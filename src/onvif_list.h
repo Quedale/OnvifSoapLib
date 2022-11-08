@@ -16,10 +16,10 @@ extern OnvifDeviceList* OnvifDeviceList__create();
 __attribute__ ((visibility("default"))) 
 extern void OnvifDeviceList__destroy(OnvifDeviceList* onvifDeviceList);
 __attribute__ ((visibility("default")))  
-extern void * OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record, int index);
+extern void OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record, int index);
 __attribute__ ((visibility("default"))) 
-extern void * OnvifDeviceList__remove_element(OnvifDeviceList* self, int index);
+extern void OnvifDeviceList__remove_element(OnvifDeviceList* self, int index);
 __attribute__ ((visibility("default"))) 
-extern void * OnvifDeviceList__clear(OnvifDeviceList* self);
+extern void OnvifDeviceList__clear(OnvifDeviceList* self);
 
 #endif

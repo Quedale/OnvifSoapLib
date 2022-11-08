@@ -3,6 +3,12 @@
 
 #include "client.h"
 
+
+struct chunk {
+    char * buffer;
+    size_t size;
+};
+
 typedef struct {
     char *xaddr;
     //TODO StreamingCapabilities
@@ -43,9 +49,14 @@ extern OnvifDevice OnvifDevice__create(char * device_url);
 __attribute__ ((visibility("default")))  
 extern void OnvifDevice__destroy(OnvifDevice* device); 
 // char * OnvifDevice__device_getHostname(OnvifDevice* self);  // equivalent to "point->x()"
+__attribute__ ((visibility("default"))) 
 extern OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self);
 __attribute__ ((visibility("default"))) 
 extern OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *self);
+__attribute__ ((visibility("default"))) 
+extern char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self);
+__attribute__ ((visibility("default"))) 
+extern struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self);
 __attribute__ ((visibility("default"))) 
 extern char * OnvifDevice__media_getStreamUri(OnvifDevice* self);
 

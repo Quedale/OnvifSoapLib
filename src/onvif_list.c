@@ -35,7 +35,7 @@ OnvifDevice * OnvifDeviceList__remove_element_and_shift(OnvifDeviceList* self, O
     return array;
 };
 
-void * OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record, int index)
+void OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record, int index)
 { 
     int i;
     int count = self->device_count;
@@ -47,12 +47,12 @@ void * OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record
     self->device_count++;
 };
 
-void * OnvifDeviceList__clear(OnvifDeviceList* self){
+void OnvifDeviceList__clear(OnvifDeviceList* self){
     self->device_count = 0;
     self->devices = realloc(self->devices,0);
 }
 
-void * OnvifDeviceList__remove_element(OnvifDeviceList* self, int index){
+void OnvifDeviceList__remove_element(OnvifDeviceList* self, int index){
     //Remove element and shift content
     self->devices = OnvifDeviceList__remove_element_and_shift(self,self->devices, index, self->device_count);  /* First shift the elements, then reallocate */
     //Resize count

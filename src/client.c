@@ -7,7 +7,6 @@ void OnvifSoapClient__init(OnvifSoapClient* self, char * endpoint) {
 }
 
 OnvifSoapClient* OnvifSoapClient__create(char * endpoint) {
-   int size = sizeof(OnvifSoapClient);
    OnvifSoapClient* result = (OnvifSoapClient*) malloc(sizeof(OnvifSoapClient));
    OnvifSoapClient__init(result, endpoint);
    return result;

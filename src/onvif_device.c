@@ -17,22 +17,21 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
 
     memset (&gethostname, 0, sizeof (gethostname));
     memset (&response, 0, sizeof (response));
-    OnvifCapabilities* capabilities;
+    OnvifCapabilities *capabilities = (OnvifCapabilities *) malloc(sizeof(OnvifCapabilities));
     
 
     if (soap_wsse_add_Timestamp(self->device_soap->soap, "Time", 10)
-        || soap_wsse_add_UsernameTokenDigest(self->device_soap->soap, "Auth", "admin", "admin2")){
+        || soap_wsse_add_UsernameTokenDigest(self->device_soap->soap, "Auth", "admin", "admin")){
         printf("Unable to set wsse creds...\n");
         //TODO Error handling
-        return "Error";
+        return NULL;
     }
 
     if (soap_call___tds__GetCapabilities(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response) == SOAP_OK){
         OnvifMedia* media =  (OnvifMedia *) malloc(sizeof(OnvifMedia));
         media->xaddr = response.Capabilities->Media->XAddr;
         capabilities->media = media;
-        self->authorized = 1;
-
+        self->authorized = (int *) 1;
         return capabilities; 
     } else {
         if(soap_fault_string(self->device_soap->soap) == "Sender not Authorized"){
@@ -49,10 +48,12 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
 }
 
 OnvifSoapClient * OnvifDevice__device_getMediaSoap(OnvifDevice* self){
-    printf("OnvifDevice__device_getMediaSoap \n");
     OnvifCapabilities* capabilities = OnvifDevice__device_getCapabilities(self);
     if(capabilities){
         return OnvifSoapClient__create(capabilities->media->xaddr);
+    } else {
+        printf("No capabilities...\n");
+        return NULL;
     }
 }
 
@@ -66,7 +67,7 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
         || soap_wsse_add_UsernameTokenDigest(self->device_soap->soap, "Auth", "admin", "admin")){
         printf("Unable to set wsse creds...\n");
         //TODO Error handling
-        return "Error";
+        return NULL;
     }
 
     if (soap_call___tds__GetDeviceInformation(self->device_soap->soap, self->device_soap->endpoint, "", &request,  &response) == SOAP_OK){
@@ -150,32 +151,75 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self){
     return "error";
 }
 
+//TODO Support timeout and invalidafter flag
+char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self){
+    struct _trt__GetSnapshotUri request;
+    struct _trt__GetSnapshotUriResponse response;
+    memset (&request, 0, sizeof (request));
+    memset (&response, 0, sizeof (response));
+
+    if (soap_wsse_add_Timestamp(self->media_soap->soap, "Time", 10)
+        || soap_wsse_add_UsernameTokenDigest(self->media_soap->soap, "Auth", "admin", "admin")){
+        printf("Unable to set wsse creds...\n");
+        //TODO Error handling
+        return NULL;
+    }
+
+    if (soap_call___trt__GetSnapshotUri(self->media_soap->soap, self->media_soap->endpoint, "", &request,  &response) == SOAP_OK){
+        printf("%s\n",response.MediaUri->Uri);
+        return response.MediaUri->Uri;
+    } else {
+        soap_print_fault(self->media_soap->soap, stderr);
+        //TODO error handling timout, invalid url, etc...
+        return NULL;
+    }
+}
+
+struct chunk * get_http_body(char * url)
+{
+
+    struct chunk * chunc = malloc(sizeof(struct chunk));
+
+    struct soap *soap = soap_new();
+    size_t response_len;
+    if (soap_GET(soap, url, NULL)
+        || soap_begin_recv(soap)
+        || (chunc->buffer = soap_http_get_body(soap, &(chunc->size))) != NULL
+        || soap_end_recv(soap)){
+        printf("Successfully extracted body\n");
+
+    } else {
+        //TODO handle error codes
+        soap_print_fault(soap, stderr);
+    }
+    soap_closesock(soap);
+    return chunc;
+}
+
+struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self){
+    char * snapshot_uri = OnvifDevice__media_getSnapshotUri(self);
+    return get_http_body(snapshot_uri);
+}
+
 void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     self->authorized = 0;
     self->device_soap = OnvifSoapClient__create(device_url);
     self->media_soap = OnvifDevice__device_getMediaSoap(self);
-    
-    printf("copy device_url : %s\n",device_url);
+
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
 
-    printf("getting protocol ...\n");
     self->protocol = strtok (data, "://"); //Protocol http/https
-    printf("getting IP:Port ...\n");
     char *ipport = strtok (NULL, "/"); //Ip:Port
     //Clear strtok?
-    printf("Clearing tok ...\n");
     while( data != NULL ) {
       data = strtok(NULL, "/");
     }
 
-    printf("getting ip ...\n");
     self->ip = strtok (ipport, ":"); //IP - TODO Handle url without port to default on http or https.
-    printf("getting port ...\n");
     self->port = strtok (NULL, "/"); //Port
 
     //Clear strtok?
-    printf("Clear tok ...\n");
     data = strtok(NULL,"/");
     while( data != NULL ) {
       data = strtok(NULL, "/");
@@ -199,16 +243,16 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     // }
     self->hostname = NULL;
 
-    printf("protocol -- %s\n",self->protocol);
-    printf("ip : %s\n",self->ip);
-    printf("hostname -- %s\n",self->hostname);
-    printf("port -- %s\n",self->port);
+    printf("Created Device:\n");
+    printf("\tprotocol -- %s\n",self->protocol);
+    printf("\tip : %s\n",self->ip);
+    printf("\thostname -- %s\n",self->hostname);
+    printf("\tport -- %s\n",self->port);
     free(data);
 }
 
 OnvifDevice OnvifDevice__create(char * device_url) {
     OnvifDevice result;
-    printf("Creating dev url1 : %s\n",device_url);
     memset (&result, 0, sizeof (result));
     OnvifDevice__init(&result,device_url);
     return result;
