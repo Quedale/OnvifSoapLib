@@ -6,6 +6,9 @@
 #include <netdb.h>
 #include "wsddapi.h"
 
+const char * SENDER_UNAUTHORIZED = "Sender not Authorized";
+const char * ONVIF_UNAUTHORIZED = "\"http://www.onvif.org/ver10/error\":NotAuthorized";
+
 struct _OnvifCred {
     char * user;
     char * pass;
@@ -34,9 +37,9 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
         self->authorized = (int *) 1;
         return capabilities; 
     } else {
-        if(soap_fault_string(self->device_soap->soap) == "Sender not Authorized"){
+        if(soap_fault_string(self->device_soap->soap) == SENDER_UNAUTHORIZED){
             self->authorized = 0;
-        } else if(soap_fault_detail(self->device_soap->soap) == "\"http://www.onvif.org/ver10/error\":NotAuthorized"){
+        } else if(soap_fault_detail(self->device_soap->soap) == ONVIF_UNAUTHORIZED){
             self->authorized = 0;
         } else {
             //TODO Set error...
@@ -181,12 +184,11 @@ struct chunk * get_http_body(char * url)
     struct chunk * chunc = malloc(sizeof(struct chunk));
 
     struct soap *soap = soap_new();
-    size_t response_len;
     if (soap_GET(soap, url, NULL)
         || soap_begin_recv(soap)
         || (chunc->buffer = soap_http_get_body(soap, &(chunc->size))) != NULL
         || soap_end_recv(soap)){
-        printf("Successfully extracted body\n");
+        // printf("Successfully extracted body\n");
 
     } else {
         //TODO handle error codes
@@ -258,6 +260,17 @@ OnvifDevice OnvifDevice__create(char * device_url) {
     return result;
 }
 
+OnvifDevice * OnvifDevice__copy(OnvifDevice * dev){
+  OnvifDevice * device = malloc(sizeof(OnvifDevice));
+  device->authorized = dev->authorized;
+  device->device_soap = dev->device_soap;
+  device->media_soap = dev->media_soap;
+  device->cred = dev->cred;
+  device->ip = dev->ip;
+  device->port = dev->port;
+  device->protocol = dev->protocol;
+  return device;
+}
 
 void OnvifDevice__reset(OnvifDevice* self) {
 }
