@@ -48,6 +48,8 @@ __attribute__ ((visibility("default")))
 extern OnvifDevice OnvifDevice__create(char * device_url);
 __attribute__ ((visibility("default")))  
 extern void OnvifDevice__destroy(OnvifDevice* device); 
+__attribute__ ((visibility("default")))  
+extern void OnvifDevice_authenticate(OnvifDevice* self);
 __attribute__ ((visibility("default"))) 
 extern char * OnvifDevice__device_getHostname(OnvifDevice* self);  // equivalent to "point->x()"
 __attribute__ ((visibility("default")))  

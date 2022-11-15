@@ -203,11 +203,17 @@ struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self){
     return get_http_body(snapshot_uri);
 }
 
+void OnvifDevice_authenticate(OnvifDevice* self){
+    self->media_soap = OnvifDevice__device_getMediaSoap(self);
+    if(self->authorized){
+        //TODO build the rest
+    }
+
+}
 void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     self->authorized = 0;
     self->device_soap = OnvifSoapClient__create(device_url);
-    self->media_soap = OnvifDevice__device_getMediaSoap(self);
-
+    
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
 
