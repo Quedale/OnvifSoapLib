@@ -9,6 +9,8 @@
 const char * SENDER_UNAUTHORIZED = "Sender not Authorized";
 const char * ONVIF_UNAUTHORIZED = "\"http://www.onvif.org/ver10/error\":NotAuthorized";
 
+const int * UNAUTHORIZED = 0;
+const int * AUTHORIZED = (int *) 1;
 struct _OnvifCred {
     char * user;
     char * pass;
@@ -34,14 +36,15 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
         OnvifMedia* media =  (OnvifMedia *) malloc(sizeof(OnvifMedia));
         media->xaddr = response.Capabilities->Media->XAddr;
         capabilities->media = media;
-        self->authorized = (int *) 1;
+        self->authorized = (int *) AUTHORIZED;
         return capabilities; 
     } else {
-        if(soap_fault_string(self->device_soap->soap) == SENDER_UNAUTHORIZED){
-            self->authorized = 0;
-        } else if(soap_fault_detail(self->device_soap->soap) == ONVIF_UNAUTHORIZED){
-            self->authorized = 0;
+        if(strcmp(soap_fault_string(self->device_soap->soap),SENDER_UNAUTHORIZED) == 0){
+            self->authorized = (int *) UNAUTHORIZED;
+        } else if(strcmp(soap_fault_detail(self->device_soap->soap),ONVIF_UNAUTHORIZED) == 0){
+            self->authorized = (int *) UNAUTHORIZED;
         } else {
+            printf("GENERIC ERROR ... \n");
             //TODO Set error...
             soap_print_fault(self->device_soap->soap, stderr);
         }
@@ -208,10 +211,9 @@ void OnvifDevice_authenticate(OnvifDevice* self){
     if(self->authorized){
         //TODO build the rest
     }
-
 }
 void OnvifDevice__init(OnvifDevice* self, char * device_url) {
-    self->authorized = 0;
+    self->authorized = (int *) UNAUTHORIZED;
     self->device_soap = OnvifSoapClient__create(device_url);
     
     char * data = malloc(strlen(device_url)+1);

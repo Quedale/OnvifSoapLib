@@ -26,7 +26,7 @@ void OnvifDeviceList__destroy(OnvifDeviceList* OnvifDeviceList) {
   }
 }
 
-OnvifDevice * OnvifDeviceList__remove_element_and_shift(OnvifDeviceList* self, OnvifDevice *array, int index, int array_length)
+OnvifDevice ** OnvifDeviceList__remove_element_and_shift(OnvifDeviceList* self, OnvifDevice **array, int index, int array_length)
 {
     int i;
     for(i = index; i < array_length; i++) {
@@ -35,11 +35,11 @@ OnvifDevice * OnvifDeviceList__remove_element_and_shift(OnvifDeviceList* self, O
     return array;
 };
 
-void OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record, int index)
+void OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice * record, int index)
 { 
     int i;
     int count = self->device_count;
-    self->devices = (OnvifDevice *) realloc (self->devices,sizeof (OnvifDevice) * (count+1));
+    self->devices = realloc (self->devices,sizeof (OnvifDevice) * (count+1));
     for(i=self->device_count; i> index; i--){
         self->devices[i] = self->devices[i-1];
     }
@@ -48,6 +48,10 @@ void OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice record, 
 };
 
 void OnvifDeviceList__clear(OnvifDeviceList* self){
+    int i;
+    for(i=0; i < self->device_count; i++){
+        OnvifDevice__destroy(self->devices[i]);
+    }
     self->device_count = 0;
     self->devices = realloc(self->devices,0);
 }
