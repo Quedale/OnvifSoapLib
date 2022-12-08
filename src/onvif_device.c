@@ -16,6 +16,28 @@ struct _OnvifCred {
     char * pass;
 };
 
+
+char * OnvifDevice__device_get_username(OnvifDevice *self){
+    struct _OnvifCred * cred = (struct _OnvifCred *) self->private;
+    return cred->user;
+}
+
+char * OnvifDevice__device_get_password(OnvifDevice *self){
+    struct _OnvifCred * cred = (struct _OnvifCred *) self->private;
+    return cred->pass;
+}
+
+
+int set_wsse_data(OnvifDevice* self, OnvifSoapClient* soap){
+    if (soap_wsse_add_Timestamp(soap->soap, "Time", 10)
+        || soap_wsse_add_UsernameTokenDigest(soap->soap, "Auth", OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self))){
+        //TODO Error handling
+        printf("Unable to set wsse creds...\n");
+        return 0;
+    }
+
+    return 1;
+}
 OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
     struct _tds__GetCapabilities gethostname;
     struct _tds__GetCapabilitiesResponse response;
@@ -24,10 +46,8 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
     memset (&response, 0, sizeof (response));
     OnvifCapabilities *capabilities = (OnvifCapabilities *) malloc(sizeof(OnvifCapabilities));
     
-
-    if (soap_wsse_add_Timestamp(self->device_soap->soap, "Time", 10)
-        || soap_wsse_add_UsernameTokenDigest(self->device_soap->soap, "Auth", "admin", "admin")){
-        printf("Unable to set wsse creds...\n");
+    int wsseret = set_wsse_data(self,self->device_soap);
+    if(!wsseret){
         //TODO Error handling
         return NULL;
     }
@@ -56,7 +76,7 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
 OnvifSoapClient * OnvifDevice__device_getMediaSoap(OnvifDevice* self){
     OnvifCapabilities* capabilities = OnvifDevice__device_getCapabilities(self);
     if(capabilities){
-        return OnvifSoapClient__create(capabilities->media->xaddr);
+        return OnvifSoapClient__create(capabilities->media->xaddr,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
     } else {
         printf("No capabilities...\n");
         return NULL;
@@ -69,9 +89,8 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
     struct _tds__GetDeviceInformationResponse response;
     OnvifDeviceInformation *ret = (OnvifDeviceInformation *) malloc(sizeof(OnvifDeviceInformation));
 
-    if (soap_wsse_add_Timestamp(self->device_soap->soap, "Time", 10)
-        || soap_wsse_add_UsernameTokenDigest(self->device_soap->soap, "Auth", "admin", "admin")){
-        printf("Unable to set wsse creds...\n");
+    int wsseret = set_wsse_data(self,self->device_soap);
+    if(!wsseret){
         //TODO Error handling
         return NULL;
     }
@@ -119,11 +138,10 @@ char * OnvifDevice__device_getHostname(OnvifDevice* self) {
     struct _tds__GetHostname gethostname;
     struct _tds__GetHostnameResponse response;
 
-    if (soap_wsse_add_Timestamp(self->device_soap->soap, "Time", 10)
-        || soap_wsse_add_UsernameTokenDigest(self->device_soap->soap, "Auth", "admin", "admin")){
-        printf("Unable to set wsse creds...\n");
+    int wsseret = set_wsse_data(self,self->device_soap);
+    if(!wsseret){
         //TODO Error handling
-        return "Error";
+        return NULL;
     }
 
     if (soap_call___tds__GetHostname(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response) == SOAP_OK){
@@ -141,11 +159,10 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
-    if (soap_wsse_add_Timestamp(self->media_soap->soap, "Time", 10)
-        || soap_wsse_add_UsernameTokenDigest(self->media_soap->soap, "Auth", "admin", "admin")){
-        printf("Unable to set wsse creds...\n");
+    int wsseret = set_wsse_data(self,self->media_soap);
+    if(!wsseret){
         //TODO Error handling
-        return "Error";
+        return NULL;
     }
 
     if (soap_call___trt__GetStreamUri(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp) == SOAP_OK){
@@ -164,9 +181,8 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self){
     memset (&request, 0, sizeof (request));
     memset (&response, 0, sizeof (response));
 
-    if (soap_wsse_add_Timestamp(self->media_soap->soap, "Time", 10)
-        || soap_wsse_add_UsernameTokenDigest(self->media_soap->soap, "Auth", "admin", "admin")){
-        printf("Unable to set wsse creds...\n");
+    int wsseret = set_wsse_data(self,self->media_soap);
+    if(!wsseret){
         //TODO Error handling
         return NULL;
     }
@@ -212,9 +228,22 @@ void OnvifDevice_authenticate(OnvifDevice* self){
         //TODO build the rest
     }
 }
+
+void OnvifDevice_set_credentials(OnvifDevice* self, char * user, char* pass){
+    struct  _OnvifCred * pcred = (struct _OnvifCred *) self->private;
+    pcred->user = realloc(pcred->user,strlen(user) + 1);
+    pcred->pass = realloc(pcred->pass,strlen(pass) + 1);
+    strcpy(pcred->pass,pass);
+    strcpy(pcred->user,user);
+}
+
 void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     self->authorized = (int *) UNAUTHORIZED;
-    self->device_soap = OnvifSoapClient__create(device_url);
+    struct _OnvifCred * cred = malloc(sizeof(struct _OnvifCred));
+    cred->pass = malloc(0);
+    cred->user = malloc(0);
+    self->private = cred;
+    self->device_soap = OnvifSoapClient__create(device_url,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
     
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
@@ -235,22 +264,6 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
       data = strtok(NULL, "/");
     }
 
-    //TODO Lookup name outside GUI Thread
-    // printf("NSLookup ...\n");
-    // //Lookup hostname
-    // struct in_addr in_a;
-    // inet_pton(AF_INET, self->ip, &in_a);
-    // struct hostent* host;
-    // host = gethostbyaddr( (const void*)&in_a, 
-    //                     sizeof(struct in_addr), 
-    //                     AF_INET );
-    // if(host){
-    //     printf("Found hostname : %s\n",host->h_name);
-    //     self->hostname = host->h_name;
-    // } else {
-    //     printf("Failed to get hostname ...\n");
-    //     self->hostname = NULL;
-    // }
     self->hostname = NULL;
 
     printf("Created Device:\n");
@@ -273,19 +286,27 @@ OnvifDevice * OnvifDevice__copy(OnvifDevice * dev){
   device->authorized = dev->authorized;
   device->device_soap = dev->device_soap;
   device->media_soap = dev->media_soap;
-  device->cred = dev->cred;
+  device->private = dev->private;
   device->ip = dev->ip;
   device->port = dev->port;
   device->protocol = dev->protocol;
+  device->image_handle = dev->image_handle;
   return device;
 }
 
 void OnvifDevice__reset(OnvifDevice* self) {
 }
 
+
+void OnvifCred__destroy(struct _OnvifCred * cred){
+    free(cred->pass);
+    free(cred->user);
+}
+
 void OnvifDevice__destroy(OnvifDevice* device) {
   if (device) {
-     OnvifDevice__reset(device);
-     free(device);
+    OnvifCred__destroy((struct _OnvifCred *)device->private);
+    OnvifDevice__reset(device);
+    free(device);
   }
 }

@@ -27,9 +27,6 @@ typedef struct {
     char * hardwareId;
 } OnvifDeviceInformation;
 
-struct _OnvifCred;
-typedef struct _OnvifCred  *OnvifCred;
-
 typedef struct {
     char * protocol;
     char * ip;
@@ -38,8 +35,8 @@ typedef struct {
     int * authorized;
     OnvifSoapClient* device_soap;
     OnvifSoapClient* media_soap;
-    OnvifCred* cred;
-    // OnvifCapabilities * capabilities;
+    void * image_handle;
+    void * private;
 } OnvifDevice;
 
 
@@ -64,5 +61,7 @@ __attribute__ ((visibility("default")))
 extern struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self);
 __attribute__ ((visibility("default"))) 
 extern char * OnvifDevice__media_getStreamUri(OnvifDevice* self);
+__attribute__ ((visibility("default"))) 
+extern void OnvifDevice_set_credentials(OnvifDevice* self, char * user, char* pass);
 
 #endif
