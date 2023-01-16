@@ -16,13 +16,12 @@ OnvifDeviceList* OnvifDeviceList__create() {
 }
 
 
-void OnvifDeviceList__reset(OnvifDeviceList* self) {
-}
 
-void OnvifDeviceList__destroy(OnvifDeviceList* OnvifDeviceList) {
-  if (OnvifDeviceList) {
-     OnvifDeviceList__reset(OnvifDeviceList);
-     free(OnvifDeviceList);
+void OnvifDeviceList__destroy(OnvifDeviceList* self) {
+  if (self) {
+     OnvifDeviceList__clear(self);
+     free(self->devices);
+     free(self);
   }
 }
 

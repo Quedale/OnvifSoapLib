@@ -12,22 +12,26 @@ void OnvifSoapClient__init(OnvifSoapClient* self, char * endpoint, char * user, 
     struct _SoapCred * priv = malloc(sizeof(struct _SoapCred));
     priv->pass = pass;
     priv->user = user;
+    self->private = priv;
     
 }
 
 OnvifSoapClient* OnvifSoapClient__create(char * endpoint, char * user, char * password) {
-   OnvifSoapClient* result = (OnvifSoapClient*) malloc(sizeof(OnvifSoapClient));
-   OnvifSoapClient__init(result, endpoint, user, password);
-   return result;
+  printf("OnvifSoapClient__create [%s]\n",endpoint);
+  OnvifSoapClient* result = (OnvifSoapClient*) malloc(sizeof(OnvifSoapClient));
+  OnvifSoapClient__init(result, endpoint, user, password);
+  return result;
 }
 
-void OnvifSoapClient__reset(OnvifSoapClient* self) {
-}
-
-void OnvifSoapClient__destroy(OnvifSoapClient* OnvifSoapClient) {
-  if (OnvifSoapClient) {
-     OnvifSoapClient__reset(OnvifSoapClient);
-     free(OnvifSoapClient->private);
-     free(OnvifSoapClient);
+void OnvifSoapClient__destroy(OnvifSoapClient* self) {
+  if (self) {
+    printf("OnvifSoapClient__destroy [%s]\n",self->endpoint);
+    soap_destroy(self->soap); // delete managed objects
+    soap_end(self->soap);     // delete managed data and temporaries 
+    soap_done(self->soap);
+    soap_free(self->soap); 
+    free(self->endpoint);
+    free(self->private);
+    free(self);
   }
 }

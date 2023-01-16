@@ -32,7 +32,7 @@ typedef struct {
     char * ip;
     char * port;
     char * hostname;
-    int * authorized;
+    int authorized;
     OnvifSoapClient* device_soap;
     OnvifSoapClient* media_soap;
     void * image_handle;
@@ -42,15 +42,13 @@ typedef struct {
 
 
 __attribute__ ((visibility("default"))) 
-extern OnvifDevice OnvifDevice__create(char * device_url);
+extern OnvifDevice * OnvifDevice__create(char * device_url);
 __attribute__ ((visibility("default")))  
 extern void OnvifDevice__destroy(OnvifDevice* device); 
 __attribute__ ((visibility("default")))  
 extern void OnvifDevice_authenticate(OnvifDevice* self);
 __attribute__ ((visibility("default"))) 
 extern char * OnvifDevice__device_getHostname(OnvifDevice* self);  // equivalent to "point->x()"
-__attribute__ ((visibility("default")))  
-extern OnvifDevice * OnvifDevice__copy(OnvifDevice * dev);
 __attribute__ ((visibility("default"))) 
 extern OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self);
 __attribute__ ((visibility("default"))) 
