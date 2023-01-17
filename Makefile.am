@@ -1,3 +1,4 @@
+pkgconfig_DATA = $(top_srcdir)/onvifsoap.pc
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
 GSOAP_SRC_DIR ?= $(shell pwd)/gsoap-2.8

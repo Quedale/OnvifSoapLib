@@ -31,6 +31,7 @@ fi
 aclocal
 autoconf
 automake --add-missing
+autoreconf -i
 
 echo "Generating WSDL gsoap files..."
 rm -rf $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
