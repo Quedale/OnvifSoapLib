@@ -36,7 +36,7 @@ autoreconf -i
 echo "Generating WSDL gsoap files..."
 rm -rf $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
 mkdir $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
-$GSOAP_SRC_DIR/build/bin/wsdl2h -x -t $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/wsdl/typemap.dat -o $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated/common_service.h -c \
+wsdl2h -x -t $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/wsdl/typemap.dat -o $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated/common_service.h -c \
 http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
 http://www.onvif.org/onvif/ver10/event/wsdl/event.wsdl \
 http://www.onvif.org/onvif/ver10/display.wsdl \
@@ -51,5 +51,5 @@ http://www.onvif.org/onvif/ver10/replay.wsdl \
 http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl \
 http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl \
 http://www.onvif.org/onvif/ver10/schema/onvif.xsd 
-$GSOAP_SRC_DIR/build/bin/soapcpp2 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated/common_service.h -d$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
+soapcpp2 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated/common_service.h -d$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
 
