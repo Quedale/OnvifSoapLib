@@ -3,6 +3,9 @@
 
 #include <stdlib.h>
 
+
+
+
 // Header
 typedef struct {
     char * endpoint;

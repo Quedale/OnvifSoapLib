@@ -3,8 +3,14 @@
 #include "generated/soapH.h"
 #include "generated/DeviceBinding.nsmap"
 #include "wsseapi.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#pragma comment(lib,"ws2_32.lib")
+#else
 #include <netdb.h>
+#endif
 #include "wsddapi.h"
+#include "httpda.h"
 
 const char * SENDER_UNAUTHORIZED = "Sender not Authorized";
 const char * ONVIF_UNAUTHORIZED = "\"http://www.onvif.org/ver10/error\":NotAuthorized";
@@ -176,12 +182,22 @@ char * OnvifDevice__device_getHostname(OnvifDevice* self) {
     return "error";
 }
 
-char * OnvifDevice__media_getStreamUri(OnvifDevice* self){
+char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
+    printf("OnvifDevice__media_getStreamUri\n");
     struct _trt__GetStreamUri req;
     struct _trt__GetStreamUriResponse resp;
     char * ret = NULL;
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
+
+    req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//初始化，分配空间
+	req.StreamSetup->Stream = 0;//stream type
+
+	req.StreamSetup->Transport = (struct tt__Transport *)soap_malloc(self->media_soap->soap, sizeof(struct tt__Transport));//初始化，分配空间
+	req.StreamSetup->Transport->Protocol = 0;
+	req.StreamSetup->Transport->Tunnel = 0;
+    
+    req.ProfileToken = self->profiles[profile_index].token;
 
     int wsseret = set_wsse_data(self,self->media_soap);
     if(!wsseret){
@@ -203,8 +219,50 @@ exit:
     return ret;
 }
 
+void OnvifDevice_get_profiles(OnvifDevice* self){
+    struct _trt__GetProfiles req;
+    struct _trt__GetProfilesResponse resp;
+    char * ret = NULL;
+    memset (&req, 0, sizeof (req));
+    memset (&resp, 0, sizeof (resp));
+
+    int wsseret = set_wsse_data(self,self->media_soap);
+    if(!wsseret){
+        //TODO Error handling
+        goto exit;
+    }
+
+    if (soap_call___trt__GetProfiles(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp) == SOAP_OK){
+        // 遍历响应结构体中的所有配置文件
+        if (resp.Profiles != NULL)
+        {
+            
+                int count = resp.__sizeProfiles;
+                self->sizeSrofiles = count;
+                self->profiles = malloc(sizeof(struct OnvifProfile)*count);
+                for(int i = 0; i < count; i++){
+                    struct tt__Profile profile = resp.Profiles[i];
+                    self->profiles[i].name = malloc(strlen(profile.Name)+1);
+                    self->profiles[i].token = malloc(strlen(profile.token)+1);
+
+                    strcpy(self->profiles[i].name,profile.Name);
+                    strcpy(self->profiles[i].token,profile.token);
+                }
+        }  
+    } else {
+        soap_print_fault(self->media_soap->soap, stderr);
+    }
+
+exit:
+    soap_destroy(self->device_soap->soap);
+    soap_end(self->device_soap->soap);  
+    soap_done(self->device_soap->soap); 
+}
+
+
+
 //TODO Support timeout and invalidafter flag
-char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self){
+char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
     printf("OnvifDevice__media_getSnapshotUri\n");
     struct _trt__GetSnapshotUri request;
     struct _trt__GetSnapshotUriResponse response;
@@ -217,6 +275,8 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self){
         //TODO Error handling
         return ret_val;
     }
+
+    request.ProfileToken = self->profiles[profile_index].token;
 
     if (soap_call___trt__GetSnapshotUri(self->media_soap->soap, self->media_soap->endpoint, NULL, &request,  &response) == SOAP_OK){
         ret_val = malloc(strlen(response.MediaUri->Uri) + 1);
@@ -233,19 +293,46 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self){
     return ret_val;
 }
 
-struct chunk * get_http_body(char * url)
+struct chunk * get_http_body(OnvifDevice *self, char * url)
 {
 
     // struct chunk * chunc = malloc(sizeof(struct chunk));
     struct chunk chunc;
     memset (&chunc, 0, sizeof (chunc));
+    
+    struct soap *soap = NULL;
+    struct http_da_info *info = NULL;
+    if (!self->snapshot){
+        self->snapshot = malloc(sizeof(struct OnvifHttp));
+        self->snapshot->soap = soap_new();
+        self->snapshot->info = malloc(sizeof(struct http_da_info));
+        memset (self->snapshot->info, 0, sizeof(struct http_da_info));
+    }
 
-    struct soap *soap = soap_new();
+    soap = self->snapshot->soap;
+    info = self->snapshot->info;
+
+    soap_register_plugin(soap, http_da);
+
+    if (info->authrealm){
+        http_da_restore(soap, info);
+    }
+
     if (soap_GET(soap, url, NULL)
-        || soap_begin_recv(soap)
-        || (chunc.buffer = soap_http_get_body(soap, &(chunc.size))) != NULL
-        || soap_end_recv(soap)){
-        // printf("Successfully extracted body\n");
+            || soap_begin_recv(soap)
+            || (chunc.buffer = soap_http_get_body(soap, &(chunc.size))) != NULL
+            || soap_end_recv(soap)){
+            if (soap->error == 401){
+                http_da_save(soap, info, soap->authrealm, OnvifDevice__device_get_username(self), OnvifDevice__device_get_password(self));
+                if (soap_GET(soap, url, NULL)
+                    || soap_begin_recv(soap)
+                    || (chunc.buffer = soap_http_get_body(soap, &(chunc.size))) != NULL
+                    || soap_end_recv(soap)){
+                }else {
+                    //TODO handle error codes
+                    soap_print_fault(soap, stderr);
+                }
+            }
 
     } else {
         //TODO handle error codes
@@ -259,17 +346,12 @@ struct chunk * get_http_body(char * url)
     nchunc->buffer = malloc(chunc.size);
     memcpy(nchunc->buffer,chunc.buffer,chunc.size);
 
-    soap_destroy(soap);
-    soap_end(soap);  //End clears the buffer. either we copy and run end or we return without end
-    soap_done(soap); 
-    soap_free(soap);
-
     return nchunc;
 }
 
-struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self){
-    char * snapshot_uri = OnvifDevice__media_getSnapshotUri(self);
-    struct chunk * ret = get_http_body(snapshot_uri);
+struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self, int profile_index){
+    char * snapshot_uri = OnvifDevice__media_getSnapshotUri(self, profile_index);
+    struct chunk * ret = get_http_body(self, snapshot_uri);
     free(snapshot_uri);
     return ret;
 }
@@ -297,6 +379,9 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     self->private = cred;
     self->device_soap = OnvifSoapClient__create(device_url,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
     self->media_soap = NULL;
+    self->sizeSrofiles = 0;
+    self->profiles = NULL;
+    self->snapshot = NULL;
     
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
@@ -339,12 +424,32 @@ void OnvifCred__destroy(struct _OnvifCred * cred){
     free(cred->user);
 }
 
+void OnvifProfile__destroy(struct OnvifProfile profiles){
+    free(profiles.name);
+    free(profiles.token);
+}
+
+void OnvifHttp__destroy(struct OnvifHttp* http){
+    http_da_release(http->soap, http->info);
+    soap_destroy(http->soap);
+    soap_end(http->soap);  //End clears the buffer. either we copy and run end or we return without end
+    soap_done(http->soap); 
+    soap_free(http->soap);
+
+}
+
 void OnvifDevice__destroy(OnvifDevice* device) {
     printf("OnvifDevice__destroy\n");
   if (device) {
     OnvifCred__destroy((struct _OnvifCred *)device->private);
     OnvifSoapClient__destroy(device->device_soap);
     OnvifSoapClient__destroy(device->media_soap);
+    for (size_t i = 0; i < device->sizeSrofiles; i++)
+    {
+        OnvifProfile__destroy(device->profiles[i]);
+    }
+    OnvifHttp__destroy(device->snapshot);
+    free(device->profiles);
     free(device);
   }
 }

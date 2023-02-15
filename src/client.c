@@ -13,7 +13,6 @@ void OnvifSoapClient__init(OnvifSoapClient* self, char * endpoint, char * user, 
     priv->pass = pass;
     priv->user = user;
     self->private = priv;
-    
 }
 
 OnvifSoapClient* OnvifSoapClient__create(char * endpoint, char * user, char * password) {
@@ -30,7 +29,6 @@ void OnvifSoapClient__destroy(OnvifSoapClient* self) {
     soap_end(self->soap);     // delete managed data and temporaries 
     soap_done(self->soap);
     soap_free(self->soap); 
-    free(self->endpoint);
     free(self->private);
     free(self);
   }
