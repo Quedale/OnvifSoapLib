@@ -17,7 +17,6 @@ add_compile_options(/bigobj)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 
-include_directories(src/onvif_device.h src/onvif_list.h src/client.h)
 include_directories(${GSOAP_SRC_DIR}/gsoap/ 
                     ${GSOAP_SRC_DIR}/gsoap/import 
                     ${GSOAP_SRC_DIR}/gsoap/custom 
@@ -29,7 +28,8 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/src/generated)
 file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/src/generated)
 endif()
 
-aux_source_directory(src/generated generated_src)
+aux_source_directory(src src_dir)
+aux_source_directory(src/generated generated_dir)
 
 add_library(onvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c 
                                 ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
@@ -41,10 +41,8 @@ add_library(onvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c
                                 ${GSOAP_SRC_DIR}/gsoap/plugin/threads.c
                                 ${GSOAP_SRC_DIR}/gsoap/plugin/httpda.c
                                 ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c 
-                                src/onvif_list.c 
-                                src/onvif_device.c 
-                                src/client.c
-                                ${generated_src})
+                                ${src_dir}
+                                ${generated_dir})
 
 target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 
