@@ -10,7 +10,7 @@ set(EXECUTABLE_OUTPUT_PATH ${OUTPUT_DIR})
 
 set(GSOAP_SRC_DIR  ${PROJECT_SOURCE_DIR}/gsoap-2.8)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -c -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -c -Wall -DWITH_DOM")
 add_definitions(-DWITH_DOM -DWITH_OPENSSL -DWITH_GZIP -DBUILD_SHARD)
 add_compile_options(/bigobj)
 

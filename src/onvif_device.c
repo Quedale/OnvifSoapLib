@@ -191,11 +191,20 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     memset (&resp, 0, sizeof (resp));
 
     req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//初始化，分配空间
-	req.StreamSetup->Stream = 0;//stream type
+	req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
 
 	req.StreamSetup->Transport = (struct tt__Transport *)soap_malloc(self->media_soap->soap, sizeof(struct tt__Transport));//初始化，分配空间
-	req.StreamSetup->Transport->Protocol = 0;
+	req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
 	req.StreamSetup->Transport->Tunnel = 0;
+
+    if(!self->profiles){
+        OnvifDevice_get_profiles(self);
+    }
+
+    if(profile_index >= self->sizeSrofiles){
+        printf("ERROR : profile index out-of-bounds.\n");
+        return NULL;
+    }
     
     req.ProfileToken = self->profiles[profile_index].token;
 
@@ -274,6 +283,15 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
     if(!wsseret){
         //TODO Error handling
         return ret_val;
+    }
+
+    if(!self->profiles){
+        OnvifDevice_get_profiles(self);
+    }
+
+    if(profile_index >= self->sizeSrofiles){
+        printf("ERROR : profile index out-of-bounds.\n");
+        return NULL;
     }
 
     request.ProfileToken = self->profiles[profile_index].token;
