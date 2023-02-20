@@ -31,7 +31,7 @@ endif()
 aux_source_directory(src src_dir)
 aux_source_directory(src/generated generated_dir)
 
-add_library(onvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c 
+add_library(libonvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c 
                                 ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
                                 ${GSOAP_SRC_DIR}/gsoap/plugin/smdevp.c 
                                 ${GSOAP_SRC_DIR}/gsoap/plugin/mecevp.c 
@@ -44,7 +44,7 @@ add_library(onvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c
                                 ${src_dir}
                                 ${generated_dir})
 
-target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
+target_link_libraries(libonvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 
 add_subdirectory(example)
 

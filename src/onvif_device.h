@@ -47,7 +47,7 @@ typedef struct {
     OnvifSoapClient* device_soap;
     OnvifSoapClient* media_soap;
     void * image_handle;
-    void * private;
+    void * priv_ptr;
     int sizeSrofiles;
     struct OnvifProfile * profiles;
     struct OnvifHttp * snapshot;

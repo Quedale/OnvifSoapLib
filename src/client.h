@@ -10,7 +10,7 @@
 typedef struct {
     char * endpoint;
     struct soap *soap;
-    void * private;
+    void * priv_ptr;
 } OnvifSoapClient;  // forward declared for encapsulation
 
 

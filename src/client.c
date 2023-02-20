@@ -12,7 +12,7 @@ void OnvifSoapClient__init(OnvifSoapClient* self, char * endpoint, char * user, 
     struct _SoapCred * priv = malloc(sizeof(struct _SoapCred));
     priv->pass = pass;
     priv->user = user;
-    self->private = priv;
+    self->priv_ptr = priv;
 }
 
 OnvifSoapClient* OnvifSoapClient__create(char * endpoint, char * user, char * password) {
@@ -29,7 +29,7 @@ void OnvifSoapClient__destroy(OnvifSoapClient* self) {
     soap_end(self->soap);     // delete managed data and temporaries 
     soap_done(self->soap);
     soap_free(self->soap); 
-    free(self->private);
+    free(self->priv_ptr);
     free(self);
   }
 }

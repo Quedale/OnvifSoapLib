@@ -27,12 +27,12 @@ struct _OnvifCred {
 
 
 char * OnvifDevice__device_get_username(OnvifDevice *self){
-    struct _OnvifCred * cred = (struct _OnvifCred *) self->private;
+    struct _OnvifCred * cred = (struct _OnvifCred *) self->priv_ptr;
     return cred->user;
 }
 
 char * OnvifDevice__device_get_password(OnvifDevice *self){
-    struct _OnvifCred * cred = (struct _OnvifCred *) self->private;
+    struct _OnvifCred * cred = (struct _OnvifCred *) self->priv_ptr;
     return cred->pass;
 }
 
@@ -382,7 +382,7 @@ void OnvifDevice_authenticate(OnvifDevice* self){
 }
 
 void OnvifDevice_set_credentials(OnvifDevice* self, char * user, char* pass){
-    struct  _OnvifCred * pcred = (struct _OnvifCred *) self->private;
+    struct  _OnvifCred * pcred = (struct _OnvifCred *) self->priv_ptr;
     pcred->user = realloc(pcred->user,strlen(user) + 1);
     pcred->pass = realloc(pcred->pass,strlen(pass) + 1);
     strcpy(pcred->pass,pass);
@@ -394,7 +394,7 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     struct _OnvifCred * cred = malloc(sizeof(struct _OnvifCred));
     cred->pass = malloc(0);
     cred->user = malloc(0);
-    self->private = cred;
+    self->priv_ptr = cred;
     self->device_soap = OnvifSoapClient__create(device_url,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
     self->media_soap = NULL;
     self->sizeSrofiles = 0;
@@ -459,7 +459,7 @@ void OnvifHttp__destroy(struct OnvifHttp* http){
 void OnvifDevice__destroy(OnvifDevice* device) {
     printf("OnvifDevice__destroy\n");
   if (device) {
-    OnvifCred__destroy((struct _OnvifCred *)device->private);
+    OnvifCred__destroy((struct _OnvifCred *)device->priv_ptr);
     OnvifSoapClient__destroy(device->device_soap);
     OnvifSoapClient__destroy(device->media_soap);
     for (size_t i = 0; i < device->sizeSrofiles; i++)
