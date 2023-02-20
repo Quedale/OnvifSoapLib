@@ -389,7 +389,7 @@ void OnvifDevice_set_credentials(OnvifDevice* self, char * user, char* pass){
     strcpy(pcred->user,user);
 }
 
-void OnvifDevice__init(OnvifDevice* self, char * device_url) {
+void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     self->authorized = UNAUTHORIZED;
     struct _OnvifCred * cred = malloc(sizeof(struct _OnvifCred));
     cred->pass = malloc(0);
@@ -430,7 +430,7 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     free(data);
 }
 
-OnvifDevice * OnvifDevice__create(char * device_url) {
+OnvifDevice * OnvifDevice__create(const char * device_url) {
     printf("OnvifDevice__create\n");
     OnvifDevice * result = malloc(sizeof(OnvifDevice));
     OnvifDevice__init(result,device_url);

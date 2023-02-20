@@ -76,7 +76,7 @@ typedef struct {
 
 
 
-SHARD_EXPORT OnvifDevice * OnvifDevice__create(char * device_url);
+SHARD_EXPORT OnvifDevice * OnvifDevice__create(const char * device_url);
 SHARD_EXPORT void OnvifDevice__destroy(OnvifDevice* device); 
 SHARD_EXPORT void OnvifDevice_authenticate(OnvifDevice* self);
 SHARD_EXPORT char * OnvifDevice__device_getHostname(OnvifDevice* self);  // equivalent to "point->x()"
@@ -86,5 +86,5 @@ SHARD_EXPORT void OnvifDevice_get_profiles(OnvifDevice* self);
 SHARD_EXPORT char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index);
 SHARD_EXPORT struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self, int profile_index);
 SHARD_EXPORT char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index);
-SHARD_EXPORT void OnvifDevice_set_credentials(OnvifDevice* self, char * user, char* pass);
+SHARD_EXPORT void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass);
 #endif
