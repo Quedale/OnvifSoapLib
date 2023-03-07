@@ -15,3 +15,8 @@ src/generated
 gsoap-2.8
 configure~
 m4
+*.dll
+*.lib
+*.pdb
+*.exp
+*.exe
