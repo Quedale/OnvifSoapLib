@@ -2,8 +2,16 @@
 Onvif Wsdl Soap Library used in Onvif Device Manager
 
 ## Linux Compile
+Prepare the environment
 ```shell
 ./bootstrap.sh
+```
+
+Configure, Compile and install
+```shell
+./configure --prefix=$(pwd)/build
+make
+make install
 ```
 
 ## Windows Compile

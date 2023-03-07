@@ -190,11 +190,13 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
-    req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//初始化，分配空间
-	req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
+    // req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//Initialize, allocate space
+	req.StreamSetup = soap_new_tt__StreamSetup(self->media_soap->soap,1);
+    req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
 
-	req.StreamSetup->Transport = (struct tt__Transport *)soap_malloc(self->media_soap->soap, sizeof(struct tt__Transport));//初始化，分配空间
-	req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
+	// req.StreamSetup->Transport = (struct tt__Transport *)soap_malloc(self->media_soap->soap, sizeof(struct tt__Transport));//Initialize, allocate space
+	req.StreamSetup->Transport = soap_new_tt__Transport(self->media_soap->soap,1);
+    req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
 	req.StreamSetup->Transport->Tunnel = 0;
 
     if(!self->profiles){
@@ -231,7 +233,7 @@ exit:
 void OnvifDevice_get_profiles(OnvifDevice* self){
     struct _trt__GetProfiles req;
     struct _trt__GetProfilesResponse resp;
-    char * ret = NULL;
+
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
@@ -242,7 +244,7 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
     }
 
     if (soap_call___trt__GetProfiles(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp) == SOAP_OK){
-        // 遍历响应结构体中的所有配置文件
+        // Traverse all configuration files in the response structure
         if (resp.Profiles != NULL)
         {
             
@@ -263,9 +265,9 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
     }
 
 exit:
-    soap_destroy(self->device_soap->soap);
-    soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
+    soap_destroy(self->media_soap->soap);
+    soap_end(self->media_soap->soap);  
+    soap_done(self->media_soap->soap); 
 }
 
 
@@ -381,7 +383,7 @@ void OnvifDevice_authenticate(OnvifDevice* self){
     }
 }
 
-void OnvifDevice_set_credentials(OnvifDevice* self, char * user, char* pass){
+void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass){
     struct  _OnvifCred * pcred = (struct _OnvifCred *) self->priv_ptr;
     pcred->user = realloc(pcred->user,strlen(user) + 1);
     pcred->pass = realloc(pcred->pass,strlen(pass) + 1);
@@ -395,7 +397,7 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     cred->pass = malloc(0);
     cred->user = malloc(0);
     self->priv_ptr = cred;
-    self->device_soap = OnvifSoapClient__create(device_url,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
+    self->device_soap = OnvifSoapClient__create((char *) device_url,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
     self->media_soap = NULL;
     self->sizeSrofiles = 0;
     self->profiles = NULL;
