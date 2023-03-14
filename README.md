@@ -16,7 +16,7 @@ make install
 
 ## Windows Compile
 ### Prepare
-- git clone https://github.com/lus-zzz/OnvifSoapLib.git
+- git clone https://github.com/Quedale/OnvifSoapLib.git
 - DownLoad https://udomain.dl.sourceforge.net/project/gsoap2/gsoap_2.8.124.zip
 - unzip to project root directory  
 ```
