@@ -450,26 +450,27 @@ void OnvifProfile__destroy(struct OnvifProfile profiles){
 }
 
 void OnvifHttp__destroy(struct OnvifHttp* http){
-    http_da_release(http->soap, http->info);
-    soap_destroy(http->soap);
-    soap_end(http->soap);  //End clears the buffer. either we copy and run end or we return without end
-    soap_done(http->soap); 
-    soap_free(http->soap);
-
+    if(http){
+        http_da_release(http->soap, http->info);
+        soap_destroy(http->soap);
+        soap_end(http->soap);  //End clears the buffer. either we copy and run end or we return without end
+        soap_done(http->soap); 
+        soap_free(http->soap);
+    }
 }
 
 void OnvifDevice__destroy(OnvifDevice* device) {
     printf("OnvifDevice__destroy\n");
-  if (device) {
-    OnvifCred__destroy((struct _OnvifCred *)device->priv_ptr);
-    OnvifSoapClient__destroy(device->device_soap);
-    OnvifSoapClient__destroy(device->media_soap);
-    for (size_t i = 0; i < device->sizeSrofiles; i++)
-    {
-        OnvifProfile__destroy(device->profiles[i]);
+    if (device) {
+        OnvifCred__destroy((struct _OnvifCred *)device->priv_ptr);
+        OnvifSoapClient__destroy(device->device_soap);
+        OnvifSoapClient__destroy(device->media_soap);
+        for (size_t i = 0; i < device->sizeSrofiles; i++)
+        {
+            OnvifProfile__destroy(device->profiles[i]);
+        }
+        OnvifHttp__destroy(device->snapshot);
+        free(device->profiles);
+        free(device);
     }
-    OnvifHttp__destroy(device->snapshot);
-    free(device->profiles);
-    free(device);
-  }
 }
