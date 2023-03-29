@@ -47,19 +47,21 @@ int set_wsse_data(OnvifDevice* self, OnvifSoapClient* soap){
 
     return 1;
 }
+
 OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
-    printf("OnvifDevice__device_getCapabilities");
+    printf("OnvifDevice__device_getCapabilities\n");
     struct _tds__GetCapabilities gethostname;
     struct _tds__GetCapabilitiesResponse response;
     OnvifCapabilities *capabilities = NULL;
 
     memset (&gethostname, 0, sizeof (gethostname));
     memset (&response, 0, sizeof (response));
-    
+
+    pthread_mutex_unlock(self->device_lock);
     int wsseret = set_wsse_data(self,self->device_soap);
     if(!wsseret){
         //TODO Error handling
-        return NULL;
+        goto exit;
     }
 
     if (soap_call___tds__GetCapabilities(self->device_soap->soap, self->device_soap->endpoint, NULL, &gethostname,  &response) == SOAP_OK){
@@ -83,16 +85,18 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
         }
     }
 
+exit:
     soap_destroy(self->device_soap->soap);
     soap_end(self->device_soap->soap);  
     soap_done(self->device_soap->soap); 
+    pthread_mutex_unlock(self->device_lock);
     return capabilities;
 }
 
-OnvifSoapClient * OnvifDevice__device_getMediaSoap(OnvifDevice* self){
-    printf("OnvifDevice__device_getMediaSoap\n");
-    if(!self->media_soap){
-        OnvifSoapClient__destroy(self->media_soap);
+OnvifSoapClient * OnvifDevice__device_createMediaSoap(OnvifDevice* self){
+    printf("OnvifDevice__device_createMediaSoap\n");
+    if(self->media_soap){
+        return self->media_soap;
     }
     OnvifSoapClient * client = NULL;
     OnvifCapabilities* capabilities = OnvifDevice__device_getCapabilities(self);
@@ -112,28 +116,32 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
     printf("OnvifDevice__device_getDeviceInformation \n");
     struct _tds__GetDeviceInformation request;
     struct _tds__GetDeviceInformationResponse response;
-    OnvifDeviceInformation *ret = (OnvifDeviceInformation *) malloc(sizeof(OnvifDeviceInformation));
+    OnvifDeviceInformation *ret = NULL;
 
+    pthread_mutex_lock(self->device_lock);
     int wsseret = set_wsse_data(self,self->device_soap);
     if(!wsseret){
         //TODO Error handling
-        return NULL;
+        goto exit;
     }
 
     if (soap_call___tds__GetDeviceInformation(self->device_soap->soap, self->device_soap->endpoint, "", &request,  &response) == SOAP_OK){
+        ret = (OnvifDeviceInformation *) malloc(sizeof(OnvifDeviceInformation));
         ret->firmwareVersion = response.FirmwareVersion;
         ret->hardwareId = response.HardwareId;
         ret->manufacturer = response.Manufacturer;
         ret->model = response.Model;
         ret->serialNumber = response.SerialNumber;
-        return ret;
     } else {
         soap_print_fault(self->device_soap->soap, stderr);
-        //TODO error handling timout, invalid url, etc...
-        return NULL;
     }
 
-    //FIXME soap cleaup
+exit:
+    soap_destroy(self->device_soap->soap);
+    soap_end(self->device_soap->soap);  
+    soap_done(self->device_soap->soap); 
+    pthread_mutex_unlock(self->device_lock);
+    return ret;
 }
 
 // Place holder to allow client compile
@@ -164,22 +172,28 @@ void wsdd_event_ResolveMatches(struct soap *soap, unsigned int InstanceId, const
 char * OnvifDevice__device_getHostname(OnvifDevice* self) {
     struct _tds__GetHostname gethostname;
     struct _tds__GetHostnameResponse response;
+    char * ret = NULL;
 
+    pthread_mutex_lock(self->device_lock);
     int wsseret = set_wsse_data(self,self->device_soap);
     if(!wsseret){
         //TODO Error handling
-        return NULL;
+        goto exit;
     }
 
     if (soap_call___tds__GetHostname(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response) == SOAP_OK){
-        return response.HostnameInformation->Name;
+        ret = response.HostnameInformation->Name;
     } else {
         soap_print_fault(self->device_soap->soap, stderr);
     }
     //TODO error handling timout, invalid url, etc...
 
-    //FIXME Soap clean up
-    return "error";
+exit:
+    soap_destroy(self->device_soap->soap);
+    soap_end(self->device_soap->soap);  
+    soap_done(self->device_soap->soap); 
+    pthread_mutex_unlock(self->device_lock);
+    return ret;
 }
 
 char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
@@ -190,6 +204,18 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
+    if(!self->profiles){
+        OnvifDevice_get_profiles(self);
+    }
+
+    if(profile_index >= self->sizeSrofiles){
+        printf("ERROR : profile index out-of-bounds.\n");
+        goto exit;
+    }
+    
+    req.ProfileToken = self->profiles[profile_index].token;
+
+    pthread_mutex_lock(self->media_lock);
     // req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//Initialize, allocate space
 	req.StreamSetup = soap_new_tt__StreamSetup(self->media_soap->soap,1);
     req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
@@ -198,17 +224,6 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
 	req.StreamSetup->Transport = soap_new_tt__Transport(self->media_soap->soap,1);
     req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
 	req.StreamSetup->Transport->Tunnel = 0;
-
-    if(!self->profiles){
-        OnvifDevice_get_profiles(self);
-    }
-
-    if(profile_index >= self->sizeSrofiles){
-        printf("ERROR : profile index out-of-bounds.\n");
-        return NULL;
-    }
-    
-    req.ProfileToken = self->profiles[profile_index].token;
 
     int wsseret = set_wsse_data(self,self->media_soap);
     if(!wsseret){
@@ -224,9 +239,10 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     }
 
 exit:
-    soap_destroy(self->device_soap->soap);
-    soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
+    soap_destroy(self->media_soap->soap);
+    soap_end(self->media_soap->soap);  
+    soap_done(self->media_soap->soap); 
+    pthread_mutex_unlock(self->media_lock);
     return ret;
 }
 
@@ -237,6 +253,7 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
+    pthread_mutex_lock(self->media_lock);
     int wsseret = set_wsse_data(self,self->media_soap);
     if(!wsseret){
         //TODO Error handling
@@ -268,6 +285,7 @@ exit:
     soap_destroy(self->media_soap->soap);
     soap_end(self->media_soap->soap);  
     soap_done(self->media_soap->soap); 
+    pthread_mutex_unlock(self->media_lock);
 }
 
 
@@ -279,13 +297,7 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
     struct _trt__GetSnapshotUriResponse response;
     memset (&request, 0, sizeof (request));
     memset (&response, 0, sizeof (response));
-
     char * ret_val = NULL;
-    int wsseret = set_wsse_data(self,self->media_soap);
-    if(!wsseret){
-        //TODO Error handling
-        return ret_val;
-    }
 
     if(!self->profiles){
         OnvifDevice_get_profiles(self);
@@ -298,6 +310,14 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
 
     request.ProfileToken = self->profiles[profile_index].token;
 
+    pthread_mutex_lock(self->media_lock);
+    int wsseret = set_wsse_data(self,self->media_soap);
+    if(!wsseret){
+        //TODO Error handling
+        printf("OnvifDevice__media_getSnapshotUri - Failed to set credentials\n");
+        goto exit;
+    }
+
     if (soap_call___trt__GetSnapshotUri(self->media_soap->soap, self->media_soap->endpoint, NULL, &request,  &response) == SOAP_OK){
         ret_val = malloc(strlen(response.MediaUri->Uri) + 1);
         strcpy(ret_val,response.MediaUri->Uri);
@@ -306,10 +326,11 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
         //TODO error handling timout, invalid url, etc...
     }
 
+exit:
     soap_destroy(self->media_soap->soap); 
     soap_end(self->media_soap->soap); 
     soap_done(self->media_soap->soap); 
-
+    pthread_mutex_unlock(self->media_lock);
     return ret_val;
 }
 
@@ -377,7 +398,7 @@ struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self, int profile_ind
 }
 
 void OnvifDevice_authenticate(OnvifDevice* self){
-    self->media_soap = OnvifDevice__device_getMediaSoap(self);
+    self->media_soap = OnvifDevice__device_createMediaSoap(self);
     if(self->authorized){
         //TODO build the rest
     }
@@ -398,7 +419,11 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     cred->user = malloc(0);
     self->priv_ptr = cred;
     self->device_soap = OnvifSoapClient__create((char *) device_url,OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self));
+    self->device_lock = malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(self->device_lock, NULL);
     self->media_soap = NULL;
+    self->media_lock = malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(self->media_lock, NULL);
     self->sizeSrofiles = 0;
     self->profiles = NULL;
     self->snapshot = NULL;
@@ -427,7 +452,6 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     printf("Created Device:\n");
     printf("\tprotocol -- %s\n",self->protocol);
     printf("\tip : %s\n",self->ip);
-    printf("\thostname -- %s\n",self->hostname);
     printf("\tport -- %s\n",self->port);
     free(data);
 }
@@ -471,6 +495,10 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         }
         OnvifHttp__destroy(device->snapshot);
         free(device->profiles);
+        pthread_mutex_destroy(device->device_lock);
+        free(device->device_lock);
+        pthread_mutex_destroy(device->media_lock);
+        free(device->media_lock);
         free(device);
     }
 }
