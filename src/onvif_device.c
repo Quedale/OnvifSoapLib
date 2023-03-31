@@ -79,8 +79,7 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
             self->authorized = UNAUTHORIZED;
             printf("unauthorized 2\n");
         } else {
-            printf("GENERIC ERROR ... \n");
-            //TODO Set error...
+            printf("OnvifDevice__device_getCapabilities ERROR");
             soap_print_fault(self->device_soap->soap, stderr);
         }
     }
@@ -133,6 +132,7 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
         ret->model = response.Model;
         ret->serialNumber = response.SerialNumber;
     } else {
+        printf("OnvifDevice__device_getDeviceInformation ERROR\n");
         soap_print_fault(self->device_soap->soap, stderr);
     }
 
@@ -170,6 +170,7 @@ void wsdd_event_ResolveMatches(struct soap *soap, unsigned int InstanceId, const
 { printf("wsdd_event_ResolveMatches\n"); }
 
 char * OnvifDevice__device_getHostname(OnvifDevice* self) {
+    printf("OnvifDevice__device_getHostname\n");
     struct _tds__GetHostname gethostname;
     struct _tds__GetHostnameResponse response;
     char * ret = NULL;
@@ -184,6 +185,7 @@ char * OnvifDevice__device_getHostname(OnvifDevice* self) {
     if (soap_call___tds__GetHostname(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response) == SOAP_OK){
         ret = response.HostnameInformation->Name;
     } else {
+        printf("OnvifDevice__device_getHostname ERROR\n");
         soap_print_fault(self->device_soap->soap, stderr);
     }
     //TODO error handling timout, invalid url, etc...
@@ -209,11 +211,11 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     }
 
     if(profile_index >= self->sizeSrofiles){
-        printf("ERROR : profile index out-of-bounds.\n");
-        goto exit;
+        printf("OnvifDevice__media_getStreamUri : profile index out-of-bounds.\n");
+        // goto exit;
+    } else {
+        req.ProfileToken = self->profiles[profile_index].token;
     }
-    
-    req.ProfileToken = self->profiles[profile_index].token;
 
     pthread_mutex_lock(self->media_lock);
     // req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//Initialize, allocate space
@@ -235,6 +237,7 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
         ret = malloc(strlen(resp.MediaUri->Uri)+1);
         strcpy(ret,resp.MediaUri->Uri);
     } else {
+        printf("OnvifDevice__media_getStreamUri ERROR\n");
         soap_print_fault(self->media_soap->soap, stderr);
     }
 
@@ -247,6 +250,7 @@ exit:
 }
 
 void OnvifDevice_get_profiles(OnvifDevice* self){
+    printf("OnvifDevice_get_profiles\n");
     struct _trt__GetProfiles req;
     struct _trt__GetProfilesResponse resp;
 
@@ -278,6 +282,7 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
                 }
         }  
     } else {
+        printf("OnvifDevice_get_profiles ERROR\n");
         soap_print_fault(self->media_soap->soap, stderr);
     }
 
@@ -304,11 +309,10 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
     }
 
     if(profile_index >= self->sizeSrofiles){
-        printf("ERROR : profile index out-of-bounds.\n");
-        return NULL;
+        printf("OnvifDevice__media_getSnapshotUri : profile index out-of-bounds.\n");
+    } else {
+        request.ProfileToken = self->profiles[profile_index].token;
     }
-
-    request.ProfileToken = self->profiles[profile_index].token;
 
     pthread_mutex_lock(self->media_lock);
     int wsseret = set_wsse_data(self,self->media_soap);
@@ -322,6 +326,7 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
         ret_val = malloc(strlen(response.MediaUri->Uri) + 1);
         strcpy(ret_val,response.MediaUri->Uri);
     } else {
+        printf("OnvifDevice__media_getSnapshotUri ERROR\n");
         soap_print_fault(self->media_soap->soap, stderr);
         //TODO error handling timout, invalid url, etc...
     }
@@ -371,12 +376,14 @@ struct chunk * get_http_body(OnvifDevice *self, char * url)
                     || soap_end_recv(soap)){
                 }else {
                     //TODO handle error codes
+                    printf("get_http_body ERROR-1\n");
                     soap_print_fault(soap, stderr);
                 }
             }
 
     } else {
         //TODO handle error codes
+        printf("get_http_body ERROR-2\n");
         soap_print_fault(soap, stderr);
     }
     soap_closesock(soap);
@@ -431,20 +438,16 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
 
-    self->protocol = strtok (data, "://"); //Protocol http/https
-    char *ipport = strtok (NULL, "/"); //Ip:Port
-    //Clear strtok?
-    while( data != NULL ) {
-      data = strtok(NULL, "/");
-    }
+    self->protocol = strtok_r ((char *)data, "://", &data);
+    char *ipport = strtok_r ((char *)data, "/", &data);
 
-    self->ip = strtok (ipport, ":"); //IP - TODO Handle url without port to default on http or https.
-    self->port = strtok (NULL, "/"); //Port
-
-    //Clear strtok?
-    data = strtok(NULL,"/");
-    while( data != NULL ) {
-      data = strtok(NULL, "/");
+    //TODO Support IPv6
+    self->ip = strtok_r (ipport, ":", &ipport);
+    self->port = strtok_r ((char *)ipport, "/", &ipport);
+    if(!self->port && !strcmp(self->protocol,"http")){
+        self->port = "80";
+    } else if(!self->port && !strcmp(self->protocol,"https")){
+        self->port = "443";
     }
 
     self->hostname = NULL;
@@ -453,7 +456,6 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     printf("\tprotocol -- %s\n",self->protocol);
     printf("\tip : %s\n",self->ip);
     printf("\tport -- %s\n",self->port);
-    free(data);
 }
 
 OnvifDevice * OnvifDevice__create(const char * device_url) {
