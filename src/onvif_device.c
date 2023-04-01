@@ -12,9 +12,6 @@
 #include "wsddapi.h"
 #include "httpda.h"
 
-const char * SENDER_UNAUTHORIZED = "Sender not Authorized";
-const char * ONVIF_UNAUTHORIZED = "\"http://www.onvif.org/ver10/error\":NotAuthorized";
-
 const int UNAUTHORIZED = 0;
 const int AUTHORIZED = 1;
 const char * TIME_CONST = "Time";
@@ -70,18 +67,9 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
         media->xaddr = malloc(strlen(response.Capabilities->Media->XAddr)+1);
         strcpy(media->xaddr,response.Capabilities->Media->XAddr);
         capabilities->media = media;
-        self->authorized = AUTHORIZED;
     } else {
-        if(strcmp(soap_fault_string(self->device_soap->soap),SENDER_UNAUTHORIZED) == 0){
-            self->authorized = UNAUTHORIZED;
-            printf("unauthorized 1\n");
-        } else if(strcmp(soap_fault_detail(self->device_soap->soap),ONVIF_UNAUTHORIZED) == 0){
-            self->authorized = UNAUTHORIZED;
-            printf("unauthorized 2\n");
-        } else {
-            printf("OnvifDevice__device_getCapabilities ERROR");
-            soap_print_fault(self->device_soap->soap, stderr);
-        }
+        printf("OnvifDevice__device_getCapabilities ERROR");
+        soap_print_fault(self->device_soap->soap, stderr);
     }
 
 exit:
@@ -406,9 +394,18 @@ struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self, int profile_ind
 
 void OnvifDevice_authenticate(OnvifDevice* self){
     self->media_soap = OnvifDevice__device_createMediaSoap(self);
-    if(self->authorized){
-        //TODO build the rest
+    if(!self->media_soap){
+        self->authorized = UNAUTHORIZED;
+        return;
     }
+
+    char * stream_uri = OnvifDevice__media_getStreamUri(self,0);
+    if(!stream_uri){
+        self->authorized = UNAUTHORIZED;
+        return;
+    }
+
+    self->authorized = AUTHORIZED;
 }
 
 void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass){
