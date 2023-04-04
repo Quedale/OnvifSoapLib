@@ -156,6 +156,235 @@ soap_wsdd_mode wsdd_event_Resolve(struct soap *soap, const char *MessageID, cons
 void wsdd_event_ResolveMatches(struct soap *soap, unsigned int InstanceId, const char * SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ResolveMatchType *match)
 { printf("wsdd_event_ResolveMatches\n"); }
 
+void urldecode(char *dst, const char *src)
+{
+        char a, b;
+        while (*src) {
+                if ((*src == '%') &&
+                    ((a = src[1]) && (b = src[2])) &&
+                    (isxdigit(a) && isxdigit(b))) {
+                        if (a >= 'a')
+                                a -= 'a'-'A';
+                        if (a >= 'A')
+                                a -= ('A' - 10);
+                        else
+                                a -= '0';
+                        if (b >= 'a')
+                                b -= 'a'-'A';
+                        if (b >= 'A')
+                                b -= ('A' - 10);
+                        else
+                                b -= '0';
+                        *dst++ = 16*a+b;
+                        src+=3;
+                } else if (*src == '+') {
+                        *dst++ = ' ';
+                        src++;
+                } else {
+                        *dst++ = *src++;
+                }
+        }
+        *dst++ = '\0';
+}
+
+int startsWith(const char *pre, const char *str)
+{
+    size_t lenpre = strlen(pre),
+           lenstr = strlen(str);
+    return lenstr < lenpre ? 0 : memcmp(pre, str, lenpre) == 0;
+}
+
+void OnvifScopes__destroy(OnvifScopes * scopes){
+    int i;
+    for(i=0;i<scopes->count;i++){
+        free(scopes->scopes[i]->scope);
+        free(scopes->scopes[i]);
+    }
+    free(scopes->scopes);
+    free(scopes);
+}
+
+char * OnvifScopes__extract_scope(OnvifScopes * scopes, char * key){
+    printf("OnvifScopes__extract_scope %s\n", key);
+    char* ret_val = "";
+    const char delimeter[2] = "/";
+    const char * onvif_key_del = "onvif://www.onvif.org/";
+
+    char key_w_del[strlen(key)+1+strlen(delimeter)];
+    strcpy(key_w_del, key);
+    strcat(key_w_del, delimeter);
+
+    int a;
+    for (a = 0 ; a < scopes->count ; ++a) {
+        if(startsWith(onvif_key_del, scopes->scopes[a]->scope)){
+            //Drop onvif scope prefix
+            char subs[strlen(scopes->scopes[a]->scope)-strlen(onvif_key_del) + 1];
+            strncpy(subs,scopes->scopes[a]->scope+(strlen(onvif_key_del)),strlen(scopes->scopes[a]->scope) - strlen(onvif_key_del)+1);
+
+            if(startsWith(key_w_del,subs)){ // Found Scope
+                //Extract value
+                char sval[strlen(subs)-strlen(key_w_del) + 1];
+                strncpy(sval,subs+(strlen(key_w_del)),strlen(subs) - strlen(key_w_del)+1);
+
+                //Decode http string (e.g. %20 = whitespace)
+                char output[strlen(sval)+1];
+                urldecode(output, sval);
+
+                if(strlen(ret_val)==0){
+                    ret_val = malloc(strlen(output)+1);
+                    memcpy(ret_val,output,strlen(output)+1);
+                } else {
+                    ret_val = realloc(ret_val, strlen(ret_val) + strlen(output) +1);
+                    strcat(ret_val, " ");
+                    strcat(ret_val, output);
+                }
+            }
+        }
+  }
+
+  return ret_val;
+}
+
+OnvifInterfaces * OnvifDevice__device_getNetworkInterfaces(OnvifDevice* self) {
+    struct _tds__GetNetworkInterfaces req;
+    struct _tds__GetNetworkInterfacesResponse resp;
+    OnvifInterfaces * interfaces = NULL;
+
+    pthread_mutex_lock(self->device_lock);
+
+    printf("OnvifDevice__device_getNetworkInterfaces [%s]\n", self->device_soap->endpoint);
+    int wsseret = set_wsse_data(self,self->device_soap);
+    if(!wsseret){
+        //TODO Error handling
+        goto exit;
+    }
+
+    if (soap_call___tds__GetNetworkInterfaces(self->device_soap->soap, self->device_soap->endpoint, "", &req,  &resp) == SOAP_OK){
+        interfaces = malloc(sizeof(OnvifInterfaces));
+        interfaces->interfaces = malloc(0);
+        interfaces->count = 0;
+
+        int i;
+        for(i=0;i<resp.__sizeNetworkInterfaces;i++){
+            struct tt__NetworkInterface interface = resp.NetworkInterfaces[i];
+            OnvifInterface * onvifinterface = malloc(sizeof(OnvifInterface));
+            onvifinterface->enabled = interface.Enabled;
+            onvifinterface->token = (char*) malloc(strlen(interface.token)+1);
+            strcpy(onvifinterface->token,interface.token);
+            
+            if(interface.Info){
+                onvifinterface->has_info = 1;
+                // onvifinterface->name = interface.Info->Name;
+                onvifinterface->name = (char*) malloc(strlen(interface.Info->Name)+1);
+                strcpy(onvifinterface->name,interface.Info->Name);
+                // onvifinterface->mac = interface.Info->HwAddress;
+                onvifinterface->mac = (char*) malloc(strlen(interface.Info->HwAddress)+1);
+                strcpy(onvifinterface->mac,interface.Info->HwAddress);
+
+                onvifinterface->mtu = interface.Info->MTU[0];
+            } else {
+                onvifinterface->has_info = 0;
+            }
+
+            if(interface.IPv4){
+                onvifinterface->ipv4_enabled = interface.IPv4->Enabled;
+                // onvifinterface->ipv4_dhcp = interface.IPv4->Config->DHCP;
+                onvifinterface->ipv4_manual_count = interface.IPv4->Config->__sizeManual;
+                onvifinterface->ipv4_manual = malloc(0);
+                if(interface.IPv4->Config->__sizeManual > 0){
+                    struct tt__PrefixedIPv4Address * manuals = interface.IPv4->Config->Manual;
+                    for(int a=0;a<onvifinterface->ipv4_manual_count;a++){
+                        struct tt__PrefixedIPv4Address manual = manuals[a];
+                        onvifinterface->ipv4_manual = realloc(onvifinterface->ipv4_manual,sizeof(char *) * onvifinterface->ipv4_manual_count);
+                        onvifinterface->ipv4_manual[onvifinterface->ipv4_manual_count-1] = malloc(strlen(manual.Address) + 1);
+                        strcpy(onvifinterface->ipv4_manual[onvifinterface->ipv4_manual_count-1],manual.Address);
+                    }
+                } else {
+                    onvifinterface->ipv4_manual = NULL;
+                }
+
+                if(interface.IPv4->Config->LinkLocal){
+                    onvifinterface->ipv4_link_local = malloc(strlen(interface.IPv4->Config->LinkLocal->Address)+1);
+                    strcpy(onvifinterface->ipv4_link_local,interface.IPv4->Config->LinkLocal->Address);
+                } else {
+                    onvifinterface->ipv4_link_local = NULL;
+                }
+
+                if(interface.IPv4->Config->FromDHCP){
+                    onvifinterface->ipv4_from_dhcp = malloc(strlen(interface.IPv4->Config->FromDHCP->Address)+1);
+                    strcpy(onvifinterface->ipv4_from_dhcp,interface.IPv4->Config->FromDHCP->Address);
+                } else {
+                    onvifinterface->ipv4_from_dhcp = NULL;
+                }
+            } else {
+                onvifinterface->ipv4_enabled = 0;
+            }
+
+            interfaces->count++;
+            interfaces->interfaces = realloc (interfaces->interfaces, sizeof (onvifinterface) * interfaces->count);
+            interfaces->interfaces[interfaces->count-1] = onvifinterface;
+        }
+
+    } else {
+        printf("OnvifDevice__device_getNetworkInterfaces ERROR\n");
+        soap_print_fault(self->device_soap->soap, stderr);
+    }
+
+exit:
+    soap_destroy(self->device_soap->soap);
+    soap_end(self->device_soap->soap);  
+    soap_done(self->device_soap->soap); 
+    pthread_mutex_unlock(self->device_lock);
+    return interfaces;
+}
+
+OnvifScopes * OnvifDevice__device_getScopes(OnvifDevice* self) {
+    struct _tds__GetScopes req;
+    struct _tds__GetScopesResponse resp;
+    OnvifScopes * scopes = NULL;
+
+    pthread_mutex_lock(self->device_lock);
+    printf("OnvifDevice__device_getScopes [%s]\n", self->device_soap->endpoint);
+    int wsseret = set_wsse_data(self,self->device_soap);
+    if(!wsseret){
+        //TODO Error handling
+        goto exit;
+    }
+
+    if (soap_call___tds__GetScopes(self->device_soap->soap, self->device_soap->endpoint, "", &req,  &resp) == SOAP_OK){
+        scopes = malloc(sizeof(OnvifScopes));
+        scopes->scopes = malloc(0);
+        scopes->count = 0;
+
+        int i;
+        for(i=0;i<resp.__sizeScopes;i++){
+            struct tt__Scope scope = resp.Scopes[i];
+            // tt__ScopeDefinition scopedef = scope.ScopeDef;
+            xsd__anyURI scopeitem = scope.ScopeItem;
+
+            OnvifScope * onvifscope = malloc(sizeof(OnvifScope));
+            onvifscope->scope = (char*) malloc(strlen(scopeitem)+1);
+            strcpy(onvifscope->scope,scopeitem);
+
+            scopes->count++;
+            scopes->scopes = realloc (scopes->scopes, sizeof (OnvifScope) * scopes->count);
+            scopes->scopes[scopes->count-1] = onvifscope;
+
+            // tt__ScopeDefinition__Fixed : tt__ScopeDefinition__Fixed || tt__ScopeDefinition__Configurable
+        }
+    } else {
+        printf("OnvifDevice__device_getScopes ERROR\n");
+        soap_print_fault(self->device_soap->soap, stderr);
+    }
+
+exit:
+    soap_destroy(self->device_soap->soap);
+    soap_end(self->device_soap->soap);  
+    soap_done(self->device_soap->soap); 
+    pthread_mutex_unlock(self->device_lock);
+    return scopes;
+}
+
 char * OnvifDevice__device_getHostname(OnvifDevice* self) {
     struct _tds__GetHostname gethostname;
     struct _tds__GetHostnameResponse response;
