@@ -113,7 +113,7 @@ typedef struct {
 #endif
 
 
-
+SHARD_EXPORT void OnvifInterfaces__destroy(OnvifInterfaces * self);
 SHARD_EXPORT OnvifDevice * OnvifDevice__create(const char * device_url);
 SHARD_EXPORT void OnvifDevice__destroy(OnvifDevice* device); 
 SHARD_EXPORT void OnvifDevice_authenticate(OnvifDevice* self);
@@ -122,6 +122,7 @@ SHARD_EXPORT char * OnvifScopes__extract_scope(OnvifScopes * scopes, char * key)
 SHARD_EXPORT void OnvifScopes__destroy(OnvifScopes * scopes);
 SHARD_EXPORT char * OnvifDevice__device_getHostname(OnvifDevice* self);  // equivalent to "point->x()"
 SHARD_EXPORT OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self);
+SHARD_EXPORT void OnvifDeviceInformation__destroy(OnvifDeviceInformation *self);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *self);
 SHARD_EXPORT void OnvifDevice_get_profiles(OnvifDevice* self);
 SHARD_EXPORT OnvifInterfaces * OnvifDevice__device_getNetworkInterfaces(OnvifDevice* self);
