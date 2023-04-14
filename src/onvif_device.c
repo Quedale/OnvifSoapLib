@@ -75,7 +75,6 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
 exit:
     soap_destroy(self->device_soap->soap);
     soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
     pthread_mutex_unlock(self->device_lock);
     return capabilities;
 }
@@ -147,7 +146,6 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
 exit:
     soap_destroy(self->device_soap->soap);
     soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
     pthread_mutex_unlock(self->device_lock);
     return ret;
 }
@@ -381,7 +379,6 @@ OnvifInterfaces * OnvifDevice__device_getNetworkInterfaces(OnvifDevice* self) {
 exit:
     soap_destroy(self->device_soap->soap);
     soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
     pthread_mutex_unlock(self->device_lock);
     return interfaces;
 }
@@ -428,7 +425,6 @@ OnvifScopes * OnvifDevice__device_getScopes(OnvifDevice* self) {
 exit:
     soap_destroy(self->device_soap->soap);
     soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
     pthread_mutex_unlock(self->device_lock);
     return scopes;
 }
@@ -447,7 +443,8 @@ char * OnvifDevice__device_getHostname(OnvifDevice* self) {
     }
 
     if (soap_call___tds__GetHostname(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response) == SOAP_OK){
-        ret = response.HostnameInformation->Name;
+        ret = malloc(strlen(response.HostnameInformation->Name)+1); 
+        strcpy(ret,response.HostnameInformation->Name);
     } else {
         printf("OnvifDevice__device_getHostname ERROR\n");
         soap_print_fault(self->device_soap->soap, stderr);
@@ -457,7 +454,6 @@ char * OnvifDevice__device_getHostname(OnvifDevice* self) {
 exit:
     soap_destroy(self->device_soap->soap);
     soap_end(self->device_soap->soap);  
-    soap_done(self->device_soap->soap); 
     pthread_mutex_unlock(self->device_lock);
     return ret;
 }
@@ -481,7 +477,7 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     }
 
     pthread_mutex_lock(self->media_lock);
-    printf("OnvifDevice__media_getStreamUri [%s]\n", self->media_soap->endpoint);
+    printf("OnvifDevice__media_getStreamUri [%s][%i]\n", self->media_soap->endpoint,profile_index);
     // req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap->soap,sizeof(struct tt__StreamSetup));//Initialize, allocate space
 	req.StreamSetup = soap_new_tt__StreamSetup(self->media_soap->soap,1);
     req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
@@ -508,7 +504,6 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
 exit:
     soap_destroy(self->media_soap->soap);
     soap_end(self->media_soap->soap);  
-    soap_done(self->media_soap->soap); 
     pthread_mutex_unlock(self->media_lock);
     return ret;
 }
@@ -553,7 +548,6 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
 exit:
     soap_destroy(self->media_soap->soap);
     soap_end(self->media_soap->soap);  
-    soap_done(self->media_soap->soap); 
     pthread_mutex_unlock(self->media_lock);
 }
 
@@ -578,7 +572,7 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
     }
 
     pthread_mutex_lock(self->media_lock);
-    printf("OnvifDevice__media_getSnapshotUri [%s]\n", self->media_soap->endpoint);
+    printf("OnvifDevice__media_getSnapshotUri [%s][%i]\n", self->media_soap->endpoint,profile_index);
     int wsseret = set_wsse_data(self,self->media_soap);
     if(!wsseret){
         //TODO Error handling
@@ -598,34 +592,27 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
 exit:
     soap_destroy(self->media_soap->soap); 
     soap_end(self->media_soap->soap); 
-    soap_done(self->media_soap->soap); 
     pthread_mutex_unlock(self->media_lock);
     return ret_val;
 }
 
 struct chunk * get_http_body(OnvifDevice *self, char * url)
 {
-
-    // struct chunk * chunc = malloc(sizeof(struct chunk));
     struct chunk chunc;
+    struct chunk * nchunc = NULL;
     memset (&chunc, 0, sizeof (chunc));
     
-    struct soap *soap = NULL;
-    struct http_da_info *info = NULL;
-    if (!self->snapshot){
-        self->snapshot = malloc(sizeof(struct OnvifHttp));
-        self->snapshot->soap = soap_new();
-        self->snapshot->info = malloc(sizeof(struct http_da_info));
-        memset (self->snapshot->info, 0, sizeof(struct http_da_info));
+    //Creating soap instance to avoid long running locks.
+    struct soap *soap = soap_new();
+    if (!self->snapshot_da_info){
+        self->snapshot_da_info = malloc(sizeof(struct http_da_info));
+        memset (self->snapshot_da_info, 0, sizeof(struct http_da_info));
     }
-
-    soap = self->snapshot->soap;
-    info = self->snapshot->info;
 
     soap_register_plugin(soap, http_da);
 
-    if (info->authrealm){
-        http_da_restore(soap, info);
+    if (self->snapshot_da_info->authrealm){
+        http_da_restore(soap, self->snapshot_da_info);
     }
 
     if (soap_GET(soap, url, NULL)
@@ -633,7 +620,7 @@ struct chunk * get_http_body(OnvifDevice *self, char * url)
             || (chunc.buffer = soap_http_get_body(soap, &(chunc.size))) != NULL
             || soap_end_recv(soap)){
             if (soap->error == 401){
-                http_da_save(soap, info, soap->authrealm, OnvifDevice__device_get_username(self), OnvifDevice__device_get_password(self));
+                http_da_save(soap, self->snapshot_da_info, soap->authrealm, OnvifDevice__device_get_username(self), OnvifDevice__device_get_password(self));
                 if (soap_GET(soap, url, NULL)
                     || soap_begin_recv(soap)
                     || (chunc.buffer = soap_http_get_body(soap, &(chunc.size))) != NULL
@@ -642,6 +629,7 @@ struct chunk * get_http_body(OnvifDevice *self, char * url)
                     //TODO handle error codes
                     printf("get_http_body ERROR-1\n");
                     soap_print_fault(soap, stderr);
+                    goto exit;
                 }
             }
 
@@ -649,15 +637,23 @@ struct chunk * get_http_body(OnvifDevice *self, char * url)
         //TODO handle error codes
         printf("get_http_body ERROR-2\n");
         soap_print_fault(soap, stderr);
+        goto exit;
     }
-    soap_closesock(soap);
 
     //Copy chunk before cleanup
-    struct chunk * nchunc = malloc(sizeof(struct chunk));
+    nchunc = malloc(sizeof(struct chunk));
     nchunc->size = chunc.size;
     nchunc->buffer = malloc(chunc.size);
     memcpy(nchunc->buffer,chunc.buffer,chunc.size);
 
+exit:
+    http_da_release(soap, self->snapshot_da_info);
+    soap_closesock(soap);
+    soap_destroy(soap); 
+    soap_end(soap); 
+    soap_done(soap);
+    soap_free(soap); 
+    
     return nchunc;
 }
 
@@ -708,7 +704,7 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     pthread_mutex_init(self->media_lock, NULL);
     self->sizeSrofiles = 0;
     self->profiles = NULL;
-    self->snapshot = NULL;
+    self->snapshot_da_info = NULL;
     
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
@@ -750,16 +746,6 @@ void OnvifProfile__destroy(struct OnvifProfile profiles){
     free(profiles.token);
 }
 
-void OnvifHttp__destroy(struct OnvifHttp* http){
-    if(http){
-        http_da_release(http->soap, http->info);
-        soap_destroy(http->soap);
-        soap_end(http->soap);  //End clears the buffer. either we copy and run end or we return without end
-        soap_done(http->soap); 
-        soap_free(http->soap);
-    }
-}
-
 void OnvifDevice__destroy(OnvifDevice* device) {
     printf("OnvifDevice__destroy\n");
     if (device) {
@@ -770,7 +756,8 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         {
             OnvifProfile__destroy(device->profiles[i]);
         }
-        OnvifHttp__destroy(device->snapshot);
+        if(device->snapshot_da_info)
+            free(device->snapshot_da_info);
         free(device->profiles);
         pthread_mutex_destroy(device->device_lock);
         free(device->device_lock);

@@ -70,11 +70,6 @@ typedef struct {
     char * hardwareId;
 } OnvifDeviceInformation;
 
-struct OnvifHttp {
-    struct soap *soap;
-    void * info;
-};
-
 typedef struct {
     char * protocol;
     char * ip;
@@ -88,7 +83,7 @@ typedef struct {
     void * priv_ptr;
     int sizeSrofiles;
     struct OnvifProfile * profiles;
-    struct OnvifHttp * snapshot;
+    struct http_da_info *  snapshot_da_info;
 } OnvifDevice;
 
 
