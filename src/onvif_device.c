@@ -11,9 +11,11 @@
 #endif
 #include "wsddapi.h"
 #include "httpda.h"
+#include "ip_match.h"
 
-const int UNAUTHORIZED = 0;
-const int AUTHORIZED = 1;
+
+#define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
+
 const char * TIME_CONST = "Time";
 const char * AUTH_CONST = "Auth";
 
@@ -39,10 +41,30 @@ int set_wsse_data(OnvifDevice* self, OnvifSoapClient* soap){
         || soap_wsse_add_UsernameTokenDigest(soap->soap, AUTH_CONST, OnvifDevice__device_get_username(self),OnvifDevice__device_get_password(self))){
         //TODO Error handling
         printf("Unable to set wsse creds...\n");
+        self->last_error = ONVIF_CONNECTION_ERROR;
         return 0;
     }
 
+    self->last_error = ONVIF_ERROR_NONE;
     return 1;
+}
+
+OnvifErrorTypes handle_soap_error(struct soap * soap, int error_code){
+    if (error_code == SOAP_UDP_ERROR || 
+        error_code == SOAP_TCP_ERROR || 
+        error_code == SOAP_HTTP_ERROR || 
+        error_code == SOAP_SSL_ERROR || 
+        error_code == SOAP_ZLIB_ERROR){
+        printf("CONNECTION ERROR\n");
+        return ONVIF_CONNECTION_ERROR;
+    } else if (strcmp(soap_fault_subcode(soap),FAULT_UNAUTHORIZED)) {
+        printf("Warning : NOT AUTHORIZED\n");
+        return ONVIF_NOT_AUTHORIZED;
+    } else { //Mostly SOAP_FAULT
+        printf("SOAP ERROR %i [%s]\n",error_code, soap_fault_subcode(soap));
+        soap_print_fault(soap, stderr);
+        return ONVIF_SOAP_ERROR;
+    }
 }
 
 OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
@@ -61,15 +83,15 @@ OnvifCapabilities* OnvifDevice__device_getCapabilities(OnvifDevice* self) {
         goto exit;
     }
 
-    if (soap_call___tds__GetCapabilities(self->device_soap->soap, self->device_soap->endpoint, NULL, &gethostname,  &response) == SOAP_OK){
+    int soapret = soap_call___tds__GetCapabilities(self->device_soap->soap, self->device_soap->endpoint, NULL, &gethostname,  &response);
+    if (soapret == SOAP_OK){
         capabilities = (OnvifCapabilities *) malloc(sizeof(OnvifCapabilities));
         OnvifMedia* media =  (OnvifMedia *) malloc(sizeof(OnvifMedia));
         media->xaddr = malloc(strlen(response.Capabilities->Media->XAddr)+1);
         strcpy(media->xaddr,response.Capabilities->Media->XAddr);
         capabilities->media = media;
     } else {
-        printf("OnvifDevice__device_getCapabilities ERROR");
-        soap_print_fault(self->device_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -121,7 +143,8 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
         goto exit;
     }
 
-    if (soap_call___tds__GetDeviceInformation(self->device_soap->soap, self->device_soap->endpoint, "", &request,  &response) == SOAP_OK){
+    int soapret = soap_call___tds__GetDeviceInformation(self->device_soap->soap, self->device_soap->endpoint, "", &request,  &response);
+    if (soapret == SOAP_OK){
         ret = (OnvifDeviceInformation *) malloc(sizeof(OnvifDeviceInformation));
 
         ret->firmwareVersion = (char*) malloc(strlen(response.FirmwareVersion)+1);
@@ -139,8 +162,7 @@ OnvifDeviceInformation * OnvifDevice__device_getDeviceInformation(OnvifDevice *s
         ret->serialNumber = (char*) malloc(strlen(response.SerialNumber)+1);
         strcpy(ret->serialNumber,response.SerialNumber);
     } else {
-        printf("OnvifDevice__device_getDeviceInformation ERROR\n");
-        soap_print_fault(self->device_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -304,7 +326,8 @@ OnvifInterfaces * OnvifDevice__device_getNetworkInterfaces(OnvifDevice* self) {
         goto exit;
     }
 
-    if (soap_call___tds__GetNetworkInterfaces(self->device_soap->soap, self->device_soap->endpoint, "", &req,  &resp) == SOAP_OK){
+    int soapret = soap_call___tds__GetNetworkInterfaces(self->device_soap->soap, self->device_soap->endpoint, "", &req,  &resp);
+    if (soapret == SOAP_OK){
         interfaces = malloc(sizeof(OnvifInterfaces));
         interfaces->interfaces = malloc(0);
         interfaces->count = 0;
@@ -372,8 +395,7 @@ OnvifInterfaces * OnvifDevice__device_getNetworkInterfaces(OnvifDevice* self) {
         }
 
     } else {
-        printf("OnvifDevice__device_getNetworkInterfaces ERROR\n");
-        soap_print_fault(self->device_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -396,7 +418,8 @@ OnvifScopes * OnvifDevice__device_getScopes(OnvifDevice* self) {
         goto exit;
     }
 
-    if (soap_call___tds__GetScopes(self->device_soap->soap, self->device_soap->endpoint, "", &req,  &resp) == SOAP_OK){
+    int soapret = soap_call___tds__GetScopes(self->device_soap->soap, self->device_soap->endpoint, "", &req,  &resp);
+    if (soapret == SOAP_OK){
         scopes = malloc(sizeof(OnvifScopes));
         scopes->scopes = malloc(0);
         scopes->count = 0;
@@ -418,8 +441,7 @@ OnvifScopes * OnvifDevice__device_getScopes(OnvifDevice* self) {
             // tt__ScopeDefinition__Fixed : tt__ScopeDefinition__Fixed || tt__ScopeDefinition__Configurable
         }
     } else {
-        printf("OnvifDevice__device_getScopes ERROR\n");
-        soap_print_fault(self->device_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -442,12 +464,12 @@ char * OnvifDevice__device_getHostname(OnvifDevice* self) {
         goto exit;
     }
 
-    if (soap_call___tds__GetHostname(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response) == SOAP_OK){
+    int soapret = soap_call___tds__GetHostname(self->device_soap->soap, self->device_soap->endpoint, "", &gethostname,  &response);
+    if (soapret == SOAP_OK){
         ret = malloc(strlen(response.HostnameInformation->Name)+1); 
         strcpy(ret,response.HostnameInformation->Name);
     } else {
-        printf("OnvifDevice__device_getHostname ERROR\n");
-        soap_print_fault(self->device_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
     //TODO error handling timout, invalid url, etc...
 
@@ -493,12 +515,12 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
         goto exit;
     }
 
-    if (soap_call___trt__GetStreamUri(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp) == SOAP_OK){
+    int soapret = soap_call___trt__GetStreamUri(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp);
+    if (soapret == SOAP_OK){
         ret = malloc(strlen(resp.MediaUri->Uri)+1);
         strcpy(ret,resp.MediaUri->Uri);
     } else {
-        printf("OnvifDevice__media_getStreamUri ERROR\n");
-        soap_print_fault(self->media_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -523,7 +545,8 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
         goto exit;
     }
 
-    if (soap_call___trt__GetProfiles(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp) == SOAP_OK){
+    int soapret = soap_call___trt__GetProfiles(self->media_soap->soap, self->media_soap->endpoint, "", &req, &resp);
+    if (soapret == SOAP_OK){
         // Traverse all configuration files in the response structure
         if (resp.Profiles != NULL)
         {
@@ -541,8 +564,7 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
                 }
         }  
     } else {
-        printf("OnvifDevice_get_profiles ERROR\n");
-        soap_print_fault(self->media_soap->soap, stderr);
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -580,13 +602,12 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
         goto exit;
     }
 
-    if (soap_call___trt__GetSnapshotUri(self->media_soap->soap, self->media_soap->endpoint, NULL, &request,  &response) == SOAP_OK){
+    int soapret = soap_call___trt__GetSnapshotUri(self->media_soap->soap, self->media_soap->endpoint, NULL, &request,  &response);
+    if (soapret == SOAP_OK){
         ret_val = malloc(strlen(response.MediaUri->Uri) + 1);
         strcpy(ret_val,response.MediaUri->Uri);
     } else {
-        printf("OnvifDevice__media_getSnapshotUri ERROR\n");
-        soap_print_fault(self->media_soap->soap, stderr);
-        //TODO error handling timout, invalid url, etc...
+        self->last_error = handle_soap_error(self->device_soap->soap,soapret);    
     }
 
 exit:
@@ -668,18 +689,15 @@ void OnvifDevice_authenticate(OnvifDevice* self){
     printf("OnvifDevice_authenticate [%s]\n", self->device_soap->endpoint);
     OnvifDevice__device_createMediaSoap(self);
     if(!self->media_soap){
-        self->authorized = UNAUTHORIZED;
         return;
     }
 
     printf("Created Media soap [%s]\n",self->media_soap->endpoint);
     char * stream_uri = OnvifDevice__media_getStreamUri(self,0);
     if(!stream_uri){
-        self->authorized = UNAUTHORIZED;
         return;
     }
     printf("StreamURI : %s\n",stream_uri);
-    self->authorized = AUTHORIZED;
 }
 
 void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass){
@@ -690,8 +708,24 @@ void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char*
     strcpy(pcred->user,user);
 }
 
+int OnvifDevice__is_valid(OnvifDevice* self){
+    if(!self->protocol){
+        return 0;
+    }
+    if(!self->hostname && !self->ip){
+        return 0;
+    }
+    //According to Core specification, the device entry point it set. (5.1.1)
+    if(!self->endpoint || strcmp(self->endpoint,"onvif/device_service")){
+        return 0;
+    }
+
+    //TODO Test endpoint
+    return 1;
+}
+
 void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
-    self->authorized = UNAUTHORIZED;
+    self->last_error = ONVIF_ERROR_NONE;
     struct _OnvifCred * cred = malloc(sizeof(struct _OnvifCred));
     cred->pass = malloc(0);
     cred->user = malloc(0);
@@ -705,28 +739,54 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     self->sizeSrofiles = 0;
     self->profiles = NULL;
     self->snapshot_da_info = NULL;
-    
+
     char * data = malloc(strlen(device_url)+1);
     memcpy(data,device_url,strlen(device_url)+1);
 
-    self->protocol = strtok_r ((char *)data, "://", &data);
-    char *ipport = strtok_r ((char *)data, "/", &data);
-
-    //TODO Support IPv6
-    self->ip = strtok_r (ipport, ":", &ipport);
-    self->port = strtok_r ((char *)ipport, "/", &ipport);
-    if(!self->port && !strcmp(self->protocol,"http")){
-        self->port = "80";
-    } else if(!self->port && !strcmp(self->protocol,"https")){
-        self->port = "443";
+    if(strstr(data,"://")){
+        self->protocol = strtok_r ((char *)data, "://", &data);
+    } else {
+        self->protocol = NULL;
     }
 
-    self->hostname = NULL;
+    self->port = NULL;
+
+    char * hostorip = NULL;
+    char *hostport = strtok_r ((char *)data, "/", &data);
+    self->endpoint = strtok_r ((char *)data, "\n", &data);
+
+    //TODO Support IPv6
+    if(hostport){
+        if(strstr(hostport,":")){ //If the port is set
+            hostorip = strtok_r (hostport, ":", &hostport);
+            self->port = strtok_r ((char *)hostport, "/", &hostport);
+        } else { //If no port is set
+            hostorip = strtok_r (hostport, "/", &hostport);
+        }
+    } else {
+        hostorip = NULL;
+    }
+
+    if(is_valid_ip(hostorip)){
+        self->ip = hostorip;
+        self->hostname = NULL;
+    } else {
+        self->ip = NULL;
+        self->hostname = hostorip;
+    }
+
+    if(!self->port && self->protocol && !strcmp(self->protocol,"http")){
+        self->port = "80";
+    } else if(!self->port && self->protocol && !strcmp(self->protocol,"https")){
+        self->port = "443";
+    }
 
     printf("Created Device:\n");
     printf("\tprotocol -- %s\n",self->protocol);
     printf("\tip : %s\n",self->ip);
+    printf("\thostname : %s\n",self->hostname);
     printf("\tport -- %s\n",self->port);
+    printf("\tendpoint : %s\n",self->endpoint);
 }
 
 OnvifDevice * OnvifDevice__create(const char * device_url) {

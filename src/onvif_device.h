@@ -3,6 +3,13 @@
 
 #include "client.h"
 
+typedef enum {
+    ONVIF_ERROR_NONE = 0,
+    ONVIF_CONNECTION_ERROR = 1,
+    ONVIF_SOAP_ERROR = 2,
+    ONVIF_NOT_AUTHORIZED = 3
+} OnvifErrorTypes;
+
 typedef struct {
     char * token; ///< Required attribute.
     int enabled; ///< Required element.
@@ -73,9 +80,10 @@ typedef struct {
 typedef struct {
     char * protocol;
     char * ip;
+    char * endpoint;
     char * port;
     char * hostname;
-    int authorized;
+    OnvifErrorTypes last_error;
     OnvifSoapClient* device_soap;
     pthread_mutex_t * device_lock;
     OnvifSoapClient* media_soap;
@@ -125,4 +133,5 @@ SHARD_EXPORT char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int pro
 SHARD_EXPORT struct chunk * OnvifDevice__media_getSnapshot(OnvifDevice *self, int profile_index);
 SHARD_EXPORT char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index);
 SHARD_EXPORT void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass);
+SHARD_EXPORT int OnvifDevice__is_valid(OnvifDevice* self);
 #endif
