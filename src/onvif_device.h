@@ -4,6 +4,7 @@
 #include "client.h"
 
 typedef enum {
+    ONVIF_NOT_SET = -1,
     ONVIF_ERROR_NONE = 0,
     ONVIF_CONNECTION_ERROR = 1,
     ONVIF_SOAP_ERROR = 2,

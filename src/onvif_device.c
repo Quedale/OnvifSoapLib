@@ -236,13 +236,15 @@ int startsWith(const char *pre, const char *str)
 }
 
 void OnvifScopes__destroy(OnvifScopes * scopes){
-    int i;
-    for(i=0;i<scopes->count;i++){
-        free(scopes->scopes[i]->scope);
-        free(scopes->scopes[i]);
+    if(scopes){
+        int i;
+        for(i=0;i<scopes->count;i++){
+            free(scopes->scopes[i]->scope);
+            free(scopes->scopes[i]);
+        }
+        free(scopes->scopes);
+        free(scopes);
     }
-    free(scopes->scopes);
-    free(scopes);
 }
 
 char * OnvifScopes__extract_scope(OnvifScopes * scopes, char * key){
@@ -487,14 +489,20 @@ char * OnvifDevice__media_getStreamUri(OnvifDevice* self, int profile_index){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
+    if(!self->media_soap){
+        printf("ERROR media soap not created. Authenticate first.\n");
+        self->last_error = ONVIF_SOAP_ERROR;
+        return NULL;
+    }
+
     if(!self->profiles){
         OnvifDevice_get_profiles(self);
     }
-
+    
     if(profile_index >= self->sizeSrofiles){
         printf("OnvifDevice__media_getStreamUri [%s]: profile index out-of-bounds.\n", self->media_soap->endpoint);
-        // goto exit;
-    } else {
+        // goto exit
+    } else if(self->sizeSrofiles > 0) {
         req.ProfileToken = self->profiles[profile_index].token;
     }
 
@@ -537,6 +545,12 @@ void OnvifDevice_get_profiles(OnvifDevice* self){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
+    if(!self->media_soap){
+        printf("ERROR media soap not created. Authenticate first.\n");
+        self->last_error = ONVIF_SOAP_ERROR;
+        return;
+    }
+    
     pthread_mutex_lock(self->media_lock);
     printf("OnvifDevice_get_profiles [%s]\n", self->media_soap->endpoint);
     int wsseret = set_wsse_data(self,self->media_soap);
@@ -589,7 +603,7 @@ char * OnvifDevice__media_getSnapshotUri(OnvifDevice *self, int profile_index){
 
     if(profile_index >= self->sizeSrofiles){
         printf("OnvifDevice__media_getSnapshotUri : profile index out-of-bounds. [%s]\n", self->media_soap->endpoint);
-    } else {
+    } else if(self->sizeSrofiles > 0) {
         request.ProfileToken = self->profiles[profile_index].token;
     }
 
@@ -725,7 +739,7 @@ int OnvifDevice__is_valid(OnvifDevice* self){
 }
 
 void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
-    self->last_error = ONVIF_ERROR_NONE;
+    self->last_error = ONVIF_NOT_SET;
     struct _OnvifCred * cred = malloc(sizeof(struct _OnvifCred));
     cred->pass = malloc(0);
     cred->user = malloc(0);
