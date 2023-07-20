@@ -86,9 +86,7 @@ typedef struct {
     char * hostname;
     OnvifErrorTypes last_error;
     OnvifSoapClient* device_soap;
-    pthread_mutex_t * device_lock;
     OnvifSoapClient* media_soap;
-    pthread_mutex_t * media_lock;
     void * priv_ptr;
     int sizeSrofiles;
     struct OnvifProfile * profiles;

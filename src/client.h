@@ -8,13 +8,16 @@
 
 // Header
 typedef struct {
+    pthread_mutex_t  * lock;
     char * endpoint;
     struct soap *soap;
-    void * priv_ptr;
 } OnvifSoapClient;  // forward declared for encapsulation
 
 
-OnvifSoapClient* OnvifSoapClient__create(char * endpoint,char * user, char * password);  // equivalent to "new Point(x, y)"
+OnvifSoapClient* OnvifSoapClient__create();  // equivalent to "new Point(x, y)"
 void OnvifSoapClient__destroy(OnvifSoapClient* OnvifSoapClient);  // equivalent to "delete point"
+int OnvifSoapClient__is_valid(OnvifSoapClient * self);
+void OnvifSoapClient__set_endpoint(OnvifSoapClient * self, char * endpoint);
+void OnvifSoapClient__set_credentials(OnvifSoapClient * self, char * user, char * password);
 
 #endif
