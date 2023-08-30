@@ -2,7 +2,7 @@
 #define SOAP_CLIENT_H_
 
 #include <stdlib.h>
-
+#include <pthread.h>
 
 
 
