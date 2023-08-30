@@ -567,8 +567,8 @@ void OnvifDevice__get_profile_token(OnvifDevice *self, int index, char * ret){
 
     if(index >= self->sizeSrofiles){
         printf("OnvifDevice__get_profile_token : profile index out-of-bounds. [%s]\n", self->media_soap->endpoint);
-    } else if(self->sizeSrofiles > 0 && self->sizeSrofiles < index) {
-        printf("OnvifDevice__get_profile_token : Found profile\n");
+    } else if(self->sizeSrofiles > 0 && self->sizeSrofiles > index) {
+        printf("OnvifDevice__get_profile_token : Found profile [%s]\n",self->profiles[index].token);
         strcpy(ret,self->profiles[index].token);
     } else {
         printf("OnvifDevice__get_profile_token : profile not found\n");
