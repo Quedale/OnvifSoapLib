@@ -88,6 +88,8 @@ typedef struct {
     OnvifSoapClient* device_soap;
     OnvifSoapClient* media_soap;
     void * priv_ptr;
+
+    pthread_mutex_t  * profile_lock;
     int sizeSrofiles;
     struct OnvifProfile * profiles;
     struct http_da_info *  snapshot_da_info;

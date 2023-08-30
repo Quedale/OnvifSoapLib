@@ -38,7 +38,7 @@ void OnvifDeviceList__insert_element(OnvifDeviceList* self, OnvifDevice * record
 { 
     int i;
     int count = self->device_count;
-    self->devices = realloc (self->devices,sizeof (OnvifDevice) * (count+1));
+    self->devices = realloc (self->devices,sizeof (OnvifDevice*) * (count+1));
     for(i=self->device_count; i> index; i--){
         self->devices[i] = self->devices[i-1];
     }
@@ -63,5 +63,5 @@ void OnvifDeviceList__remove_element(OnvifDeviceList* self, int index){
     //Assign arythmatic
     int count = self->device_count; 
     //Resize array memory
-    self->devices = realloc (self->devices,sizeof(OnvifDevice) * count);
+    self->devices = realloc (self->devices,sizeof(OnvifDevice*) * count);
 };
