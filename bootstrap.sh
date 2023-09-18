@@ -660,7 +660,7 @@ if [ $SKIP_GSOAP -eq 0 ] && [ $ret != 0 ]; then
     #       
     ################################################################
     PATH=$SUBPROJECT_DIR/unzip60/build/dist/bin:$PATH
-    if [ -z "$(checkProg name='unzipx' args='-v' path=$PATH)" ]; then
+    if [ -z "$(checkProg name='unzip' args='-v' path=$PATH)" ]; then
         echo "-- Building unzip --"
         downloadAndExtract file="unzip60.tar.gz" path="https://sourceforge.net/projects/infozip/files/UnZip%206.x%20%28latest%29/UnZip%206.0/unzip60.tar.gz/download"
         if [ $FAILED -eq 1 ]; then exit 1; fi
