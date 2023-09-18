@@ -12,7 +12,7 @@ Makefile
 Makefile.in
 missing
 src/generated
-gsoap-2.8
+subprojects
 configure~
 m4
 libtool

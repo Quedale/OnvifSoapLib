@@ -6,7 +6,7 @@ AC_PROG_CC
 PKG_INSTALLDIR(${prefix}/lib/pkgconfig)
 
 AC_ARG_VAR(GSOAP_SRC_DIR,[gSoap source directory location])
-AS_VAR_SET_IF(GSOAP_SRC_DIR,[],AC_SUBST(GSOAP_SRC_DIR,'$(top_srcdir)/subprojects/gsoap-2.8'))
+AS_VAR_SET_IF(GSOAP_SRC_DIR,[],AC_SUBST(GSOAP_SRC_DIR,'$(abs_srcdir)/subprojects/gsoap-2.8'))
 
 AC_CONFIG_FILES([
     Makefile

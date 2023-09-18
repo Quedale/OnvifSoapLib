@@ -1,6 +1,24 @@
+#!/bin/bash
+SKIP=0
+#Save current working directory to run configure in
+WORK_DIR=$(pwd)
+
+#Get project root directory based on autogen.sh file location
+SCRT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+SUBPROJECT_DIR=$SCRT_DIR/subprojects
+
+#Cache folder for downloaded sources
+SRC_CACHE_DIR=$SUBPROJECT_DIR/.cache
+
+#meson utility location set for pip source
+MESON_TOOL=meson
+
+#Failure marker
+FAILED=0
+
 SKIP_GSOAP=0
 SKIP_WSDL=0
-GSOAP_SRC_DIR="${GSOAP_SRC_DIR:=gsoap-2.8}" 
+GSOAP_SRC_DIR="${GSOAP_SRC_DIR:=subprojects/gsoap-2.8}" 
 i=1;
 for arg in "$@" 
 do
@@ -13,29 +31,660 @@ do
     i=$((i + 1));
 done
 
-sudo apt install automake autoconf gcc make pkg-config
-sudo apt install unzip
+# Define color code constants
+ORANGE='\033[0;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-if [ $SKIP_GSOAP -eq 0 ]; then
-echo "-- Building gsoap libgsoap-dev --"
-    #WS-Security depends on OpenSSL library 3.0 or 1.1
-    wget https://sourceforge.net/projects/gsoap2/files/gsoap_2.8.123.zip/download
-    unzip download
-    rm download
-    cd gsoap-2.8
-    mkdir build
-    ./configure --with-openssl=/usr/lib/ssl --prefix=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/build
-    LIBRARY_PATH="$(pkg-config --variable=libdir openssl):$LIBRARY_PATH" \
-    LD_LIBRARY_PATH="$(pkg-config --variable=libdir openssl):$LD_LIBRARY_PATH" \
-        make -j$(nproc)
-    make install
-    cd ..
+############################################
+#
+# Function to print time for human
+#
+############################################
+function displaytime {
+  local T=$1
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
+  local S=$((T%60))
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** "
+  (( $D > 0 )) && printf '%d days ' $D
+  (( $H > 0 )) && printf '%d hours ' $H
+  (( $M > 0 )) && printf '%d minutes ' $M
+  (( $D > 0 || $H > 0 || $M > 0 )) && printf 'and '
+  printf "%d seconds\n${NC}" $S
+  printf "${ORANGE}*****************************\n${NC}"
+}
+
+############################################
+#
+# Function to download and extract tar package file
+# Can optionally use a caching folder defined with SRC_CACHE_DIR
+#
+############################################
+downloadAndExtract (){
+  local path file # reset first
+  local "${@}"
+
+  if [ $SKIP -eq 1 ]
+  then
+      printf "${ORANGE}*****************************\n${NC}"
+      printf "${ORANGE}*** Skipping Download ${path} ***\n${NC}"
+      printf "${ORANGE}*****************************\n${NC}"
+      return
+  fi
+
+  dest_val=""
+  if [ ! -z "$SRC_CACHE_DIR" ]; then
+    dest_val="$SRC_CACHE_DIR/${file}"
+  else
+    dest_val=${file}
+  fi
+
+  if [ ! -f "$dest_val" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** Downloading : ${path} ***\n${NC}"
+    printf "${ORANGE}*** Destination : $dest_val ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    wget ${path} -O $dest_val
+  else
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** Source already downloaded : ${path} ***\n${NC}"
+    printf "${ORANGE}*** Destination : $dest_val ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** Extracting : ${file} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+  if [[ $dest_val == *.tar.gz ]]; then
+    tar xfz $dest_val
+  elif [[ $dest_val == *.tar.xz ]]; then
+    tar xf $dest_val
+  elif [[ $dest_val == *.tar.bz2 ]]; then
+    tar xjf $dest_val
+  elif [[ $dest_val == *.zip ]]; then
+    unzip -o $dest_val
+  else
+    echo "ERROR FILE NOT FOUND ${path} // ${file} // $dest_val"
+    FAILED=1
+  fi
+}
+
+############################################
+#
+# Function to clone a git repository or pull if it already exists locally
+# Can optionally use a caching folder defined with SRC_CACHE_DIR
+#
+############################################
+pullOrClone (){
+  local path tag depth recurse ignorecache # reset first
+  local "${@}"
+
+  if [ $SKIP -eq 1 ]
+  then
+      printf "${ORANGE}*****************************\n${NC}"
+      printf "${ORANGE}*** Skipping Pull/Clone ${tag}@${path} ***\n${NC}"
+      printf "${ORANGE}*****************************\n${NC}"
+      return
+  fi
+
+  recursestr=""
+  if [ ! -z "${recurse}" ] 
+  then
+    recursestr="--recurse-submodules"
+  fi
+  depthstr=""
+  if [ ! -z "${depth}" ] 
+  then
+    depthstr="--depth ${depth}"
+  fi 
+
+  tgstr=""
+  tgstr2=""
+  if [ ! -z "${tag}" ] 
+  then
+    tgstr="origin tags/${tag}"
+    tgstr2="-b ${tag}"
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** Cloning ${tag}@${path} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+  IFS='/' read -ra ADDR <<< "$path"
+  namedotgit=${ADDR[-1]}
+  IFS='.' read -ra ADDR <<< "$namedotgit"
+  name=${ADDR[0]}
+
+  dest_val=""
+  if [ ! -z "$SRC_CACHE_DIR" ] && [ -z "${ignorecache}" ]; then
+    dest_val="$SRC_CACHE_DIR/$name"
+  else
+    dest_val=$name
+  fi
+  if [ ! -z "${tag}" ]; then
+    dest_val+="-${tag}"
+  fi
+
+  if [ -z "$SRC_CACHE_DIR" ] || [ -z "${ignorecache}" ]; then 
+    #TODO Check if it's the right tag
+    git -C $dest_val pull $tgstr 2> /dev/null || git clone -j$(nproc) $recursestr $depthstr $tgstr2 ${path} $dest_val
+  elif [ -d "$dest_val" ] && [ ! -z "${tag}" ]; then #Folder exist, switch to tag
+    currenttag=$(git -C $dest_val tag --points-at ${tag})
+    echo "TODO Check current tag \"${tag}\" == \"$currenttag\""
+    git -C $dest_val pull $tgstr 2> /dev/null || git clone -j$(nproc) $recursestr $depthstr $tgstr2 ${path} $dest_val
+  elif [ -d "$dest_val" ] && [ -z "${tag}" ]; then #Folder exist, switch to main
+    currenttag=$(git -C $dest_val tag --points-at ${tag})
+    echo "TODO Handle no tag \"${tag}\" == \"$currenttag\""
+    git -C $dest_val pull $tgstr 2> /dev/null || git clone -j$(nproc) $recursestr $depthstr $tgstr2 ${path} $dest_val
+  elif [ ! -d "$dest_val" ]; then #fresh start
+    git -C $dest_val pull $tgstr 2> /dev/null || git clone -j$(nproc) $recursestr $depthstr $tgstr2 ${path} $dest_val
+  else
+    if [ -d "$dest_val" ]; then
+      echo "yey destval"
+    fi
+    if [ -z "${tag}" ]; then
+      echo "yey tag"
+    fi
+    echo "1 $dest_val : $(test -f \"$dest_val\")"
+    echo "2 ${tag} : $(test -z \"${tag}\")"
+  fi
+
+  if [ ! -z "$SRC_CACHE_DIR" ] && [ -z "${ignorecache}" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** Copy repo from cache ***\n${NC}"
+    printf "${ORANGE}*** $dest_val ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    rm -rf $name
+    cp -r $dest_val ./$name
+  fi
+}
+
+############################################
+#
+# Function to build a project configured with autotools
+#
+############################################
+buildMakeProject(){
+  local srcdir prefix autogen autoreconf configure make cmakedir cmakeargs installargs bootstrap configcustom
+  local "${@}"
+
+  build_start=$SECONDS
+  if [ $SKIP -eq 1 ]; then
+      printf "${ORANGE}*****************************\n${NC}"
+      printf "${ORANGE}*** Skipping Make ${srcdir} ***\n${NC}"
+      printf "${ORANGE}*****************************\n${NC}"
+      return
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}* Building Project ***\n${NC}"
+  printf "${ORANGE}* Src dir : ${srcdir} ***\n${NC}"
+  printf "${ORANGE}* Prefix : ${prefix} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+
+  curr_dir=$(pwd)
+  cd ${srcdir}
+
+  if [ -f "./bootstrap" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** bootstrap ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    ./bootstrap ${bootstrap}
+    status=$?
+    if [ $status -ne 0 ]; then
+        printf "${RED}*****************************\n${NC}"
+        printf "${RED}*** ./bootstrap failed ${srcdir} ***\n${NC}"
+        printf "${RED}*****************************\n${NC}"
+        FAILED=1
+        cd $curr_dir
+        return
+    fi
+  fi
+
+  if [ -f "./bootstrap.sh" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** bootstrap.sh ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    ./bootstrap.sh ${bootstrap}
+    status=$?
+    if [ $status -ne 0 ]; then
+        printf "${RED}*****************************\n${NC}"
+        printf "${RED}*** ./bootstrap.sh failed ${srcdir} ***\n${NC}"
+        printf "${RED}*****************************\n${NC}"
+        FAILED=1
+        cd $curr_dir
+        return
+    fi
+  fi
+  if [ -f "./autogen.sh" ] && [ "${autogen}" != "skip" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** autogen ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    ./autogen.sh ${autogen}
+    status=$?
+    if [ $status -ne 0 ]; then
+        printf "${RED}*****************************\n${NC}"
+        printf "${RED}*** Autogen failed ${srcdir} ***\n${NC}"
+        printf "${RED}*****************************\n${NC}"
+        FAILED=1
+        cd $curr_dir
+        return
+    fi
+  fi
+
+  if [ ! -z "${autoreconf}" ] 
+  then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** autoreconf ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    autoreconf ${autoreconf}
+    status=$?
+    if [ $status -ne 0 ]; then
+        printf "${RED}*****************************\n${NC}"
+        printf "${RED}*** Autoreconf failed ${srcdir} ***\n${NC}"
+        printf "${RED}*****************************\n${NC}"
+        FAILED=1
+        cd $curr_dir
+        return
+    fi
+  fi
+  if [ ! -z "${cmakedir}" ] 
+  then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** cmake ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*** Args ${cmakeargs} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    cmake -G "Unix Makefiles" \
+      ${cmakeargs} \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="${prefix}" \
+      -DENABLE_TESTS=OFF \
+      -DENABLE_SHARED=on \
+      "${cmakedir}"
+    status=$?
+    if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** CMake failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+    fi
+  fi
+
+  if [ ! -z "${configcustom}" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** custom config ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*** ${configcustom} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+      bash -c "${configcustom}"
+    status=$?
+    if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** Custom Config failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
+    fi
+  fi
+
+  if [ -f "./configure" ]; then
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** configure ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+    ./configure \
+        --prefix=${prefix} \
+        ${configure}
+    status=$?
+    if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** ./configure failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
+    fi
+  else
+    printf "${ORANGE}*****************************\n${NC}"
+    printf "${ORANGE}*** no configuration available ${srcdir} ***\n${NC}"
+    printf "${ORANGE}*****************************\n${NC}"
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** compile ${srcdir} ***\n${NC}"
+  printf "${ORANGE}*** Make Args : ${makeargs} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+  make -j$(nproc) ${make}
+  status=$?
+  if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** Make failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
+  fi
+
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** install ${srcdir} ***\n${NC}"
+  printf "${ORANGE}*** Make Args : ${makeargs} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+  make -j$(nproc) ${make} install ${installargs}
+  status=$?
+  if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** Make failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
+  fi
+
+  build_time=$(( SECONDS - build_start ))
+  displaytime $build_time
+
+  cd $curr_dir
+}
+
+
+############################################
+#
+# Function to build a project configured with meson
+#
+############################################
+buildMesonProject() {
+  local srcdir mesonargs prefix setuppatch bindir destdir builddir defaultlib clean
+  local "${@}"
+
+  build_start=$SECONDS
+  if [ $SKIP -eq 1 ]
+  then
+      printf "${ORANGE}*****************************\n${NC}"
+      printf "${ORANGE}*** Skipping Meson ${srcdir} ***\n${NC}"
+      printf "${ORANGE}*****************************\n${NC}"
+      return
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}* Building Github Project ***\n${NC}"
+  printf "${ORANGE}* Src dir : ${srcdir} ***\n${NC}"
+  printf "${ORANGE}* Prefix : ${prefix} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+
+  curr_dir=$(pwd)
+
+  build_dir=""
+  if [ ! -z "${builddir}" ] 
+  then
+    build_dir="${builddir}"
+  else
+    build_dir="build_dir"
+  fi
+
+  default_lib=""
+  if [ ! -z "${defaultlib}" ] 
+  then
+    default_lib="${defaultlib}"
+  else
+    default_lib="static"
+  fi
+
+  bindir_val=""
+  if [ ! -z "${bindir}" ]; then
+      bindir_val="--bindir=${bindir}"
+  fi
+  
+  if [ ! -z "${clean}" ]; then
+    rm -rf ${srcdir}/$build_dir
+  fi
+
+  if [ ! -d "${srcdir}/$build_dir" ]; then
+      mkdir -p ${srcdir}/$build_dir
+
+      cd ${srcdir}
+      if [ -d "./subprojects" ]; then
+          printf "${ORANGE}*****************************\n${NC}"
+          printf "${ORANGE}*** Download Subprojects ${srcdir} ***\n${NC}"
+          printf "${ORANGE}*****************************\n${NC}"
+          #     $MESON_TOOL subprojects download
+      fi
+
+      echo "setup patch : ${setuppatch}"
+      if [ ! -z "${setuppatch}" ]; then
+          printf "${ORANGE}*****************************\n${NC}"
+          printf "${ORANGE}*** Meson Setup Patch ${srcdir} ***\n${NC}"
+          printf "${ORANGE}*** ${setuppatch} ***\n${NC}"
+          printf "${ORANGE}*****************************\n${NC}"
+          bash -c "${setuppatch}"
+          status=$?
+          if [ $status -ne 0 ]; then
+              printf "${RED}*****************************\n${NC}"
+              printf "${RED}*** Bash Setup failed ${srcdir} ***\n${NC}"
+              printf "${RED}*****************************\n${NC}"
+              FAILED=1
+              cd $curr_dir
+              return
+          fi
+      fi
+
+      printf "${ORANGE}*****************************\n${NC}"
+      printf "${ORANGE}*** Meson Setup ${srcdir} ***\n${NC}"
+      printf "${ORANGE}*****************************\n${NC}"
+      $MESON_TOOL setup $build_dir \
+          ${mesonargs} \
+          --default-library=$default_lib \
+          --prefix=${prefix} \
+          $bindir_val \
+          --libdir=lib \
+          --includedir=include \
+          --buildtype=release 
+      status=$?
+      if [ $status -ne 0 ]; then
+          printf "${RED}*****************************\n${NC}"
+          printf "${RED}*** Meson Setup failed ${srcdir} ***\n${NC}"
+          printf "${RED}*****************************\n${NC}"
+          rm -rf $build_dir
+          FAILED=1
+          cd $curr_dir
+          return
+      fi
+  else
+      cd ${srcdir}
+      if [ -d "./subprojects" ]; then
+          printf "${ORANGE}*****************************\n${NC}"
+          printf "${ORANGE}*** Meson Update ${srcdir} ***\n${NC}"
+          printf "${ORANGE}*****************************\n${NC}"
+          #     $MESON_TOOL subprojects update
+      fi
+
+      if [ ! -z "${setuppatch}" ]; then
+          printf "${ORANGE}*****************************\n${NC}"
+          printf "${ORANGE}*** Meson Setup Patch ${srcdir} ***\n${NC}"
+          printf "${ORANGE}*** ${setuppatch} ***\n${NC}"
+          printf "${ORANGE}*****************************\n${NC}"
+          bash -c "${setuppatch}"
+          status=$?
+          if [ $status -ne 0 ]; then
+              printf "${RED}*****************************\n${NC}"
+              printf "${RED}*** Bash Setup failed ${srcdir} ***\n${NC}"
+              printf "${RED}*****************************\n${NC}"
+              FAILED=1
+              cd $curr_dir
+              return
+          fi
+      fi
+
+      printf "${ORANGE}*****************************\n${NC}"
+      printf "${ORANGE}*** Meson Reconfigure $(pwd) ${srcdir} ***\n${NC}"
+      printf "${ORANGE}*****************************\n${NC}"
+      $MESON_TOOL setup $build_dir \
+          ${mesonargs} \
+          --default-library=$default_lib \
+          --prefix=${prefix} \
+          $bindir_val \
+          --libdir=lib \
+          --includedir=include \
+          --buildtype=release \
+          --reconfigure
+
+      status=$?
+      if [ $status -ne 0 ]; then
+          printf "${RED}*****************************\n${NC}"
+          printf "${RED}*** Meson Setup failed ${srcdir} ***\n${NC}"
+          printf "${RED}*****************************\n${NC}"
+          rm -rf $build_dir
+          FAILED=1
+          cd $curr_dir
+          return
+      fi
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** Meson Compile ${srcdir} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+  $MESON_TOOL compile -C $build_dir
+  status=$?
+  if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** meson compile failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
+  fi
+
+  printf "${ORANGE}*****************************\n${NC}"
+  printf "${ORANGE}*** Meson Install ${srcdir} ***\n${NC}"
+  printf "${ORANGE}*****************************\n${NC}"
+  DESTDIR=${destdir} $MESON_TOOL install -C $build_dir
+  status=$?
+  if [ $status -ne 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** Meson Install failed ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
+  fi
+
+  build_time=$(( SECONDS - build_start ))
+  displaytime $build_time
+  cd $curr_dir
+
+}
+
+############################################
+#
+# Function to check if a program exists
+#
+############################################
+checkProg () {
+  local name args path # reset first
+  local "${@}"
+
+  if !PATH=$PATH:${path} command -v ${name} &> /dev/null
+  then
+    return #Prog not found
+  else
+    PATH=$PATH:${path} command ${name} ${args} &> /dev/null
+    status=$?
+    if [[ $status -eq 0 ]]; then
+        echo "Working"
+    else
+        return #Prog failed
+    fi
+  fi
+}
+
+# Hard dependency check
+MISSING_DEP=0
+if [ -z "$(checkProg name='make' args='--version' path=$PATH)" ]; then
+ MISSING_DEP=1
+ echo "make build utility not found! Aborting..."
 fi
 
+if [ -z "$(checkProg name='automake' args='--version' path=$PATH)" ]; then
+  MISSING_DEP=1
+  echo "automake build utility not found! Aborting..."
+fi
+
+if [ -z "$(checkProg name='autoconf' args='--version' path=$PATH)" ]; then
+  MISSING_DEP=1
+  echo "autoconf build utility not found! Aborting..."
+fi
+
+if [ -z "$(checkProg name='pkg-config' args='--version' path=$PATH)" ]; then
+  MISSING_DEP=1
+  echo "pkg-config build utility not found! Aborting..."
+fi
+
+if [ -z "$(checkProg name='gcc' args='--version' path=$PATH)" ]; then
+ MISSING_DEP=1
+ echo "gcc build utility not found! Aborting..."
+fi
+
+if [ $MISSING_DEP -eq 1 ]; then
+  exit 1
+fi
+
+#Change to the project folder to run autoconf and automake
+cd $SCRT_DIR
+
+#Initialize project
 aclocal
 autoconf
 automake --add-missing
 autoreconf -i
+
+mkdir -p $SUBPROJECT_DIR
+mkdir -p $SRC_CACHE_DIR
+
+cd $SUBPROJECT_DIR
+
+################################################################
+# 
+#    Build gSoap
+#       
+################################################################
+PATH=$SUBPROJECT_DIR/gsoap-2.8/build/dist/bin:$PATH
+GSOAP_PKG=$SUBPROJECT_DIR/gsoap-2.8/build/dist/lib/pkgconfig
+PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GSOAP_PKG \
+pkg-config --exists --print-errors "gsoap >= 2.8.123"
+ret=$?
+if [ $SKIP_GSOAP -eq 0 ] && [ $ret != 0 ]; then
+
+    ################################################################
+    # 
+    #    Build unzip for gsoap
+    #       
+    ################################################################
+    PATH=$SUBPROJECT_DIR/unzip60/build/dist/bin:$PATH
+    if [ -z "$(checkProg name='unzipx' args='-v' path=$PATH)" ]; then
+        echo "-- Building unzip --"
+        downloadAndExtract file="unzip60.tar.gz" path="https://sourceforge.net/projects/infozip/files/UnZip%206.x%20%28latest%29/UnZip%206.0/unzip60.tar.gz/download"
+        if [ $FAILED -eq 1 ]; then exit 1; fi
+        buildMakeProject srcdir="unzip60" make="-f unix/Makefile generic" installargs="prefix=$SUBPROJECT_DIR/unzip60/build/dist MANDIR=$SUBPROJECT_DIR/unzip60/build/dist/share/man/man1 -f unix/Makefile"
+        if [ $FAILED -eq 1 ]; then exit 1; fi
+    fi
+
+
+    echo "-- Building gsoap libgsoap-dev --"
+    #WS-Security depends on OpenSSL library 3.0 or 1.1
+    downloadAndExtract file="gsoap.zip" path="https://sourceforge.net/projects/gsoap2/files/gsoap_2.8.129.zip/download"
+    if [ $FAILED -eq 1 ]; then exit 1; fi
+    PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$OPENSSL_PKG:$ZLIB_PKG \
+    C_INCLUDE_PATH="$SSL_INCLUDE:$ZLIB_INCLUDE:$C_INCLUDE_PATH" \
+    CPLUS_INCLUDE_PATH="$SSL_INCLUDE:$ZLIB_INCLUDE:$CPLUS_INCLUDE_PATH" \
+    LIBRARY_PATH="$(pkg-config --variable=libdir openssl):$LIBRARY_PATH" \
+    LD_LIBRARY_PATH="$(pkg-config --variable=libdir openssl):$LD_LIBRARY_PATH" \
+    LIBS='-ldl -lpthread' \
+    buildMakeProject srcdir="gsoap-2.8" prefix="$SUBPROJECT_DIR/gsoap-2.8/build/dist" autogen="skip" configure="--with-openssl=/usr/lib/ssl"
+    if [ $FAILED -eq 1 ]; then exit 1; fi
+fi
+
+#Get out of subproject folder
+cd ..
 
 if [ $SKIP_WSDL -eq 0 ]; then
     echo "Generating WSDL gsoap files..."
