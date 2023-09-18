@@ -15,10 +15,10 @@ int main(int argc, char** argv)
 
         OnvifDeviceInformation * devinfo = OnvifDevice__device_getDeviceInformation(dev);
         if (devinfo){
-			OnvifDevice_get_profiles(dev);
-			for (int i = 0; i < dev->sizeSrofiles; i++){
-				printf("Profile name: %s\n", dev->profiles[i].name);
-				printf("Profile token: %s\n", dev->profiles[i].token);
+			OnvifProfiles * profiles = OnvifDevice_get_profiles(dev);
+			for (int i = 0; i < profiles->sizeSrofiles; i++){
+				printf("Profile name: %s\n", profiles->profiles[i].name);
+				printf("Profile token: %s\n", profiles->profiles[i].token);
 
 				printf("StreamUri : %s\n",OnvifDevice__media_getStreamUri(dev, i));
 				printf("SnapshotUri : %s\n",OnvifDevice__media_getSnapshotUri(dev, i));
@@ -34,6 +34,7 @@ int main(int argc, char** argv)
 					free(image_buf);
 				}
 			}
+			OnvifProfiles__destroy(profiles);
         }       
 
         OnvifDevice__destroy(dev);
