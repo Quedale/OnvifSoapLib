@@ -14,6 +14,7 @@ SHARD_EXPORT char * OnvifDevice__get_port(OnvifDevice* self);
 SHARD_EXPORT OnvifErrorTypes OnvifDevice__get_last_error(OnvifDevice * self);
 SHARD_EXPORT void OnvifDevice_authenticate(OnvifDevice* self);
 SHARD_EXPORT void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass);
+SHARD_EXPORT OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self);
 SHARD_EXPORT int OnvifDevice__is_valid(OnvifDevice* self);
 SHARD_EXPORT OnvifDeviceService * OnvifDevice__get_device_service(OnvifDevice* self);
 SHARD_EXPORT OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self);

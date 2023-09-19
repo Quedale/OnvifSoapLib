@@ -111,6 +111,10 @@ void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char*
     pthread_mutex_unlock(self->prop_lock);
 }
 
+OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self){
+    return self->credentials;
+}
+
 int OnvifDevice__is_valid(OnvifDevice* self){
     if(!self->protocol){
         return 0;
