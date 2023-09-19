@@ -1,7 +1,7 @@
 #ifndef ONVIF_DEV_PROFILE_LOCAL_H_ 
 #define ONVIF_DEV_PROFILE_LOCAL_H_
 
-#include "onvif_device_profile.h"
+#include "onvif_media_profile.h"
 #include "generated/soapH.h"
 
 OnvifProfile * OnvifProfile__create(struct tt__Profile * profile);

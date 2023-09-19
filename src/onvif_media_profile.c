@@ -1,4 +1,4 @@
-#include "onvif_device_profile_local.h"
+#include "onvif_media_profile_local.h"
 
 typedef struct _OnvifProfile {
     char * name;
@@ -37,6 +37,7 @@ void OnvifProfile__destroy(OnvifProfile* self){
         free(self->name);
     if(self->token)
         free(self->token);
+    free(self);
 }
 
 char * OnvifProfile__get_name(OnvifProfile* self){
@@ -74,6 +75,7 @@ void OnvifProfiles__destroy(OnvifProfiles* self){
             OnvifProfile__destroy(self->profiles[i]);
         }
         self->count = 0;
+        free(self);
     }
 }
 

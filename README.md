@@ -23,7 +23,7 @@ make install
 directory struct:  
     OnvifSoapLib  
         example
-        gsoap-2.8  
+        subprojects/gsoap-2.8  
         src  
         wsdl  
 ```
