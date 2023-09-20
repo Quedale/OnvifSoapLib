@@ -10,6 +10,7 @@ AS_VAR_SET_IF(GSOAP_SRC_DIR,[],AC_SUBST(GSOAP_SRC_DIR,'$(abs_srcdir)/subprojects
 
 AC_CONFIG_FILES([
     Makefile
+    src/generated/Makefile
     onvifsoap.pc
 ])
 LT_INIT([static])
