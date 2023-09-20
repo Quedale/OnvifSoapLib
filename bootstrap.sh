@@ -688,24 +688,25 @@ cd ..
 
 if [ $SKIP_WSDL -eq 0 ]; then
     echo "Generating WSDL gsoap files..."
-    rm -rf $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
-    mkdir $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
-    wsdl2h -x -t $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/wsdl/typemap.dat -o $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated/common_service.h -c \
+    rm -rf $SUBPROJECT_DIR/../src/generated
+    mkdir $SUBPROJECT_DIR/../src/generated
+    wsdl2h -x -t $SUBPROJECT_DIR/../wsdl/typemap.dat -o $SUBPROJECT_DIR/../src/generated/common_service.h -c \
     http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
-    http://www.onvif.org/onvif/ver10/event/wsdl/event.wsdl \
-    http://www.onvif.org/onvif/ver10/display.wsdl \
-    http://www.onvif.org/onvif/ver10/deviceio.wsdl \
-    http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
     http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl \
-    http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
-    http://www.onvif.org/onvif/ver10/receiver.wsdl \
-    http://www.onvif.org/onvif/ver10/recording.wsdl \
-    http://www.onvif.org/onvif/ver10/search.wsdl \
-    http://www.onvif.org/onvif/ver10/replay.wsdl \
-    http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl \
-    http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl \
-    http://www.onvif.org/onvif/ver10/schema/onvif.xsd 
-    soapcpp2 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated/common_service.h -d$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/src/generated
+    http://www.onvif.org/onvif/ver10/schema/onvif.xsd
+
+    # http://www.onvif.org/onvif/ver10/deviceio.wsdl \
+    # http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
+    # http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
+    # http://www.onvif.org/onvif/ver10/event/wsdl/event.wsdl \
+    # http://www.onvif.org/onvif/ver10/display.wsdl \
+    # http://www.onvif.org/onvif/ver10/receiver.wsdl \
+    # http://www.onvif.org/onvif/ver10/recording.wsdl \
+    # http://www.onvif.org/onvif/ver10/search.wsdl \
+    # http://www.onvif.org/onvif/ver10/replay.wsdl \
+    # http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl \
+    # http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl \ 
+    soapcpp2 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $SUBPROJECT_DIR/../src/generated/common_service.h -d$SUBPROJECT_DIR/../src/generated
 else
     echo "Skipping WSDL class generation..."
 fi
