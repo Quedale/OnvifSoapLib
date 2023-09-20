@@ -8,11 +8,18 @@ set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release)
 set(LIBRARY_OUTPUT_PATH    ${OUTPUT_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${OUTPUT_DIR})
 
-set(GSOAP_SRC_DIR  ${PROJECT_SOURCE_DIR}/subprojects/gsoap-2.8)
+set(GSOAP_SRC_DIR  ${CMAKE_SOURCE_DIR}/subprojects/gsoap-2.8)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -c -Wall -DWITH_DOM")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -DWITH_DOM")
 add_definitions(-DWITH_DOM -DWITH_OPENSSL -DWITH_GZIP -DBUILD_SHARD)
-add_compile_options(/bigobj)
+if (MSVC)
+    add_compile_options(/bigobj)
+elseif (MINGW)
+    check_cxx_compiler_flag("Wa,-mbig-obj" FMT_HAS_MBIG_OBJ)
+    if (${FMT_HAS_MBIG_OBJ})
+        add_compile_options(-Wa,-mbig-obj)
+    endif ()
+endif ()
 
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -24,14 +31,14 @@ include_directories(${GSOAP_SRC_DIR}/gsoap/
                     src/generated
                     src)
 
-if(NOT EXISTS ${PROJECT_SOURCE_DIR}/src/generated)
-file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/src/generated)
+if(NOT EXISTS ${CMAKE_SOURCE_DIR}/src/generated)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 endif()
 
 aux_source_directory(src src_dir)
 aux_source_directory(src/generated generated_dir)
 
-add_library(libonvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c 
+add_library(onvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c 
                                 ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
                                 ${GSOAP_SRC_DIR}/gsoap/plugin/smdevp.c 
                                 ${GSOAP_SRC_DIR}/gsoap/plugin/mecevp.c 
@@ -44,7 +51,7 @@ add_library(libonvifsoap SHARED ${GSOAP_SRC_DIR}/gsoap/dom.c
                                 ${src_dir}
                                 ${generated_dir})
 
-target_link_libraries(libonvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
+target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 
 add_subdirectory(example)
 
