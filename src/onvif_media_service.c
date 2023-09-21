@@ -17,7 +17,6 @@ OnvifMediaService * OnvifMediaService__create(const char * endpoint, OnvifCreden
 
 void OnvifMediaService__init(OnvifMediaService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     self->parent = OnvifBaseService__create(endpoint, credentials, error_cb, error_data);
-    self->profile_lock = MUTEX_INITIALIZER;
     MUTEX_SETUP(self->profile_lock);
 
     self->profiles = NULL;
@@ -29,7 +28,6 @@ void OnvifMediaService__destroy(OnvifMediaService * self){
         OnvifBaseService__destroy(self->parent);
         OnvifProfiles__destroy(self->profiles);
         MUTEX_CLEANUP(self->profile_lock);
-        free(self->profile_lock);
         if(self->snapshot_da_info)
             free(self->snapshot_da_info);
         free(self);

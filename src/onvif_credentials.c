@@ -16,7 +16,6 @@ OnvifCredentials * OnvifCredentials__create(){
 }
 
 void OnvifCredentials__init(OnvifCredentials * self){
-    self->prop_lock = MUTEX_INITIALIZER;
     MUTEX_SETUP(self->prop_lock);
 
     self->user = NULL;
@@ -28,7 +27,6 @@ void OnvifCredentials__destroy(OnvifCredentials * self){
         free(self->user);
         free(self->pass);
         MUTEX_CLEANUP(self->prop_lock);
-        free(self->prop_lock);
         free(self);
     }
 }

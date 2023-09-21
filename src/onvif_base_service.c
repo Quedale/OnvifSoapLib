@@ -32,10 +32,8 @@ void OnvifBaseService__init(OnvifBaseService * self,const char * endpoint, Onvif
     self->endpoint = malloc(strlen(endpoint)+1);
     strcpy(self->endpoint,endpoint);
 
-    self->service_lock = MUTEX_INITIALIZER;
     MUTEX_SETUP(self->service_lock);
 
-    self->prop_lock = MUTEX_INITIALIZER;
     MUTEX_SETUP(self->prop_lock);
 }
 
@@ -44,14 +42,8 @@ void OnvifBaseService__destroy(OnvifBaseService * self){
         if(self->endpoint){
             free(self->endpoint);
         }
-        if(self->prop_lock){
-            MUTEX_CLEANUP(self->prop_lock);
-            free(self->prop_lock);
-        }
-        if(self->service_lock){
-            MUTEX_CLEANUP(self->service_lock);
-            free(self->service_lock);
-        }
+        MUTEX_CLEANUP(self->prop_lock);
+        MUTEX_CLEANUP(self->service_lock);
         free(self);
     }
 }

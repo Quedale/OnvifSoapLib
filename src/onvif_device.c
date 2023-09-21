@@ -145,10 +145,8 @@ OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self){
 }
 
 void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
-    self->prop_lock = MUTEX_INITIALIZER;
     MUTEX_SETUP(self->prop_lock);
 
-    self->media_lock = MUTEX_INITIALIZER;
     MUTEX_SETUP(self->media_lock);
 
     self->last_error = ONVIF_NOT_SET;
@@ -220,8 +218,6 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         OnvifMediaService__destroy(device->media_service);
         MUTEX_CLEANUP(device->media_lock);
         MUTEX_CLEANUP(device->prop_lock);
-        free(device->media_lock);
-        free(device->prop_lock);
         free(device);
     }
 }
