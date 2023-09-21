@@ -14,6 +14,11 @@
 #include "onvif_device_service.h"
 #include "onvif_media_service.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+/* We are on Windows */
+# define strtok_r strtok_s
+#endif
+
 typedef struct _OnvifDevice {
     char * protocol;
     char * ip;
@@ -21,10 +26,10 @@ typedef struct _OnvifDevice {
     char * port;
     char * hostname;
     OnvifErrorTypes last_error;
-    pthread_mutex_t  * prop_lock;
+    MUTEX_TYPE prop_lock;
     
     OnvifDeviceService * device_service;
-    pthread_mutex_t  * media_lock;
+    MUTEX_TYPE media_lock;
     OnvifMediaService * media_service;
 
     OnvifCredentials * credentials;
@@ -37,7 +42,7 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
         return;
     }
 
-    pthread_mutex_lock(self->media_lock);
+    MUTEX_LOCK(self->media_lock);
 
     //Check again in case it was created during lock
     if(self->media_service){
@@ -55,7 +60,7 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
     }
 
 exit:
-    pthread_mutex_unlock(self->media_lock);
+    MUTEX_UNLOCK(self->media_lock);
 }
 
 // Place holder to allow client compile
@@ -105,10 +110,10 @@ void OnvifDevice_authenticate(OnvifDevice* self){
 }
 
 void OnvifDevice_set_credentials(OnvifDevice* self,const char * user,const char* pass){
-    pthread_mutex_lock(self->prop_lock);
+    MUTEX_LOCK(self->prop_lock);
     OnvifCredentials__set_username(self->credentials,user);
     OnvifCredentials__set_password(self->credentials,pass);
-    pthread_mutex_unlock(self->prop_lock);
+    MUTEX_UNLOCK(self->prop_lock);
 }
 
 OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self){
@@ -140,11 +145,11 @@ OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self){
 }
 
 void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
-    self->prop_lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(self->prop_lock, NULL);
+    self->prop_lock = MUTEX_INITIALIZER;
+    MUTEX_SETUP(self->prop_lock);
 
-    self->media_lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(self->media_lock, NULL);
+    self->media_lock = MUTEX_INITIALIZER;
+    MUTEX_SETUP(self->media_lock);
 
     self->last_error = ONVIF_NOT_SET;
     self->credentials = OnvifCredentials__create(NULL,NULL);
@@ -213,8 +218,8 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         OnvifCredentials__destroy(device->credentials);
         OnvifDeviceService__destroy(device->device_service);
         OnvifMediaService__destroy(device->media_service);
-        pthread_mutex_destroy(device->media_lock);
-        pthread_mutex_destroy(device->prop_lock);
+        MUTEX_CLEANUP(device->media_lock);
+        MUTEX_CLEANUP(device->prop_lock);
         free(device->media_lock);
         free(device->prop_lock);
         free(device);
@@ -223,33 +228,33 @@ void OnvifDevice__destroy(OnvifDevice* device) {
 
 char * OnvifDevice__get_ip(OnvifDevice* self){
     char * ret;
-    pthread_mutex_lock(self->prop_lock);
+    MUTEX_LOCK(self->prop_lock);
     ret = malloc(strlen(self->ip)+1);
     strcpy(ret,self->ip);
-    pthread_mutex_unlock(self->prop_lock);
+    MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }
 
 char * OnvifDevice__get_port(OnvifDevice* self){
     char * ret;
-    pthread_mutex_lock(self->prop_lock);
+    MUTEX_LOCK(self->prop_lock);
     ret = malloc(strlen(self->port)+1);
     strcpy(ret,self->port);
-    pthread_mutex_unlock(self->prop_lock);
+    MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }
 
 void OnvifDevice__set_last_error(OnvifErrorTypes error, void * error_data){
     OnvifDevice * self = (OnvifDevice *) error_data;
-    pthread_mutex_lock(self->prop_lock);
+    MUTEX_LOCK(self->prop_lock);
     self->last_error = error;
-    pthread_mutex_unlock(self->prop_lock);
+    MUTEX_UNLOCK(self->prop_lock);
 }
 
 OnvifErrorTypes OnvifDevice__get_last_error(OnvifDevice * self){
     OnvifErrorTypes ret;
-    pthread_mutex_lock(self->prop_lock);
+    MUTEX_LOCK(self->prop_lock);
     ret = self->last_error;
-    pthread_mutex_unlock(self->prop_lock);
+    MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }

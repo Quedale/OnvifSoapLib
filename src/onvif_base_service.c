@@ -4,7 +4,7 @@
 #include "wsse2api.h"
 #include <string.h>
 #include <stdlib.h>
-#include <pthread.h>
+#include "threads.h"
 #include <stddef.h>
 
 #define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
@@ -12,8 +12,8 @@
 struct _OnvifBaseService {
     char * endpoint;
     OnvifCredentials * credentials;
-    pthread_mutex_t  * service_lock;
-    pthread_mutex_t  * prop_lock;
+    MUTEX_TYPE service_lock;
+    MUTEX_TYPE prop_lock;
     void (*error_cb)(OnvifErrorTypes type, void * user_data);
     void * error_data;
 };
@@ -32,11 +32,11 @@ void OnvifBaseService__init(OnvifBaseService * self,const char * endpoint, Onvif
     self->endpoint = malloc(strlen(endpoint)+1);
     strcpy(self->endpoint,endpoint);
 
-    self->service_lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(self->service_lock, NULL);
+    self->service_lock = MUTEX_INITIALIZER;
+    MUTEX_SETUP(self->service_lock);
 
-    self->prop_lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(self->prop_lock, NULL);
+    self->prop_lock = MUTEX_INITIALIZER;
+    MUTEX_SETUP(self->prop_lock);
 }
 
 void OnvifBaseService__destroy(OnvifBaseService * self){
@@ -45,11 +45,11 @@ void OnvifBaseService__destroy(OnvifBaseService * self){
             free(self->endpoint);
         }
         if(self->prop_lock){
-            pthread_mutex_destroy(self->prop_lock);
+            MUTEX_CLEANUP(self->prop_lock);
             free(self->prop_lock);
         }
         if(self->service_lock){
-            pthread_mutex_destroy(self->service_lock);
+            MUTEX_CLEANUP(self->service_lock);
             free(self->service_lock);
         }
         free(self);
@@ -57,19 +57,19 @@ void OnvifBaseService__destroy(OnvifBaseService * self){
 }
 
 void OnvifBaseService__lock(OnvifBaseService * self){
-    pthread_mutex_lock(self->service_lock);
+    MUTEX_LOCK(self->service_lock);
 }
 
 void OnvifBaseService__unlock(OnvifBaseService * self){
-    pthread_mutex_unlock(self->service_lock);
+    MUTEX_UNLOCK(self->service_lock);
 }
 
 char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
     char * ret = NULL;
-    pthread_mutex_lock(self->prop_lock);
+    MUTEX_LOCK(self->prop_lock);
     ret = malloc(strlen(self->endpoint)+1);
     strcpy(ret,self->endpoint);
-    pthread_mutex_unlock(self->prop_lock);
+    MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }
 
