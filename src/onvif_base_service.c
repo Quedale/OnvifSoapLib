@@ -1,10 +1,11 @@
 #include "onvif_base_service.h"
+#include "generated/soapH.h"
+#include "generated/DeviceBinding.nsmap"
 #include "onvif_credentials.h"
 #include "generated/soapH.h"
 #include "wsse2api.h"
 #include <string.h>
 #include <stdlib.h>
-#include "threads.h"
 #include <stddef.h>
 
 #define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
@@ -12,8 +13,8 @@
 struct _OnvifBaseService {
     char * endpoint;
     OnvifCredentials * credentials;
-    MUTEX_TYPE service_lock;
-    MUTEX_TYPE prop_lock;
+    P_MUTEX_TYPE service_lock;
+    P_MUTEX_TYPE prop_lock;
     void (*error_cb)(OnvifErrorTypes type, void * user_data);
     void * error_data;
 };
@@ -32,9 +33,9 @@ void OnvifBaseService__init(OnvifBaseService * self,const char * endpoint, Onvif
     self->endpoint = malloc(strlen(endpoint)+1);
     strcpy(self->endpoint,endpoint);
 
-    MUTEX_SETUP(self->service_lock);
+    P_MUTEX_SETUP(self->service_lock);
 
-    MUTEX_SETUP(self->prop_lock);
+    P_MUTEX_SETUP(self->prop_lock);
 }
 
 void OnvifBaseService__destroy(OnvifBaseService * self){
@@ -42,26 +43,26 @@ void OnvifBaseService__destroy(OnvifBaseService * self){
         if(self->endpoint){
             free(self->endpoint);
         }
-        MUTEX_CLEANUP(self->prop_lock);
-        MUTEX_CLEANUP(self->service_lock);
+        P_MUTEX_CLEANUP(self->prop_lock);
+        P_MUTEX_CLEANUP(self->service_lock);
         free(self);
     }
 }
 
 void OnvifBaseService__lock(OnvifBaseService * self){
-    MUTEX_LOCK(self->service_lock);
+    P_MUTEX_LOCK(self->service_lock);
 }
 
 void OnvifBaseService__unlock(OnvifBaseService * self){
-    MUTEX_UNLOCK(self->service_lock);
+    P_MUTEX_UNLOCK(self->service_lock);
 }
 
 char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
     char * ret = NULL;
-    MUTEX_LOCK(self->prop_lock);
+    P_MUTEX_LOCK(self->prop_lock);
     ret = malloc(strlen(self->endpoint)+1);
     strcpy(ret,self->endpoint);
-    MUTEX_UNLOCK(self->prop_lock);
+    P_MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }
 

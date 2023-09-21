@@ -5,8 +5,8 @@
 
 typedef struct _OnvifSnapshot OnvifSnapshot;
 
-OnvifSnapshot * OnvifSnapshot__create(int size, char * buffer);
-void OnvifSnapshot__init(OnvifSnapshot * self, int size, char * buffer);
+SHARD_EXPORT OnvifSnapshot * OnvifSnapshot__create(int size, char * buffer);
+SHARD_EXPORT void OnvifSnapshot__init(OnvifSnapshot * self, int size, char * buffer);
 SHARD_EXPORT void OnvifSnapshot__destroy(OnvifSnapshot * self);
 
 SHARD_EXPORT double OnvifSnapshot__get_size(OnvifSnapshot * self);
