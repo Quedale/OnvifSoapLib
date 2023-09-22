@@ -2,7 +2,6 @@
 #include "generated/soapH.h"
 #include "generated/DeviceBinding.nsmap"
 #include "onvif_credentials.h"
-#include "generated/soapH.h"
 #include "wsse2api.h"
 #include <string.h>
 #include <stdlib.h>

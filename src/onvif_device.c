@@ -1,9 +1,9 @@
 #include "onvif_device.h"
 #include "onvif_credentials.h"
-#include "wsddapi.h"
-#include "ip_match.h"
 #include "onvif_device_service.h"
 #include "onvif_media_service.h"
+#include "wsddapi.h"
+#include "ip_match.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 /* We are on Windows */

@@ -9,8 +9,8 @@ int main(int argc, char** argv)
 
         printf("creating device...\n");
         OnvifDevice* dev = OnvifDevice__create("http://192.168.0.121/onvif/device_service"); 
-        OnvifDevice_set_credentials(dev,"admin", "Admin123");
-		        OnvifDevice_authenticate(dev);
+        OnvifDevice__set_credentials(dev,"admin", "Admin123");
+		OnvifDevice__authenticate(dev);
         
 		char * ip = OnvifDevice__get_ip(dev);
         printf("dev : %s\n",ip);
