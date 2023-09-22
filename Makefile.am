@@ -22,4 +22,4 @@ libonvifsoap_la_CFLAGS= -c -Wall -fvisibility=hidden -DWITH_DOM -DWITH_OPENSSL -
 libonvifsoap_la_LDFLAGS= -all-static `pkg-config --libs openssl zlib`
 libonvifsoap_la_LIBADD = src/generated/libgeneratedsoap.la
 
-include_HEADERS= src/onvif_base_service.h src/onvif_device_capabilities.h src/onvif_credentials.h src/onvif_device.h src/onvif_media_profile.h src/onvif_device_service.h src/onvif_device_info.h src/onvif_device_interface.h src/onvif_media_service.h src/onvif_device_scopes.h src/shard_export.h src/onvif_media_snapshot.h
+include_HEADERS= src/onvif_base_service.h src/onvif_device_capabilities.h src/onvif_credentials.h src/onvif_device.h src/onvif_media_profile.h src/onvif_device_service.h src/onvif_device_info.h src/onvif_device_interface.h src/onvif_media_service.h src/onvif_device_scopes.h src/shard_export.h src/onvif_media_snapshot.h src/portable_thread.h
