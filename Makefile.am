@@ -18,7 +18,7 @@ libonvifsoap_la_SOURCES =   src/ip_match.c \
                             src/onvif_media_profile.c \
                             src/onvif_media_service.c \
                             src/onvif_media_snapshot.c
-libonvifsoap_la_CFLAGS= -c -Wall -fvisibility=hidden -DWITH_DOM -DWITH_OPENSSL -DWITH_NOEMPTYSTRUCT -DWITH_GZIP -DBUILD_SHARD -I$(GSOAP_SRC_DIR)/gsoap/ -I$(GSOAP_SRC_DIR)/gsoap/import -I$(GSOAP_SRC_DIR)/gsoap/custom -I$(GSOAP_SRC_DIR)/gsoap/plugin -I$(srcdir)/src/generated
+libonvifsoap_la_CFLAGS= -c -Wall -fvisibility=hidden -DWITH_DOM -DWITH_OPENSSL -DWITH_GZIP -DBUILD_SHARD -I$(GSOAP_SRC_DIR)/gsoap/ -I$(GSOAP_SRC_DIR)/gsoap/import -I$(GSOAP_SRC_DIR)/gsoap/custom -I$(GSOAP_SRC_DIR)/gsoap/plugin -I$(srcdir)/src/generated
 libonvifsoap_la_LDFLAGS= -all-static `pkg-config --libs openssl zlib`
 libonvifsoap_la_LIBADD = src/generated/libgeneratedsoap.la
 
