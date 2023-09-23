@@ -156,7 +156,12 @@ if (MSVC)
   target_compile_options(onvifsoap PRIVATE "SHELL: -wd4100 -wd4244 -wd4255 -wd4706 -wd4820 -wd4996 -wd5045")
 endif()
 
-target_compile_options(onvifsoap PUBLIC "SHELL: -fvisibility=hidden -c -Wall -DBUILD_SHARD")
+if(NOT WIN32)
+  target_compile_options(onvifsoap PUBLIC "SHELL: -fvisibility=hidden")
+endif()
+
+target_compile_options(onvifsoap PUBLIC "SHELL: -c -Wall -DBUILD_SHARD")
+
 add_subdirectory(example)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})

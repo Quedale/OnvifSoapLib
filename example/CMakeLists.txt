@@ -9,7 +9,7 @@ target_link_libraries(client-test onvifsoap)
 
 #I care little for MSVC warning. Support is from good faith
 if (MSVC)
-  target_compile_options(client-test PRIVATE "SHELL: -wd4244 -wd4996")
+  target_compile_options(client-test PRIVATE "SHELL: -wd4244 -wd4996 -wd5045")
 endif()
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})

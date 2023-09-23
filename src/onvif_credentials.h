@@ -5,7 +5,7 @@
 
 typedef struct _OnvifCredentials OnvifCredentials;
 
-SHARD_EXPORT OnvifCredentials * OnvifCredentials__create();
+SHARD_EXPORT OnvifCredentials * OnvifCredentials__create(void);
 SHARD_EXPORT void OnvifCredentials__init(OnvifCredentials * self);
 SHARD_EXPORT void OnvifCredentials__destroy(OnvifCredentials * self);
 SHARD_EXPORT void OnvifCredentials__set_username(OnvifCredentials *self, const char * username);

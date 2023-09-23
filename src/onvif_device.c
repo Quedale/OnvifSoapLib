@@ -141,7 +141,7 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     P_MUTEX_SETUP(self->media_lock);
 
     self->last_error = ONVIF_NOT_SET;
-    self->credentials = OnvifCredentials__create(NULL,NULL);
+    self->credentials = OnvifCredentials__create();
     self->device_service = OnvifDeviceService__create(device_url,self->credentials,OnvifDevice__set_last_error,self);
     self->media_service = NULL;
 
