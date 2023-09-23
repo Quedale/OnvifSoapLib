@@ -8,7 +8,9 @@ set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release)
 set(LIBRARY_OUTPUT_PATH    ${OUTPUT_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${OUTPUT_DIR})
 
-set(GSOAP_SRC_DIR  ${CMAKE_SOURCE_DIR}/subprojects/gsoap-2.8)
+if (NOT DEFINED GSOAP_SRC_DIR)
+  set(GSOAP_SRC_DIR  ${CMAKE_SOURCE_DIR}/subprojects/gsoap-2.8)
+endif()
 
 if (MSVC)
     add_compile_options(/bigobj)
