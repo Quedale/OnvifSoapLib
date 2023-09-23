@@ -77,7 +77,7 @@ endif()
 if (MSVC)
   target_compile_options(gsoap PRIVATE "SHELL: -wd4244 -wd4267")
 else()
-  target_compile_options(gsoap PRIVATE "SHELL: -fPIC")
+  target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -fPIC")
 endif()
 
 target_compile_options(gsoap PRIVATE "SHELL: -c -DWITH_DOM")
@@ -110,7 +110,7 @@ else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-if (!MSVC)
+if (NOT MSVC)
   target_compile_options(gsoap PRIVATE "SHELL: -fPIC")
 endif()
 
@@ -123,22 +123,28 @@ target_link_libraries(generatedsoap PRIVATE gsoap)
 # onvif ibrary
 #
 #########################
+# add_library(onvifsoapstc STATIC    ${src_dir})
 add_library(onvifsoap SHARED    ${src_dir})
 
 if(ZLIB_FOUND)
-  target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
+  target_link_libraries(onvifsoap PUBLIC ZLIB::ZLIB)
+  set(LA_LIBS "${LA_LIBS} -lz")
 else()
   message(WARNING "ZLIB not found...")
 endif()
 
 if(OPENSSL_FOUND)
-  target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+  target_link_libraries(onvifsoap PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+  set(LA_LIBS "${LA_LIBS} -lssl -lcrypto")
 else()
   message(FATAL_ERROR "OpenSSL not found...")
 endif()
 
 if(Threads_FOUND)
-  target_link_libraries(onvifsoap PRIVATE Threads::Threads)
+  target_link_libraries(onvifsoap PUBLIC Threads::Threads)
+  if(CMAKE_USE_PTHREADS_INIT)
+    set(LA_LINK "${LA_LINK} -pthread")
+  endif()
 else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
@@ -150,7 +156,7 @@ if (MSVC)
   target_compile_options(onvifsoap PRIVATE "SHELL: -wd4100 -wd4244 -wd4255 -wd4706 -wd4820 -wd4996 -wd5045")
 endif()
 
-target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -DBUILD_SHARD")
+target_compile_options(onvifsoap PUBLIC "SHELL: -fvisibility=hidden -c -Wall -DBUILD_SHARD")
 add_subdirectory(example)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
@@ -182,10 +188,16 @@ set(exec_prefix ${CMAKE_INSTALL_BINDIR})
 set(libdir ${CMAKE_INSTALL_LIBDIR})
 set(includedir ${CMAKE_INSTALL_INCLUDEDIR})
 
-#Create pkgconfig file
-configure_file(onvifsoap.pc.in onvifsoap.pc @ONLY) 
+if(NOT WIN32)
+  #Create pkgconfig file
+  configure_file(onvifsoap.pc.in onvifsoap.pc @ONLY) 
+  install(FILES ${PROJECT_BINARY_DIR}/onvifsoap.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
-#Install packages
+  #Configure libtool file to allow hidden symbol on static link
+  configure_file(libonvifsoap.la.in libonvifsoap.la @ONLY)
+  install(FILES ${PROJECT_BINARY_DIR}/libonvifsoap.la DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+endif()
+
 install(TARGETS onvifsoap EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-install(FILES ${PROJECT_BINARY_DIR}/onvifsoap.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+# install(TARGETS onvifsoapstc EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
