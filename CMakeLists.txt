@@ -148,4 +148,41 @@ add_subdirectory(example)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
+set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
+set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
+
 include(CPack)
+
+set(headers ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
+		        ${PROJECT_SOURCE_DIR}/src/onvif_device_capabilities.h
+		        ${PROJECT_SOURCE_DIR}/src/onvif_credentials.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_device.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_media_profile.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_device_service.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_device_info.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_device_interface.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_media_service.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_device_scopes.h
+            ${PROJECT_SOURCE_DIR}/src/shard_export.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h
+            ${PROJECT_SOURCE_DIR}/src/portable_thread.h)
+
+#Setting .pc file variables
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${CMAKE_INSTALL_BINDIR})
+set(libdir ${CMAKE_INSTALL_LIBDIR})
+set(includedir ${CMAKE_INSTALL_INCLUDEDIR})
+
+configure_file(onvifsoap.pc.in onvifsoap.pc @ONLY) 
+
+install(TARGETS onvifsoap EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install(FILES ${PROJECT_BINARY_DIR}/onvifsoap.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# install(TARGETS onvifsoap
+#         EXPORT onvifsoap
+#         [PERMISSIONS permissions...]
+#         [CONFIGURATIONS [Debug|Release|...]]
+#         [COMPONENT <component>]
+#         [RENAME <name>] [OPTIONAL] [EXCLUDE_FROM_ALL])
