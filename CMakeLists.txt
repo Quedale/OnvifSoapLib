@@ -76,8 +76,11 @@ endif()
 
 if (MSVC)
   target_compile_options(gsoap PRIVATE "SHELL: -wd4244 -wd4267")
+else()
+  target_compile_options(gsoap PRIVATE "SHELL: -fPIC")
 endif()
-target_compile_options(gsoap PRIVATE "SHELL: -fPIC -c -DWITH_DOM")
+
+target_compile_options(gsoap PRIVATE "SHELL: -c -DWITH_DOM")
 
 #########################
 #
@@ -107,7 +110,11 @@ else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-target_compile_options(generatedsoap PRIVATE "SHELL: -fPIC -c -DWITH_DOM")
+if (!MSVC)
+  target_compile_options(gsoap PRIVATE "SHELL: -fPIC")
+endif()
+
+target_compile_options(generatedsoap PRIVATE "SHELL: -c -DWITH_DOM")
 
 target_link_libraries(generatedsoap PRIVATE gsoap)
 
