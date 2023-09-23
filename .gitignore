@@ -32,3 +32,4 @@ config.guess
 config.sub
 ltmain.sh
 release
+.vscode/settings.json
