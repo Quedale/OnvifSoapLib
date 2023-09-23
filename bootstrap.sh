@@ -308,6 +308,9 @@ buildMakeProject(){
       printf "${RED}*****************************\n${NC}"
       printf "${RED}*** CMake failed ${srcdir} ***\n${NC}"
       printf "${RED}*****************************\n${NC}"
+      FAILED=1
+      cd $curr_dir
+      return
     fi
   fi
 
@@ -328,7 +331,7 @@ buildMakeProject(){
     fi
   fi
 
-  if [ -f "./configure" ]; then
+  if [ -f "./configure" ] && [ -z "${cmakedir}" ]; then
     printf "${ORANGE}*****************************\n${NC}"
     printf "${ORANGE}*** configure ${srcdir} ***\n${NC}"
     printf "${ORANGE}*****************************\n${NC}"

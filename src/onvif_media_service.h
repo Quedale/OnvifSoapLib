@@ -10,8 +10,8 @@
 typedef struct _OnvifMediaService OnvifMediaService;
 
 //Generic Service functions
-OnvifMediaService * OnvifMediaService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
-void OnvifMediaService__init(OnvifMediaService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT OnvifMediaService * OnvifMediaService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT void OnvifMediaService__init(OnvifMediaService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
 SHARD_EXPORT void OnvifMediaService__destroy(OnvifMediaService * self);
 SHARD_EXPORT OnvifBaseService * OnvifMediaService__get_parent(OnvifMediaService * self);
 

@@ -40,36 +40,36 @@ void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterf
 
     int i;
     for(i=0;i<resp->__sizeNetworkInterfaces;i++){
-        struct tt__NetworkInterface interface = resp->NetworkInterfaces[i];
+        struct tt__NetworkInterface interf = resp->NetworkInterfaces[i];
         OnvifInterface * onvifinterface = malloc(sizeof(OnvifInterface));
-        onvifinterface->enabled = interface.Enabled;
-        onvifinterface->token = (char*) malloc(strlen(interface.token)+1);
-        strcpy(onvifinterface->token,interface.token);
+        onvifinterface->enabled = interf.Enabled;
+        onvifinterface->token = (char*) malloc(strlen(interf.token)+1);
+        strcpy(onvifinterface->token,interf.token);
         
-        if(interface.Info){
+        if(interf.Info){
             onvifinterface->has_info = 1;
-            onvifinterface->name = (char*) malloc(strlen(interface.Info->Name)+1);
-            strcpy(onvifinterface->name,interface.Info->Name);
-            onvifinterface->mac = (char*) malloc(strlen(interface.Info->HwAddress)+1);
-            strcpy(onvifinterface->mac,interface.Info->HwAddress);
+            onvifinterface->name = (char*) malloc(strlen(interf.Info->Name)+1);
+            strcpy(onvifinterface->name,interf.Info->Name);
+            onvifinterface->mac = (char*) malloc(strlen(interf.Info->HwAddress)+1);
+            strcpy(onvifinterface->mac,interf.Info->HwAddress);
 
-            onvifinterface->mtu = interface.Info->MTU[0];
+            onvifinterface->mtu = interf.Info->MTU[0];
         } else {
             onvifinterface->has_info = 0;
         }
         
         //struct tt__IPv4NetworkInterface*     IPv4
-        if(interface.IPv4){
-            onvifinterface->ipv4_enabled = interface.IPv4->Enabled;
-            onvifinterface->ipv4_dhcp = interface.IPv4->Config->DHCP;
-            onvifinterface->ipv4_manual_count = interface.IPv4->Config->__sizeManual;
+        if(interf.IPv4){
+            onvifinterface->ipv4_enabled = interf.IPv4->Enabled;
+            onvifinterface->ipv4_dhcp = interf.IPv4->Config->DHCP;
+            onvifinterface->ipv4_manual_count = interf.IPv4->Config->__sizeManual;
             onvifinterface->ipv4_manual = NULL;
             onvifinterface->ipv4_link_local = NULL;
             onvifinterface->ipv4_from_dhcp = NULL;
 
             //Manually configured IPs
-            if(interface.IPv4->Config->__sizeManual > 0){
-                struct tt__PrefixedIPv4Address * manuals = interface.IPv4->Config->Manual;
+            if(interf.IPv4->Config->__sizeManual > 0){
+                struct tt__PrefixedIPv4Address * manuals = interf.IPv4->Config->Manual;
                 for(int a=0;a<onvifinterface->ipv4_manual_count;a++){
                     struct tt__PrefixedIPv4Address manual = manuals[a];
                     onvifinterface->ipv4_manual = realloc(onvifinterface->ipv4_manual,sizeof(char *) * onvifinterface->ipv4_manual_count);
@@ -79,15 +79,15 @@ void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterf
             }
 
             //Link local address.
-            if(interface.IPv4->Config->LinkLocal){
-                onvifinterface->ipv4_link_local = malloc(strlen(interface.IPv4->Config->LinkLocal->Address)+1);
-                strcpy(onvifinterface->ipv4_link_local,interface.IPv4->Config->LinkLocal->Address);
+            if(interf.IPv4->Config->LinkLocal){
+                onvifinterface->ipv4_link_local = malloc(strlen(interf.IPv4->Config->LinkLocal->Address)+1);
+                strcpy(onvifinterface->ipv4_link_local,interf.IPv4->Config->LinkLocal->Address);
             }
 
             //DHCP IP
-            if(interface.IPv4->Config->FromDHCP){
-                onvifinterface->ipv4_from_dhcp = malloc(strlen(interface.IPv4->Config->FromDHCP->Address)+1);
-                strcpy(onvifinterface->ipv4_from_dhcp,interface.IPv4->Config->FromDHCP->Address);
+            if(interf.IPv4->Config->FromDHCP){
+                onvifinterface->ipv4_from_dhcp = malloc(strlen(interf.IPv4->Config->FromDHCP->Address)+1);
+                strcpy(onvifinterface->ipv4_from_dhcp,interf.IPv4->Config->FromDHCP->Address);
             }
         } else {
             onvifinterface->ipv4_enabled = 0;

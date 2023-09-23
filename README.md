@@ -14,7 +14,7 @@ make
 make install
 ```
 
-## Windows Compile
+## Windows Compile [Mingw64 and MSVC tested]
 ### Prepare
 - git clone https://github.com/Quedale/OnvifSoapLib.git
 - DownLoad https://udomain.dl.sourceforge.net/project/gsoap2/gsoap_2.8.124.zip
@@ -23,7 +23,8 @@ make install
 directory struct:  
     OnvifSoapLib  
         example
-        subprojects/gsoap-2.8  
+        subprojects
+            gsoap-2.8  
         src  
         wsdl  
 ```

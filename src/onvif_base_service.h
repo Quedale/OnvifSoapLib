@@ -1,6 +1,7 @@
 #ifndef ONVIF_BASE_SERVICE_H_ 
 #define ONVIF_BASE_SERVICE_H_
 
+#include "portable_thread.h"
 #include "shard_export.h"
 #include "onvif_credentials.h"
 
@@ -21,7 +22,7 @@ void OnvifBaseService__destroy(OnvifBaseService * self);
 void OnvifBaseService__lock(OnvifBaseService * self);
 void OnvifBaseService__unlock(OnvifBaseService * self);
 SHARD_EXPORT char * OnvifBaseService__get_endpoint(OnvifBaseService * self);
-OnvifCredentials * OnvifBaseService__get_credentials(OnvifBaseService * self);
+SHARD_EXPORT OnvifCredentials * OnvifBaseService__get_credentials(OnvifBaseService * self);
 SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
 void OnvifBaseService__soap_destroy(struct soap *soap);
 void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes code);

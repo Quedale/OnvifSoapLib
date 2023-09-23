@@ -83,7 +83,7 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
     const char delimeter[2] = "/";
     const char * onvif_key_del = "onvif://www.onvif.org/";
 
-    char key_w_del[strlen(key)+1+strlen(delimeter)];
+    char * key_w_del = malloc(strlen(key)+1+strlen(delimeter));
     strcpy(key_w_del, key);
     strcat(key_w_del, delimeter);
 
@@ -91,16 +91,16 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
     for (a = 0 ; a < self->count ; ++a) {
         if(startsWith(onvif_key_del, self->scopes[a]->scope)){
             //Drop onvif scope prefix
-            char subs[strlen(self->scopes[a]->scope)-strlen(onvif_key_del) + 1];
+            char * subs = malloc(strlen(self->scopes[a]->scope)-strlen(onvif_key_del) + 1);
             strncpy(subs,self->scopes[a]->scope+(strlen(onvif_key_del)),strlen(self->scopes[a]->scope) - strlen(onvif_key_del)+1);
 
             if(startsWith(key_w_del,subs)){ // Found Scope
                 //Extract value
-                char sval[strlen(subs)-strlen(key_w_del) + 1];
+                char * sval = malloc(strlen(subs)-strlen(key_w_del) + 1);
                 strncpy(sval,subs+(strlen(key_w_del)),strlen(subs) - strlen(key_w_del)+1);
 
                 //Decode http string (e.g. %20 = whitespace)
-                char output[strlen(sval)+1];
+                char * output = malloc(strlen(sval)+1);
                 urldecode(output, sval);
 
                 if(strlen(ret_val)==0){
@@ -111,10 +111,12 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
                     strcat(ret_val, " ");
                     strcat(ret_val, output);
                 }
+                free(sval);
             }
+            free(subs);
         }
-  }
-
+    }
+    free(key_w_del);
   return ret_val;
 }
 

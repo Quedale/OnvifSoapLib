@@ -8,7 +8,6 @@
 #include "wsse2api.h"
 #include <string.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <stddef.h>
 
 typedef struct _OnvifDeviceService {

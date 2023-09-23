@@ -9,14 +9,10 @@
 #include "onvif_device_capabilities.h"
 #include "onvif_device_scopes.h"
 
-typedef struct _OnvifScope OnvifScope;
-typedef struct _OnvifScopes OnvifScopes;
-
 typedef struct _OnvifDeviceService OnvifDeviceService;
 
-
-OnvifDeviceService * OnvifDeviceService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
-void OnvifDeviceService__init(OnvifDeviceService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT OnvifDeviceService * OnvifDeviceService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT void OnvifDeviceService__init(OnvifDeviceService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
 SHARD_EXPORT void OnvifDeviceService__destroy(OnvifDeviceService * self);
 SHARD_EXPORT OnvifBaseService * OnvifDeviceService__get_parent(OnvifDeviceService * self);
 

@@ -5,7 +5,7 @@
 typedef struct _OnvifMediaService {
     OnvifBaseService * parent;
     OnvifProfiles * profiles;
-    pthread_mutex_t  * profile_lock;
+    P_MUTEX_TYPE profile_lock;
     struct http_da_info *  snapshot_da_info;
 } OnvifMediaService;
 
@@ -17,8 +17,8 @@ OnvifMediaService * OnvifMediaService__create(const char * endpoint, OnvifCreden
 
 void OnvifMediaService__init(OnvifMediaService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     self->parent = OnvifBaseService__create(endpoint, credentials, error_cb, error_data);
-    self->profile_lock = malloc(sizeof(pthread_mutex_t));
-    pthread_mutex_init(self->profile_lock, NULL);
+    P_MUTEX_SETUP(self->profile_lock);
+
     self->profiles = NULL;
     self->snapshot_da_info = NULL;
 }
@@ -27,8 +27,7 @@ void OnvifMediaService__destroy(OnvifMediaService * self){
     if(self){
         OnvifBaseService__destroy(self->parent);
         OnvifProfiles__destroy(self->profiles);
-        pthread_mutex_destroy(self->profile_lock);
-        free(self->profile_lock);
+        P_MUTEX_CLEANUP(self->profile_lock);
         if(self->snapshot_da_info)
             free(self->snapshot_da_info);
         free(self);
@@ -54,10 +53,10 @@ int OnvifMediaService__check_profiles(OnvifMediaService * self){
 
 OnvifProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
     OnvifProfiles * ret;
-    pthread_mutex_lock(self->profile_lock);
+    P_MUTEX_LOCK(self->profile_lock);
     if(!OnvifMediaService__check_profiles(self)) return NULL;
     ret = OnvifProfiles__copy(self->profiles);
-    pthread_mutex_unlock(self->profile_lock);
+    P_MUTEX_UNLOCK(self->profile_lock);
     return ret;
 }
 
@@ -269,7 +268,7 @@ void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, ch
         ret[0] = '\0'; 
         return;
     }
-    pthread_mutex_lock(self->profile_lock);
+    P_MUTEX_LOCK(self->profile_lock);
     printf("OnvifMediaService__get_profile_token\n");
     if(!OnvifMediaService__check_profiles(self)) { 
         ret[0] = '\0'; 
@@ -293,5 +292,5 @@ void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, ch
     } else {
         printf("OnvifMediaService__get_profile_token : profile not found\n");
     }
-    pthread_mutex_unlock(self->profile_lock);
+    P_MUTEX_UNLOCK(self->profile_lock);
 }
