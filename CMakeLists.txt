@@ -154,6 +154,7 @@ set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 
 include(CPack)
 
+#Defining headers to export
 set(headers ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
 		        ${PROJECT_SOURCE_DIR}/src/onvif_device_capabilities.h
 		        ${PROJECT_SOURCE_DIR}/src/onvif_credentials.h
@@ -168,21 +169,16 @@ set(headers ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
             ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h
             ${PROJECT_SOURCE_DIR}/src/portable_thread.h)
 
-#Setting .pc file variables
+#Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix ${CMAKE_INSTALL_BINDIR})
 set(libdir ${CMAKE_INSTALL_LIBDIR})
 set(includedir ${CMAKE_INSTALL_INCLUDEDIR})
 
+#Create pkgconfig file
 configure_file(onvifsoap.pc.in onvifsoap.pc @ONLY) 
 
+#Install packages
 install(TARGETS onvifsoap EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${PROJECT_BINARY_DIR}/onvifsoap.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-
-# install(TARGETS onvifsoap
-#         EXPORT onvifsoap
-#         [PERMISSIONS permissions...]
-#         [CONFIGURATIONS [Debug|Release|...]]
-#         [COMPONENT <component>]
-#         [RENAME <name>] [OPTIONAL] [EXCLUDE_FROM_ALL])
