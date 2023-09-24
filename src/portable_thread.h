@@ -76,7 +76,7 @@ POP_WARNING_IGNORE(NULL)
 #   define P_THREAD_EXIT	pthread_exit(NULL)
 #   define P_THREAD_CANCEL(x)	pthread_cancel(x)
 #   define P_MUTEX_TYPE		pthread_mutex_t
-#   define P_MUTEX_INITIALIZER	PP_THREAD_P_MUTEX_INITIALIZER
+#   define P_MUTEX_INITIALIZER	PTHREAD_MUTEX_INITIALIZER
 #   define P_MUTEX_SETUP(x)	pthread_mutex_init(&(x), NULL)
 #   define P_MUTEX_CLEANUP(x)	pthread_mutex_destroy(&(x))
 #   define P_MUTEX_LOCK(x)	pthread_mutex_lock(&(x))
