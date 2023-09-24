@@ -2,6 +2,7 @@
 #define ONVIF_SNAPSHOT_H_
 
 #include "shard_export.h"
+#include <stddef.h>
 
 typedef struct _OnvifSnapshot OnvifSnapshot;
 

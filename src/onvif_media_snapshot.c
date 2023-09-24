@@ -1,7 +1,6 @@
 #include "onvif_media_snapshot.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stddef.h>
 
 typedef struct _OnvifSnapshot {
     char * buffer;
