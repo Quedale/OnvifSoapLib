@@ -5,7 +5,7 @@ WORK_DIR=$(pwd)
 
 #Get project root directory based on autogen.sh file location
 SCRT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
-SUBPROJECT_DIR=$SCRT_DIR/subprojects
+SUBPROJECT_DIR=${SUBPROJECT_DIR:="$SCRT_DIR/subprojects"}
 
 #Cache folder for downloaded sources
 SRC_CACHE_DIR=$SUBPROJECT_DIR/.cache
