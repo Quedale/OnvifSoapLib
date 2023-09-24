@@ -7,13 +7,13 @@ typedef struct _OnvifSnapshot {
     size_t size;
 } OnvifSnapshot;
 
-OnvifSnapshot * OnvifSnapshot__create(int size, char * buffer){
+OnvifSnapshot * OnvifSnapshot__create(size_t size, char * buffer){
     OnvifSnapshot * self = malloc(sizeof(OnvifSnapshot));
     OnvifSnapshot__init(self,size,buffer);
     return self;
 }
 
-void OnvifSnapshot__init(OnvifSnapshot * self, int size, char * buffer){
+void OnvifSnapshot__init(OnvifSnapshot * self, size_t size, char * buffer){
     self->size = size;
     self->buffer = malloc(size);
     memcpy(self->buffer,buffer,size);
