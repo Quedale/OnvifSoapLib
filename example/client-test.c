@@ -2,18 +2,18 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "clogger.h"
 
 int main(void)
 {
 
-        printf("creating device...\n");
+        C_DEBUG("creating device...\n");
         OnvifDevice* dev = OnvifDevice__create("http://192.168.0.121/onvif/device_service"); 
         OnvifDevice__set_credentials(dev,"admin", "Admin123");
 		OnvifDevice__authenticate(dev);
         
 		char * ip = OnvifDevice__get_ip(dev);
-        printf("dev : %s\n",ip);
+        C_DEBUG("dev : %s\n",ip);
 		free(ip);
 
 		OnvifDeviceService * device_service = OnvifDevice__get_device_service(dev);
@@ -24,13 +24,13 @@ int main(void)
 			OnvifProfiles * profiles = OnvifMediaService__get_profiles(media_service);
 			for (int i = 0; i < OnvifProfiles__get_size(profiles); i++){
 				OnvifProfile * profile = OnvifProfiles__get_profile(profiles,i);
-				printf("Profile name: %s\n", OnvifProfile__get_name(profile));
-				printf("Profile token: %s\n", OnvifProfile__get_token(profile));
+				C_DEBUG("Profile name: %s\n", OnvifProfile__get_name(profile));
+				C_DEBUG("Profile token: %s\n", OnvifProfile__get_token(profile));
 
 				char * stream_uri = OnvifMediaService__getStreamUri(media_service, i);
 				char * snapshot_uri = OnvifMediaService__getSnapshotUri(media_service, i);
-				printf("StreamUri : %s\n", stream_uri);
-				printf("SnapshotUri : %s\n",snapshot_uri);
+				C_DEBUG("StreamUri : %s\n", stream_uri);
+				C_DEBUG("SnapshotUri : %s\n",snapshot_uri);
 
 				OnvifSnapshot * snapshot = OnvifMediaService__getSnapshot(media_service, i);
 				if (snapshot && OnvifSnapshot__get_size(snapshot) > 0){

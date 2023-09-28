@@ -1,6 +1,7 @@
 #include "onvif_media_service.h"
 #include "onvif_media_profile_local.h"
 #include "httpda.h"
+#include "clogger.h"
 
 typedef struct _OnvifMediaService {
     OnvifBaseService * parent;
@@ -44,7 +45,7 @@ char * OnvifMediaService__get_endpoint(OnvifMediaService * self){
 
 int OnvifMediaService__check_profiles(OnvifMediaService * self){
     if(!self->profiles){
-        printf("OnvifMediaService__get_profile_token : Initializing profiles\n");
+        C_INFO("OnvifMediaService__get_profile_token : Initializing profiles\n");
         self->profiles = OnvifMediaService__getProfiles(self);
     }
 
@@ -62,7 +63,7 @@ OnvifProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
 
 OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
     if(!self){
-        printf("OnvifMediaService__getProfiles - MediaService uninitialized.\n");
+        C_ERROR("OnvifMediaService__getProfiles - MediaService uninitialized.\n");
         return NULL;
     }
     struct _trt__GetProfiles req;
@@ -99,7 +100,7 @@ exit:
 
 char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_index){
     if(!self){
-        printf("OnvifMediaService__getStreamUri - MediaService uninitialized.\n");
+        C_ERROR("OnvifMediaService__getStreamUri - MediaService uninitialized.\n");
         return NULL;
     }
     struct _trt__GetStreamUri req;
@@ -123,7 +124,7 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
         OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_NONE);
     }
     
-    printf("OnvifMediaService__getStreamUri [%s][%i]\n", endpoint,profile_index);
+    C_DEBUG("OnvifMediaService__getStreamUri [%s][%i]\n", endpoint,profile_index);
     // req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap,sizeof(struct tt__StreamSetup));//Initialize, allocate space
 	req.StreamSetup = soap_new_tt__StreamSetup(soap,1);
     req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
@@ -152,7 +153,7 @@ exit:
 //TODO Support timeout and invalidafter flag
 char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
     if(!self){
-        printf("OnvifMediaService__getSnapshotUri - MediaService uninitialized.\n");
+        C_ERROR("OnvifMediaService__getSnapshotUri - MediaService uninitialized.\n");
         return NULL;
     }
     struct _trt__GetSnapshotUri request;
@@ -161,7 +162,7 @@ char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_in
     memset (&response, 0, sizeof (response));
     char * ret_val = NULL;
 
-    printf("OnvifMediaService__getSnapshotUri\n");
+    C_DEBUG("OnvifMediaService__getSnapshotUri\n");
     char token[255];
     OnvifMediaService__get_profile_token(self,profile_index, token);
     request.ProfileToken = token;
@@ -197,7 +198,7 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
     char * buffer = NULL;
     OnvifSnapshot * snap = NULL;
 
-    printf("get_http_body\n");
+    C_TRACE("get_http_body\n");
     //Creating soap instance to avoid long running locks.
     struct soap * soap = soap_new1(SOAP_IO_CHUNK);
     if (!self->snapshot_da_info){
@@ -226,7 +227,7 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
                     || soap_end_recv(soap)){
                 }else {
                     //TODO handle error codes
-                    printf("get_http_body ERROR-1\n");
+                    C_ERROR("get_http_body ERROR-1\n");
                     soap_print_fault(soap, stderr);
                     goto exit;
                 }
@@ -234,7 +235,7 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
 
     } else {
         //TODO handle error codes
-        printf("get_http_body ERROR-2\n");
+        C_ERROR("get_http_body ERROR-2\n");
         soap_print_fault(soap, stderr);
         goto exit;
     }
@@ -254,9 +255,9 @@ exit:
 }
 
 OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int profile_index){
-    printf("OnvifMediaService__getSnapshot\n");
+    C_DEBUG("OnvifMediaService__getSnapshot\n");
     char * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
-    printf("snapshot_uri : %s\n",snapshot_uri);
+    C_INFO("Snapshot URI : %s\n",snapshot_uri);
     OnvifSnapshot * ret = get_http_body(self, snapshot_uri);
     free(snapshot_uri);
     return ret;
@@ -264,12 +265,12 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
 
 void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, char * ret){
     if(!self){
-        printf("OnvifMediaService__get_profile_token - MediaService uninitialized.\n");
+        C_ERROR("OnvifMediaService__get_profile_token - MediaService uninitialized.\n");
         ret[0] = '\0'; 
         return;
     }
     P_MUTEX_LOCK(self->profile_lock);
-    printf("OnvifMediaService__get_profile_token\n");
+    C_TRACE("OnvifMediaService__get_profile_token\n");
     if(!OnvifMediaService__check_profiles(self)) { 
         ret[0] = '\0'; 
         return;
@@ -278,19 +279,19 @@ void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, ch
     int profileCount = OnvifProfiles__get_size(self->profiles);
     if(index >= profileCount){
         char * endpoint = OnvifMediaService__get_endpoint(self);
-        printf("OnvifMediaService__get_profile_token : profile index out-of-bounds. [%s]\n", endpoint);
+        C_ERROR("OnvifMediaService__get_profile_token : profile index out-of-bounds. [%s]\n", endpoint);
         free(endpoint);
     } else if(profileCount > 0 && profileCount > index) {
         OnvifProfile * profile = OnvifProfiles__get_profile(self->profiles,index);
         char * token = OnvifProfile__get_token(profile);
         if(token){
-            printf("OnvifMediaService__get_profile_token : Found profile [%s]\n",token);
+            C_TRACE("OnvifMediaService__get_profile_token : Found profile [%s]\n",token);
             strcpy(ret,token);
         } else {
-            printf("OnvifMediaService__get_profile_token : Found profile, but token was NULL\n");
+            C_ERROR("OnvifMediaService__get_profile_token : Found profile, but token was NULL\n");
         }
     } else {
-        printf("OnvifMediaService__get_profile_token : profile not found\n");
+        C_ERROR("OnvifMediaService__get_profile_token : profile not found\n");
     }
     P_MUTEX_UNLOCK(self->profile_lock);
 }

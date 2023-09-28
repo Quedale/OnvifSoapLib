@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include "clogger.h"
 
 #define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
 
@@ -78,7 +79,7 @@ int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
         if (soap_wsse_add_Timestamp(soap, "Time", 10)
             || soap_wsse_add_UsernameTokenDigest(soap, "Auth",user,pass)){
             //TODO Error handling
-            printf("Unable to set wsse creds...\n");
+            C_ERROR("Unable to set wsse creds...\n");
             ret = 0;
         }
     }
@@ -123,13 +124,13 @@ void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * 
         error_code == SOAP_HTTP_ERROR || 
         error_code == SOAP_SSL_ERROR || 
         error_code == SOAP_ZLIB_ERROR){
-        printf("CONNECTION ERROR\n");
+        C_ERROR("CONNECTION ERROR\n");
         OnvifBaseService__set_error_code(self,ONVIF_CONNECTION_ERROR);
     } else if (strcmp(soap_fault_subcode(soap),FAULT_UNAUTHORIZED)) {
-        printf("Warning : NOT AUTHORIZED\n");
+        C_WARN("Warning : NOT AUTHORIZED\n");
         OnvifBaseService__set_error_code(self,ONVIF_NOT_AUTHORIZED);
     } else { //Mostly SOAP_FAULT
-        printf("SOAP ERROR %i [%s]\n",error_code, soap_fault_subcode(soap));
+        C_ERROR("SOAP ERROR %i [%s]\n",error_code, soap_fault_subcode(soap));
         soap_print_fault(soap, stderr);
         OnvifBaseService__set_error_code(self,ONVIF_SOAP_ERROR);
     }

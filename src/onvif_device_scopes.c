@@ -1,4 +1,5 @@
 #include "onvif_device_scopes_local.h"
+#include "clogger.h"
 
 typedef struct _OnvifScope {
     char * scope;
@@ -78,7 +79,7 @@ void OnvifScopes__init(OnvifScopes * self,struct _tds__GetScopesResponse * resp)
 }
 
 char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
-    printf("OnvifScopes__extract_scope %s\n", key);
+    C_DEBUG("OnvifScopes__extract_scope %s\n", key);
     char* ret_val = "";
     const char delimeter[2] = "/";
     const char * onvif_key_del = "onvif://www.onvif.org/";

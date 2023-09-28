@@ -4,6 +4,7 @@
 #include "onvif_media_service.h"
 #include "wsddapi.h"
 #include "ip_match.h"
+#include "clogger.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 /* We are on Windows */
@@ -40,14 +41,14 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
         goto exit;
     }
 
-    printf("OnvifDevice__createMediaService\n");
+    C_DEBUG("OnvifDevice__createMediaService\n");
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
     if(capabilities){
         OnvifMedia * media = OnvifCapabilities__get_media(capabilities);
         self->media_service = OnvifMediaService__create(OnvifMedia__get_address(media),self->credentials,OnvifDevice__set_last_error,self);
         OnvifCapabilities__destroy(capabilities);
     } else {
-        printf("No capabilities...\n");
+        C_WARN("No capabilities...\n");
     }
 
 exit:
@@ -56,32 +57,32 @@ exit:
 
 // Place holder to allow client compile
 void wsdd_event_Hello(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, const char *EndpointReference, const char *Types, const char *Scopes, const char *MatchBy, const char *XAddrs, unsigned int MetadataVersion)
-{ printf("wsdd_event_Hello\n"); }
+{ C_FATAL("wsdd_event_Hello\n"); }
 
 void wsdd_event_Bye(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, const char *EndpointReference, const char *Types, const char *Scopes, const char *MatchBy, const char *XAddrs, unsigned int *MetadataVersion)
-{ printf("wsdd_event_Bye\n"); }
+{ C_FATAL("wsdd_event_Bye\n"); }
 
 soap_wsdd_mode wsdd_event_Probe(struct soap *soap, const char *MessageID, const char *ReplyTo, const char *Types, const char *Scopes, const char *MatchBy, struct wsdd__ProbeMatchesType *ProbeMatches)
 {
-    printf("wsdd_event_Probe\n");
+    C_FATAL("wsdd_event_Probe\n");
     return SOAP_WSDD_ADHOC;
 }
 
 void wsdd_event_ProbeMatches(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ProbeMatchesType *ProbeMatches)
-{  printf("wsdd_event_ProbeMatches\n"); }
+{  C_FATAL("wsdd_event_ProbeMatches\n"); }
 
 soap_wsdd_mode wsdd_event_Resolve(struct soap *soap, const char *MessageID, const char *ReplyTo, const char *EndpointReference, struct wsdd__ResolveMatchType *match)
 {
-    printf("wsdd_event_Resolve\n");
+    C_FATAL("wsdd_event_Resolve\n");
     return SOAP_WSDD_ADHOC;
 }
 
 void wsdd_event_ResolveMatches(struct soap *soap, unsigned int InstanceId, const char * SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ResolveMatchType *match)
-{ printf("wsdd_event_ResolveMatches\n"); }
+{ C_FATAL("wsdd_event_ResolveMatches\n"); }
 
 void OnvifDevice__authenticate(OnvifDevice* self){
     char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
-    printf("OnvifDevice__authenticate [%s]\n", endpoint);
+    C_INFO("OnvifDevice__authenticate [%s]\n", endpoint);
     free(endpoint);
 
     OnvifDevice__createMediaService(self);
@@ -90,14 +91,14 @@ void OnvifDevice__authenticate(OnvifDevice* self){
     }
 
     endpoint = OnvifMediaService__get_endpoint(self->media_service);
-    printf("Created Media soap [%s]\n",endpoint);
+    C_DEBUG("Created Media soap [%s]\n",endpoint);
     free(endpoint);
 
     char * stream_uri = OnvifMediaService__getStreamUri(self->media_service,0);
     if(!stream_uri){
         return;
     }
-    printf("StreamURI : %s\n",stream_uri);
+    C_DEBUG("StreamURI : %s\n",stream_uri);
 }
 
 void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass){
@@ -186,23 +187,23 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
         self->port = "443";
     }
 
-    printf("Created Device:\n");
-    printf("\tprotocol -- %s\n",self->protocol);
-    printf("\tip : %s\n",self->ip);
-    printf("\thostname : %s\n",self->hostname);
-    printf("\tport -- %s\n",self->port);
-    printf("\tendpoint : %s\n",self->endpoint);
+    C_INFO("Created Device:\n");
+    C_INFO("\tprotocol -- %s\n",self->protocol);
+    C_INFO("\tip : %s\n",self->ip);
+    C_INFO("\thostname : %s\n",self->hostname);
+    C_INFO("\tport -- %s\n",self->port);
+    C_INFO("\tendpoint : %s\n",self->endpoint);
 }
 
 OnvifDevice * OnvifDevice__create(const char * device_url) {
-    printf("OnvifDevice__create\n");
+    C_DEBUG("OnvifDevice__create\n");
     OnvifDevice * result = malloc(sizeof(OnvifDevice));
     OnvifDevice__init(result,device_url);
     return result;
 }
 
 void OnvifDevice__destroy(OnvifDevice* device) {
-    printf("OnvifDevice__destroy\n");
+    C_DEBUG("OnvifDevice__destroy\n");
     if (device) {
         OnvifCredentials__destroy(device->credentials);
         OnvifDeviceService__destroy(device->device_service);

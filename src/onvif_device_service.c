@@ -3,7 +3,7 @@
 #include "onvif_device_info_local.h"
 #include "onvif_device_interface_local.h"
 #include "onvif_device_scopes_local.h"
-
+#include "clogger.h"
 #include "generated/soapH.h"
 #include "wsse2api.h"
 #include <string.h>
@@ -36,7 +36,7 @@ OnvifBaseService * OnvifDeviceService__get_parent(OnvifDeviceService * self){
 }
 
 OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self) {
-    printf("OnvifDeviceService__getCapabilities\n");
+    C_DEBUG("OnvifDeviceService__getCapabilities\n");
     struct _tds__GetCapabilities gethostname;
     struct _tds__GetCapabilitiesResponse response;
     OnvifCapabilities *capabilities = NULL;

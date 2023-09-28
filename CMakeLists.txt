@@ -18,6 +18,11 @@ elseif (MINGW)
     add_compile_options(-Wa,-mbig-obj)
 endif ()
 
+set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/CUtils/build/dist/lib/pkgconfig")
+find_package(PkgConfig)
+pkg_check_modules(CUTILS REQUIRED cutils)
+include_directories(${CUTILS_INCLUDE_DIRS})
+
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(Threads REQUIRED)
@@ -151,7 +156,7 @@ else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-target_link_libraries(onvifsoap PRIVATE gsoap generatedsoap)
+target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} gsoap generatedsoap)
 
 #I care little for MSVC warning. Support is from good faith
 if (MSVC)
@@ -186,8 +191,7 @@ set(headers ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
             ${PROJECT_SOURCE_DIR}/src/onvif_media_service.h
             ${PROJECT_SOURCE_DIR}/src/onvif_device_scopes.h
             ${PROJECT_SOURCE_DIR}/src/shard_export.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h
-            ${PROJECT_SOURCE_DIR}/src/portable_thread.h)
+            ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h)
 
 #Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})
