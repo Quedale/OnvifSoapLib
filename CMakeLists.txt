@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(client-test VERSION 0.1.0)
-
-include(CTest)
-enable_testing()
+project(onvifsoaplib VERSION 0.1.0)
 
 set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release)
 set(LIBRARY_OUTPUT_PATH    ${OUTPUT_DIR})
@@ -18,9 +15,29 @@ elseif (MINGW)
     add_compile_options(-Wa,-mbig-obj)
 endif ()
 
-set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/CUtils/build/dist/lib/pkgconfig")
-find_package(PkgConfig)
-pkg_check_modules(CUTILS REQUIRED cutils)
+#################
+# Build subproject(s) using child cmake inside ./subprojects
+##############
+message (STATUS " START PROCESS = ${CMAKE_COMMAND} --build ${CMAKE_SOURCE_DIR}/subprojects")
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/subprojects)
+execute_process(
+    COMMAND ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR}/subprojects "-DCMAKE_TOOLCHAIN_FILE:STRING=C:\\Users\\Quedale\\git\\OnvifSoapLib\\subprojects\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake" -G "Visual Studio 17 2022" -T host=x64 -A win32
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/subprojects
+)
+execute_process(
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR}/subprojects
+)
+message (STATUS " END PROCESS = ${CMAKE_COMMAND} --build ${CMAKE_SOURCE_DIR}/subprojects")
+
+#################
+# Set dependencies library and include variables
+##############
+find_library(CUTILS_LIB
+    NAMES cutils
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/subprojects/CUtils/build/lib
+    NO_CACHE
+)
+set(CUTILS_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/subprojects/cutils/build/include)
 include_directories(${CUTILS_INCLUDE_DIRS})
 
 find_package(OpenSSL REQUIRED)
@@ -35,7 +52,11 @@ include_directories(${GSOAP_SRC_DIR}/gsoap/
                     src)
 
 if(NOT EXISTS ${CMAKE_SOURCE_DIR}/src/generated)
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
+  if (WIN32)
+    message(FATAL_ERROR " soap generated files not found.\n Make sure to run autogen.bat")
+  else ()
+    message(FATAL_ERROR " soap generated files not found.\n Make sure to run bootstrap.sh")
+  endif()
 endif()
 
 aux_source_directory(src src_dir)
@@ -156,11 +177,11 @@ else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} gsoap generatedsoap)
+target_link_libraries(onvifsoap PRIVATE ${CUTILS_LIB} gsoap generatedsoap)
 
 #I care little for MSVC warning. Support is from good faith
 if (MSVC)
-  target_compile_options(onvifsoap PRIVATE "SHELL: -wd4100 -wd4244 -wd4255 -wd4706 -wd4820 -wd4996 -wd5045")
+  target_compile_options(onvifsoap PRIVATE "SHELL: -wd4100 -wd4244 -wd4255 -wd4706 -wd4820 -wd4996 -wd5045 -wd4668 -wd4191")
 endif()
 
 if(NOT WIN32)

@@ -6,16 +6,17 @@ SET CMAKE_PATH=%SUBPROJ_PATH%\vcpkg\scripts\buildsystems\vcpkg.cmake
 SET VSCODE_PATH=%MYPATH%.vscode
 SET ESC_CMAKE_PATH=%CMAKE_PATH:\=\\%
 
+REM Setup subproject durectory structure
 if NOT EXIST %SUBPROJ_PATH% (
     ECHO "Making directory %SUBPROJ_PATH%"
     mkdir %SUBPROJ_PATH%
 )
-
 if NOT EXIST %CACHE_PATH% (
     ECHO "Making directory %CACHE_PATH%"
     mkdir %CACHE_PATH%
 )
 
+REM Setup gsoap dependency and source
 IF NOT EXIST %SUBPROJ_PATH%\gsoap-2.8\ (
     IF NOT EXIST %CACHE_PATH%\gsoap_2.8.zip (
         echo "Downloading gsoap archive..."
@@ -25,28 +26,32 @@ IF NOT EXIST %SUBPROJ_PATH%\gsoap-2.8\ (
     tar -xf %CACHE_PATH%\gsoap_2.8.zip -C %SUBPROJ_PATH%
 )
 
+REM Setup vcpkg for additional depedencies
 IF NOT EXIST %SUBPROJ_PATH%\vcpkg\ (
     git clone https://github.com/Microsoft/vcpkg.git %SUBPROJ_PATH%\vcpkg
-    %SUBPROJ_PATH%\vcpkg\bootstrap-vcpkg.sh
 ) else (
     git -C %SUBPROJ_PATH%\vcpkg pull
 )
-
+call %SUBPROJ_PATH%\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+echo "VCPKG configured."
 %SUBPROJ_PATH%\vcpkg\vcpkg install openssl:x64-windows openssl:x86-windows zlib:x64-windows zlib:x86-windows
+echo "VCPKG Dependencies downloaded."
 
+REM Generated ONVIF soap files
 rd /s/q %cd%\src\generated  
 md %cd%\src\generated  
 %cd%\subprojects\gsoap-2.8\gsoap\bin\win64\wsdl2h.exe -x -t %cd%\wsdl\typemap.dat -o %cd%\src\generated\common_service.h -c ^
     http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl ^
     http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl ^
     http://www.onvif.org/onvif/ver10/schema/onvif.xsd
-
 %cd%\subprojects\gsoap-2.8\gsoap\bin\win64\soapcpp2.exe -f100 -CL -x -I "%cd%\subprojects\gsoap-2.8\gsoap\import";"%cd%\subprojects\gsoap-2.8\gsoap" %cd%\src\generated\common_service.h -d%cd%\src\generated
+echo "ONVIF Soap file generated."
 
 IF NOT EXIST %VSCODE_PATH%\ (
     mkdir %VSCODE_PATH%\
 )
 
+@REM Setting up vscode settings.json
 IF NOT EXIST %VSCODE_PATH%\settings.json (
     echo { > %VSCODE_PATH%\settings.json
     echo     "cmake.configureSettings": { >> %VSCODE_PATH%\settings.json

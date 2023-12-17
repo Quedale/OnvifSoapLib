@@ -12,7 +12,7 @@ Makefile
 Makefile.in
 missing
 src/generated
-subprojects
+subprojects/*/
 configure~
 m4
 libtool
