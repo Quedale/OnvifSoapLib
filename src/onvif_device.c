@@ -99,6 +99,7 @@ void OnvifDevice__authenticate(OnvifDevice* self){
         return;
     }
     C_DEBUG("StreamURI : %s\n",stream_uri);
+    free(stream_uri);
 }
 
 void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass){
@@ -146,11 +147,14 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     self->device_service = OnvifDeviceService__create(device_url,self->credentials,OnvifDevice__set_last_error,self);
     self->media_service = NULL;
 
-    char * data = malloc(strlen(device_url)+1);
+    char data_arr[strlen(device_url)+1];
+    char * data = data_arr;
     memcpy(data,device_url,strlen(device_url)+1);
 
     if(strstr(data,"://")){
-        self->protocol = strtok_r ((char *)data, "://", &data);
+        char * tmpprot = strtok_r ((char *)data, "://", &data);
+        self->protocol = malloc(strlen(tmpprot)+1);
+        strcpy(self->protocol,tmpprot);
     } else {
         self->protocol = NULL;
     }
@@ -165,7 +169,9 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     if(hostport){
         if(strstr(hostport,":")){ //If the port is set
             hostorip = strtok_r (hostport, ":", &hostport);
-            self->port = strtok_r ((char *)hostport, "/", &hostport);
+            char * tmpport = strtok_r ((char *)hostport, "/", &hostport);
+            self->port = malloc(strlen(tmpport)+1);
+            strcpy(self->port,tmpport);
         } else { //If no port is set
             hostorip = strtok_r (hostport, "/", &hostport);
         }
@@ -174,17 +180,21 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
     }
 
     if(is_valid_ip(hostorip)){
-        self->ip = hostorip;
+        self->ip = malloc(strlen(hostorip) +1);
+        strcpy(self->ip,hostorip);
         self->hostname = NULL;
     } else {
         self->ip = NULL;
-        self->hostname = hostorip;
+        self->hostname = malloc(strlen(hostorip) +1);
+        strcpy(self->hostname,hostorip);
     }
 
     if(!self->port && self->protocol && !strcmp(self->protocol,"http")){
-        self->port = "80";
+        self->port = malloc(strlen("80")+1);
+        strcpy(self->port,"80");
     } else if(!self->port && self->protocol && !strcmp(self->protocol,"https")){
-        self->port = "443";
+        self->port = malloc(strlen("443")+1);
+        strcpy(self->port,"443");
     }
 
     C_INFO("Created Device:\n");
@@ -210,6 +220,10 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         OnvifMediaService__destroy(device->media_service);
         P_MUTEX_CLEANUP(device->media_lock);
         P_MUTEX_CLEANUP(device->prop_lock);
+        free(device->hostname);
+        free(device->ip);
+        free(device->protocol);
+        free(device->port);
         free(device);
     }
 }

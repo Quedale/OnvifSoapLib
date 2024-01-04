@@ -74,6 +74,7 @@ void OnvifProfiles__destroy(OnvifProfiles* self){
         for (int i = 0; i < self->count; i++){
             OnvifProfile__destroy(self->profiles[i]);
         }
+        free(self->profiles);
         self->count = 0;
         free(self);
     }
