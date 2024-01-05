@@ -192,8 +192,10 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
         struct hostent *host_entry = gethostbyname(self->hostname);
         if(host_entry){
             C_DEBUG("Resolving hostname...");
-            self->ip = inet_ntoa(*((struct in_addr*)
+            char * tmpip = inet_ntoa(*((struct in_addr*)
                         host_entry->h_addr_list[0]));
+            self->ip = malloc(strlen(tmpip)+1);
+            strcpy(self->ip,tmpip);
         }
     }
 
