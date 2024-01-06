@@ -118,13 +118,15 @@ else()
 endif()
 
 if (NOT MSVC)
-  target_compile_options(gsoap PRIVATE "SHELL: -fPIC")
+  target_compile_options(gsoap PRIVATE "SHELL: -fPIC -fvisibility=hidden")
 endif()
 
 target_compile_options(generatedsoap PRIVATE "SHELL: -c -DWITH_DOM")
 
 target_link_libraries(generatedsoap PRIVATE gsoap)
-
+if(NOT WIN32)
+  target_compile_options(generatedsoap PRIVATE "SHELL: -fvisibility=hidden")
+endif()
 #########################
 #
 # onvif ibrary
@@ -134,21 +136,21 @@ target_link_libraries(generatedsoap PRIVATE gsoap)
 add_library(onvifsoap SHARED    ${src_dir})
 
 if(ZLIB_FOUND)
-  target_link_libraries(onvifsoap PUBLIC ZLIB::ZLIB)
+  target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
   set(LA_LIBS "${LA_LIBS} -lz")
 else()
   message(WARNING "ZLIB not found...")
 endif()
 
 if(OPENSSL_FOUND)
-  target_link_libraries(onvifsoap PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+  target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
   set(LA_LIBS "${LA_LIBS} -lssl -lcrypto")
 else()
   message(FATAL_ERROR "OpenSSL not found...")
 endif()
 
 if(Threads_FOUND)
-  target_link_libraries(onvifsoap PUBLIC Threads::Threads)
+  target_link_libraries(onvifsoap PRIVATE Threads::Threads)
   if(CMAKE_USE_PTHREADS_INIT)
     set(LA_LINK "${LA_LINK} -pthread")
   endif()
@@ -164,10 +166,10 @@ if (MSVC)
 endif()
 
 if(NOT WIN32)
-  target_compile_options(onvifsoap PUBLIC "SHELL: -fvisibility=hidden")
+  target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
 endif()
 
-target_compile_options(onvifsoap PUBLIC "SHELL: -c -Wall -DBUILD_SHARD")
+target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -DBUILD_SHARD")
 
 add_subdirectory(example)
 

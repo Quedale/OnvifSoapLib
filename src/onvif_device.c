@@ -55,31 +55,6 @@ exit:
     P_MUTEX_UNLOCK(self->media_lock);
 }
 
-// Place holder to allow client compile
-void wsdd_event_Hello(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, const char *EndpointReference, const char *Types, const char *Scopes, const char *MatchBy, const char *XAddrs, unsigned int MetadataVersion)
-{ C_FATAL("wsdd_event_Hello\n"); }
-
-void wsdd_event_Bye(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, const char *EndpointReference, const char *Types, const char *Scopes, const char *MatchBy, const char *XAddrs, unsigned int *MetadataVersion)
-{ C_FATAL("wsdd_event_Bye\n"); }
-
-soap_wsdd_mode wsdd_event_Probe(struct soap *soap, const char *MessageID, const char *ReplyTo, const char *Types, const char *Scopes, const char *MatchBy, struct wsdd__ProbeMatchesType *ProbeMatches)
-{
-    C_FATAL("wsdd_event_Probe\n");
-    return SOAP_WSDD_ADHOC;
-}
-
-void wsdd_event_ProbeMatches(struct soap *soap, unsigned int InstanceId, const char *SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ProbeMatchesType *ProbeMatches)
-{  C_FATAL("wsdd_event_ProbeMatches\n"); }
-
-soap_wsdd_mode wsdd_event_Resolve(struct soap *soap, const char *MessageID, const char *ReplyTo, const char *EndpointReference, struct wsdd__ResolveMatchType *match)
-{
-    C_FATAL("wsdd_event_Resolve\n");
-    return SOAP_WSDD_ADHOC;
-}
-
-void wsdd_event_ResolveMatches(struct soap *soap, unsigned int InstanceId, const char * SequenceId, unsigned int MessageNumber, const char *MessageID, const char *RelatesTo, struct wsdd__ResolveMatchType *match)
-{ C_FATAL("wsdd_event_ResolveMatches\n"); }
-
 void OnvifDevice__authenticate(OnvifDevice* self){
     char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
     C_INFO("OnvifDevice__authenticate [%s]\n", endpoint);
