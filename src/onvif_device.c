@@ -162,16 +162,6 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
         self->ip = NULL;
         self->hostname = malloc(strlen(hostorip) +1);
         strcpy(self->hostname,hostorip);
-
-        // To retrieve host information
-        struct hostent *host_entry = gethostbyname(self->hostname);
-        if(host_entry){
-            C_DEBUG("Resolving hostname...");
-            char * tmpip = inet_ntoa(*((struct in_addr*)
-                        host_entry->h_addr_list[0]));
-            self->ip = malloc(strlen(tmpip)+1);
-            strcpy(self->ip,tmpip);
-        }
     }
 
     if(!self->port && self->protocol && !strcmp(self->protocol,"http")){
@@ -226,6 +216,19 @@ char * OnvifDevice__get_ip(OnvifDevice* self){
     }
     P_MUTEX_UNLOCK(self->prop_lock);
     return ret;
+}
+
+void OnvifDevice__lookup_ip(OnvifDevice* self){
+    struct hostent *host_entry = gethostbyname(self->hostname);
+    if(host_entry){
+        C_DEBUG("Resolving hostname...");
+        char * tmpip = inet_ntoa(*((struct in_addr*)
+                    host_entry->h_addr_list[0]));
+        P_MUTEX_LOCK(self->prop_lock);
+        self->ip = malloc(strlen(tmpip)+1);
+        strcpy(self->ip,tmpip);
+        P_MUTEX_UNLOCK(self->prop_lock);
+    }
 }
 
 char * OnvifDevice__get_port(OnvifDevice* self){

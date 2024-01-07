@@ -10,6 +10,7 @@ typedef struct _OnvifDevice OnvifDevice;
 SHARD_EXPORT OnvifDevice * OnvifDevice__create(const char * device_url);
 SHARD_EXPORT void OnvifDevice__destroy(OnvifDevice* device); 
 SHARD_EXPORT char * OnvifDevice__get_ip(OnvifDevice* self);
+SHARD_EXPORT void OnvifDevice__lookup_ip(OnvifDevice* self);
 SHARD_EXPORT char * OnvifDevice__get_port(OnvifDevice* self);
 SHARD_EXPORT OnvifErrorTypes OnvifDevice__get_last_error(OnvifDevice * self);
 SHARD_EXPORT void OnvifDevice__authenticate(OnvifDevice* self);
