@@ -4,8 +4,6 @@
 #include "onvif_device_interface_local.h"
 #include "onvif_device_scopes_local.h"
 #include "clogger.h"
-#include "generated/soapH.h"
-#include "wsse2api.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>

@@ -87,7 +87,7 @@ else()
   target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -fPIC")
 endif()
 
-target_compile_options(gsoap PRIVATE "SHELL: -c -DWITH_DOM")
+target_compile_options(gsoap PRIVATE "SHELL: -c -DWITH_DOM -DSOAP_H_FILE=onvifsoapH.h")
 
 #########################
 #
@@ -121,7 +121,7 @@ if (NOT MSVC)
   target_compile_options(gsoap PRIVATE "SHELL: -fPIC -fvisibility=hidden")
 endif()
 
-target_compile_options(generatedsoap PRIVATE "SHELL: -c -DWITH_DOM")
+target_compile_options(generatedsoap PRIVATE "SHELL: -c -DWITH_DOM -DSOAP_H_FILE=onvifsoapH.h")
 
 target_link_libraries(generatedsoap PRIVATE gsoap)
 if(NOT WIN32)
@@ -169,7 +169,7 @@ if(NOT WIN32)
   target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
 endif()
 
-target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -DBUILD_SHARD")
+target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
 
 add_subdirectory(example)
 

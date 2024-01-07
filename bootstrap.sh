@@ -744,7 +744,7 @@ if [ $SKIP_WSDL -eq 0 ]; then
     # http://www.onvif.org/onvif/ver10/replay.wsdl \
     # http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl \
     # http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl \ 
-    soapcpp2 -f100 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $SUBPROJECT_DIR/../src/generated/common_service.h -d$SUBPROJECT_DIR/../src/generated
+    soapcpp2 -ponvifsoap -f100 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $SUBPROJECT_DIR/../src/generated/common_service.h -d$SUBPROJECT_DIR/../src/generated
 else
     echo "Skipping WSDL class generation..."
 fi

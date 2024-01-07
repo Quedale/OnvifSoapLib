@@ -1,5 +1,4 @@
 #include "onvif_base_service.h"
-#include "generated/soapH.h"
 #include "generated/DeviceBinding.nsmap"
 #include "onvif_credentials.h"
 #include "wsse2api.h"
