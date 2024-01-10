@@ -80,7 +80,7 @@ void OnvifScopes__init(OnvifScopes * self,struct _tds__GetScopesResponse * resp)
 
 char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
     C_DEBUG("OnvifScopes__extract_scope %s\n", key);
-    char* ret_val = "";
+    char* ret_val = NULL;
     const char delimeter[2] = "/";
     const char * onvif_key_del = "onvif://www.onvif.org/";
 
@@ -104,7 +104,7 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
                 char * output = malloc(strlen(sval)+1);
                 urldecode(output, sval);
 
-                if(strlen(ret_val)==0){
+                if(ret_val == NULL){
                     ret_val = malloc(strlen(output)+1);
                     memcpy(ret_val,output,strlen(output)+1);
                 } else {

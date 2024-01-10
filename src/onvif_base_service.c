@@ -6,28 +6,29 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include "clogger.h"
+#include "plugin/logging.h"
 
 #define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
 
 struct _OnvifBaseService {
+    OnvifDevice * device;
     char * endpoint;
-    OnvifCredentials * credentials;
     P_MUTEX_TYPE service_lock;
     P_MUTEX_TYPE prop_lock;
     void (*error_cb)(OnvifErrorTypes type, void * user_data);
     void * error_data;
 };
 
-OnvifBaseService * OnvifBaseService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     OnvifBaseService * self = malloc(sizeof(OnvifBaseService));
-    OnvifBaseService__init(self,endpoint,credentials, error_cb, error_data);
+    OnvifBaseService__init(self,device, endpoint, error_cb, error_data);
     return self;
 }
 
-void OnvifBaseService__init(OnvifBaseService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+void OnvifBaseService__init(OnvifBaseService * self,OnvifDevice * device, const  char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     self->error_cb = error_cb;
     self->error_data = error_data;
-    self->credentials = credentials;
+    self->device = device;
 
     self->endpoint = malloc(strlen(endpoint)+1);
     strcpy(self->endpoint,endpoint);
@@ -35,6 +36,13 @@ void OnvifBaseService__init(OnvifBaseService * self,const char * endpoint, Onvif
     P_MUTEX_SETUP(self->service_lock);
 
     P_MUTEX_SETUP(self->prop_lock);
+}
+
+void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
+    P_MUTEX_LOCK(self->prop_lock);
+    self->endpoint = realloc(self->endpoint, strlen(endpoint)+1);
+    strcpy(self->endpoint, endpoint);
+    P_MUTEX_UNLOCK(self->prop_lock);
 }
 
 void OnvifBaseService__destroy(OnvifBaseService * self){
@@ -65,14 +73,14 @@ char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
     return ret;
 }
 
-OnvifCredentials * OnvifBaseService__get_credentials(OnvifBaseService * self){
-    return self->credentials;
+SHARD_EXPORT OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self){
+    return self->device;
 }
 
 int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
     int ret = 1;
-    char * user = OnvifCredentials__get_username(self->credentials);
-    char * pass = OnvifCredentials__get_password(self->credentials);
+    char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(self->device));
+    char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(self->device));
     soap_wsse_delete_Security(soap);
     if(user && pass){
         if (soap_wsse_add_Timestamp(soap, "Time", 10)
@@ -91,7 +99,8 @@ int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
 
 SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     struct soap * soap = soap_new1(SOAP_XML_CANONICAL | SOAP_C_UTFSTRING); //SOAP_XML_STRICT may cause crash
-    soap->connect_timeout = soap->recv_timeout = soap->send_timeout = 10; // 10 sec
+    soap->connect_timeout = 2; // 2 sec
+    soap->recv_timeout = soap->send_timeout = 10;//10 sec
     soap_register_plugin(soap, soap_wsse);
 
     int wsseret = OnvifBaseService__set_wsse_data(self,soap);
@@ -101,10 +110,33 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
         soap = NULL;
     }
 
+
+    char *debug_flag = NULL;
+
+    if (( debug_flag =getenv( "ONVIF_DEBUG" )) != NULL )
+        C_INFO("ONVIF_DEBUG variable set. '%s'",debug_flag) ;
+
+    if(debug_flag){
+        soap_register_plugin(soap, logging);
+        soap_set_logging_outbound(soap,stdout);
+        soap_set_logging_inbound(soap,stdout);
+    }
+
+
     return (SoapDef *) soap;
 }
 
 void OnvifBaseService__soap_destroy(SoapDef * soap){
+    char *debug_flag = NULL;
+
+    if (( debug_flag =getenv( "ONVIF_DEBUG" )) != NULL )
+        C_INFO("ONVIF_DEBUG variable set. '%s'",debug_flag) ;
+
+    if(debug_flag){
+        soap_set_logging_outbound(soap,NULL);
+        soap_set_logging_inbound(soap,NULL);
+    }
+
     soap_wsse_delete_Security(soap);
     soap_wsse_verify_done(soap);
     soap_destroy(soap);

@@ -1,6 +1,8 @@
 #ifndef ONVIF_DEV_SERVICE_H_ 
 #define ONVIF_DEV_SERVICE_H_
 
+typedef struct _OnvifDeviceService OnvifDeviceService;
+
 #include "shard_export.h"
 #include "onvif_base_service.h"
 #include "onvif_credentials.h"
@@ -8,11 +10,10 @@
 #include "onvif_device_interface.h"
 #include "onvif_device_capabilities.h"
 #include "onvif_device_scopes.h"
+#include "onvif_device.h"
 
-typedef struct _OnvifDeviceService OnvifDeviceService;
-
-SHARD_EXPORT OnvifDeviceService * OnvifDeviceService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
-SHARD_EXPORT void OnvifDeviceService__init(OnvifDeviceService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT OnvifDeviceService * OnvifDeviceService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT void OnvifDeviceService__init(OnvifDeviceService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
 SHARD_EXPORT void OnvifDeviceService__destroy(OnvifDeviceService * self);
 SHARD_EXPORT OnvifBaseService * OnvifDeviceService__get_parent(OnvifDeviceService * self);
 

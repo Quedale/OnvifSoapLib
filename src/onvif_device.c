@@ -45,7 +45,7 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
     if(capabilities){
         OnvifMedia * media = OnvifCapabilities__get_media(capabilities);
-        self->media_service = OnvifMediaService__create(OnvifMedia__get_address(media),self->credentials,OnvifDevice__set_last_error,self);
+        self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media),OnvifDevice__set_last_error,self);
         OnvifCapabilities__destroy(capabilities);
     } else {
         C_WARN("No capabilities...\n");
@@ -71,6 +71,7 @@ void OnvifDevice__authenticate(OnvifDevice* self){
 
     char * stream_uri = OnvifMediaService__getStreamUri(self->media_service,0);
     if(!stream_uri){
+        C_ERROR("No stream uri returned...");
         return;
     }
     C_DEBUG("StreamURI : %s\n",stream_uri);
@@ -119,7 +120,7 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
 
     self->last_error = ONVIF_NOT_SET;
     self->credentials = OnvifCredentials__create();
-    self->device_service = OnvifDeviceService__create(device_url,self->credentials,OnvifDevice__set_last_error,self);
+    self->device_service = OnvifDeviceService__create(self, device_url,OnvifDevice__set_last_error,self);
     self->media_service = NULL;
 
     char data_arr[strlen(device_url)+1];
@@ -138,8 +139,9 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
 
     char * hostorip = NULL;
     char *hostport = strtok_r ((char *)data, "/", &data);
-    self->endpoint = strtok_r ((char *)data, "\n", &data);
-
+    char * tmpep = strtok_r ((char *)data, "\n", &data);
+    self->endpoint = malloc(strlen(tmpep)+1);
+    strcpy(self->endpoint,tmpep);
     //TODO Support IPv6
     if(hostport){
         if(strstr(hostport,":")){ //If the port is set
@@ -199,6 +201,7 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         free(device->ip);
         free(device->protocol);
         free(device->port);
+        free(device->endpoint);
         free(device);
     }
 }

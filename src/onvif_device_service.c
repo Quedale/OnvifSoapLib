@@ -3,6 +3,7 @@
 #include "onvif_device_info_local.h"
 #include "onvif_device_interface_local.h"
 #include "onvif_device_scopes_local.h"
+#include "onvif_base_service_local.h"
 #include "clogger.h"
 #include <string.h>
 #include <stdlib.h>
@@ -12,14 +13,14 @@ typedef struct _OnvifDeviceService {
     OnvifBaseService * parent;
 } OnvifDeviceService;
 
-OnvifDeviceService * OnvifDeviceService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+OnvifDeviceService * OnvifDeviceService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     OnvifDeviceService * self = malloc(sizeof(OnvifDeviceService));
-    OnvifDeviceService__init(self,endpoint, credentials, error_cb, error_data);
+    OnvifDeviceService__init(self, device, endpoint, error_cb, error_data);
     return self;
 }
 
-void OnvifDeviceService__init(OnvifDeviceService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
-    self->parent = OnvifBaseService__create(endpoint, credentials, error_cb, error_data);
+void OnvifDeviceService__init(OnvifDeviceService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+    self->parent = OnvifBaseService__create(device, endpoint, error_cb, error_data);
 }
 
 void OnvifDeviceService__destroy(OnvifDeviceService * self){
@@ -42,28 +43,8 @@ OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self
     memset (&gethostname, 0, sizeof (gethostname));
     memset (&response, 0, sizeof (response));
 
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifBaseService__get_endpoint(self->parent);
-    SoapDef * soap  = OnvifBaseService__soap_new(self->parent);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetCapabilities, OnvifCapabilities__create, capabilities, soap, endpoint, NULL, &gethostname,  &response);
 
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent,ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_NONE);
-    }
-
-    int soapret = soap_call___tds__GetCapabilities(soap, endpoint, NULL, &gethostname,  &response);
-    if (soapret == SOAP_OK){
-        capabilities = OnvifCapabilities__create(&response);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
-
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);  
-    OnvifBaseService__unlock(self->parent);
     return capabilities;
 }
 
@@ -74,30 +55,11 @@ OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceSer
     memset (&request, 0, sizeof (request));
     memset (&response, 0, sizeof (response));
 
-    OnvifDeviceInformation *ret = NULL;
+    OnvifDeviceInformation *dev_info = NULL;
 
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifBaseService__get_endpoint(self->parent);
-    SoapDef * soap  = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent, ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent, ONVIF_ERROR_NONE);
-    }
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetDeviceInformation, OnvifDeviceInformation__create, dev_info, soap, endpoint, NULL, &request,  &response);
 
-    int soapret = soap_call___tds__GetDeviceInformation(soap, endpoint, "", &request,  &response);
-    if (soapret == SOAP_OK){
-        ret = OnvifDeviceInformation__create(&response);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
-
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
-    return ret;
+    return dev_info;
 }
 
 OnvifInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self) {
@@ -108,28 +70,8 @@ OnvifInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * 
 
     OnvifInterfaces * interfaces = NULL;
 
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifBaseService__get_endpoint(self->parent);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetNetworkInterfaces, OnvifInterfaces__create, interfaces, soap, endpoint, NULL, &req,  &resp);
 
-    SoapDef * soap  = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent, ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent, ONVIF_ERROR_NONE);
-    }
-
-    int soapret = soap_call___tds__GetNetworkInterfaces(soap, endpoint, "", &req,  &resp);
-    if (soapret == SOAP_OK){
-        interfaces = OnvifInterfaces__create(&resp);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
-
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
     return interfaces;
 }
 
@@ -140,29 +82,16 @@ OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self) {
     memset (&resp, 0, sizeof (resp));
 
     OnvifScopes * scopes = NULL;
-
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifBaseService__get_endpoint(self->parent);
-    SoapDef * soap  = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent, ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent, ONVIF_ERROR_NONE);
-    }
     
-    int soapret = soap_call___tds__GetScopes(soap, endpoint, "", &req,  &resp);
-    if (soapret == SOAP_OK){
-        scopes = OnvifScopes__create(&resp);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetScopes, OnvifScopes__create, scopes, soap, endpoint, NULL, &req,  &resp);
 
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
     return scopes;
+}
+
+char * OnvifDeviceService__getHostname_callback(struct _tds__GetHostnameResponse * response){
+    char * ret = malloc(strlen(response->HostnameInformation->Name)+1); 
+    strcpy(ret,response->HostnameInformation->Name);
+    return ret;
 }
 
 char * OnvifDeviceService__getHostname(OnvifDeviceService * self) {
@@ -171,31 +100,11 @@ char * OnvifDeviceService__getHostname(OnvifDeviceService * self) {
     memset (&gethostname, 0, sizeof (gethostname));
     memset (&response, 0, sizeof (response));
 
-    char * ret = NULL;
+    char * hostname = NULL;
 
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifBaseService__get_endpoint(self->parent);
-    SoapDef * soap  = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent, ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent, ONVIF_ERROR_NONE);
-    }
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetHostname, OnvifDeviceService__getHostname_callback, hostname, soap, endpoint, NULL, &gethostname,  &response);
 
-    int soapret = soap_call___tds__GetHostname(soap, endpoint, "", &gethostname,  &response);
-    if (soapret == SOAP_OK){
-        ret = malloc(strlen(response.HostnameInformation->Name)+1); 
-        strcpy(ret,response.HostnameInformation->Name);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
-
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
-    return ret;
+    return hostname;
 }
 
 char * OnvifDeviceService__get_endpoint(OnvifDeviceService * self){

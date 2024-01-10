@@ -8,8 +8,13 @@ int main(void)
 {
 
         C_DEBUG("creating device...\n");
-        OnvifDevice* dev = OnvifDevice__create("http://192.168.0.121/onvif/device_service"); 
-        OnvifDevice__set_credentials(dev,"admin", "Admin123");
+		/*
+			The following url isn't compliant.
+			I suspect it may be sitting behind NAT.
+			The result is that the URL returned by the ONVIF calls all returned an invalid port, forcing a URL correction.
+		*/
+        OnvifDevice* dev = OnvifDevice__create("http://61.216.97.157:16887/onvif/device_service"); 
+        OnvifDevice__set_credentials(dev,"demo", "demo");
 		OnvifDevice__authenticate(dev);
         
 		char * ip = OnvifDevice__get_ip(dev);

@@ -1,5 +1,6 @@
 #include "onvif_media_service.h"
 #include "onvif_media_profile_local.h"
+#include "onvif_base_service_local.h"
 #include "httpda.h"
 #include "clogger.h"
 
@@ -10,14 +11,14 @@ typedef struct _OnvifMediaService {
     struct http_da_info *  snapshot_da_info;
 } OnvifMediaService;
 
-OnvifMediaService * OnvifMediaService__create(const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     OnvifMediaService * self = malloc(sizeof(OnvifMediaService));
-    OnvifMediaService__init(self,endpoint, credentials, error_cb, error_data);
+    OnvifMediaService__init(self,device, endpoint, error_cb, error_data);
     return self;
 }
 
-void OnvifMediaService__init(OnvifMediaService * self,const char * endpoint, OnvifCredentials * credentials, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
-    self->parent = OnvifBaseService__create(endpoint, credentials, error_cb, error_data);
+void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+    self->parent = OnvifBaseService__create(device, endpoint, error_cb, error_data);
     P_MUTEX_SETUP(self->profile_lock);
 
     self->profiles = NULL;
@@ -71,30 +72,16 @@ OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
-    OnvifBaseService__lock(self->parent);
-    OnvifProfiles * ret = NULL;
-    char * endpoint = OnvifMediaService__get_endpoint(self);
-    struct soap * soap = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent,ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_NONE);
-    }
+    OnvifProfiles * profiles = NULL;
     
-    int soapret = soap_call___trt__GetProfiles(soap, endpoint, "", &req, &resp);
-    if (soapret == SOAP_OK){
-        // Traverse all configuration files in the response structure
-        ret = OnvifProfiles__create(&resp);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetProfiles, OnvifProfiles__create, profiles, soap, endpoint, NULL, &req,  &resp);
+    
+    return profiles;
+}
 
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
-    
+char * OnvifMediaService__getStreamUri_callback(struct _trt__GetStreamUriResponse * resp){
+    char * ret = malloc(strlen(resp->MediaUri->Uri)+1);
+    strcpy(ret,resp->MediaUri->Uri);
     return ret;
 }
 
@@ -105,7 +92,7 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
     }
     struct _trt__GetStreamUri req;
     struct _trt__GetStreamUriResponse resp;
-    char * ret = NULL;
+    char * streamuri = NULL;
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
@@ -114,41 +101,27 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
     OnvifMediaService__get_profile_token(self,profile_index, token);
     req.ProfileToken = token;
 
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifMediaService__get_endpoint(self);
-    struct soap * soap = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent,ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_NONE);
-    }
-    
-    C_DEBUG("OnvifMediaService__getStreamUri [%s][%i]\n", endpoint,profile_index);
-    // req.StreamSetup = (struct tt__StreamSetup*)soap_malloc(self->media_soap,sizeof(struct tt__StreamSetup));//Initialize, allocate space
-	req.StreamSetup = soap_new_tt__StreamSetup(soap,1);
+    struct tt__StreamSetup ssetup;
+    memset(&ssetup,0,sizeof(ssetup));
+    req.StreamSetup = &ssetup;
     req.StreamSetup->Stream = tt__StreamType__RTP_Unicast;//stream type
 
-	// req.StreamSetup->Transport = (struct tt__Transport *)soap_malloc(self->media_soap, sizeof(struct tt__Transport));//Initialize, allocate space
-	req.StreamSetup->Transport = soap_new_tt__Transport(soap,1);
+    struct tt__Transport transport;
+    memset(&transport,0,sizeof(transport));
+    req.StreamSetup->Transport = &transport;
     req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
-	req.StreamSetup->Transport->Tunnel = 0;
+    req.StreamSetup->Transport->Tunnel = 0;
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetStreamUri, OnvifMediaService__getStreamUri_callback, streamuri, soap, endpoint, NULL, &req,  &resp);
 
-    int soapret = soap_call___trt__GetStreamUri(soap, endpoint, "", &req, &resp);
-    if (soapret == SOAP_OK){
-        ret = malloc(strlen(resp.MediaUri->Uri)+1);
-        strcpy(ret,resp.MediaUri->Uri);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
-
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
-    return ret;
+    return streamuri;
 }
 
+
+char * OnvifMediaService__getSnapshotUri_callback(struct _trt__GetSnapshotUriResponse * response){
+    char * ret_val = malloc(strlen(response->MediaUri->Uri) + 1);
+    strcpy(ret_val,response->MediaUri->Uri);
+    return ret_val;
+}
 
 //TODO Support timeout and invalidafter flag
 char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
@@ -167,32 +140,12 @@ char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_in
     OnvifMediaService__get_profile_token(self,profile_index, token);
     request.ProfileToken = token;
 
-    OnvifBaseService__lock(self->parent);
-    char * endpoint = OnvifMediaService__get_endpoint(self);
-    struct soap * soap = OnvifBaseService__soap_new(self->parent);
-    if(!soap){
-        OnvifBaseService__set_error_code(self->parent,ONVIF_CONNECTION_ERROR);
-        goto exit;
-    } else {
-        OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_NONE);
-    }
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetSnapshotUri, OnvifMediaService__getSnapshotUri_callback, ret_val, soap, endpoint, NULL, &request,  &response);
 
-    int soapret = soap_call___trt__GetSnapshotUri(soap, endpoint, NULL, &request,  &response);
-    if (soapret == SOAP_OK){
-        ret_val = malloc(strlen(response.MediaUri->Uri) + 1);
-        strcpy(ret_val,response.MediaUri->Uri);
-    } else {
-        OnvifBaseService__handle_soap_error(self->parent,soap,soapret);
-    }
-
-exit:
-    free(endpoint);
-    OnvifBaseService__soap_destroy(soap);
-    OnvifBaseService__unlock(self->parent);
     return ret_val;
 }
 
-OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
+OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_flag)
 {   
     size_t size = 0;
     char * buffer = NULL;
@@ -201,6 +154,8 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
     C_TRACE("get_http_body\n");
     //Creating soap instance to avoid long running locks.
     struct soap * soap = soap_new1(SOAP_IO_CHUNK);
+    soap->connect_timeout = 2; // 2 sec
+    soap->recv_timeout = soap->send_timeout = 10;//10 sec
     if (!self->snapshot_da_info){
         self->snapshot_da_info = malloc(sizeof(struct http_da_info));
         memset (self->snapshot_da_info, 0, sizeof(struct http_da_info));
@@ -217,34 +172,57 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
             || soap_begin_recv(soap)
             || (buffer = soap_http_get_body(soap, &size)) != NULL
             || soap_end_recv(soap)){
-            if (soap->error == 401){
-                user = OnvifCredentials__get_username(OnvifBaseService__get_credentials(self->parent));
-                pass = OnvifCredentials__get_password(OnvifBaseService__get_credentials(self->parent));
+            if(soap->error == SOAP_OK){
+                snap = OnvifSnapshot__create(size,buffer);
+            } else if (soap->error == 401){
+                user = OnvifCredentials__get_username(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
+                pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
                 http_da_save(soap, self->snapshot_da_info, soap->authrealm, user, pass);
                 if (soap_GET(soap, url, NULL)
                     || soap_begin_recv(soap)
                     || (buffer = soap_http_get_body(soap, &size)) != NULL
                     || soap_end_recv(soap)){
+                    snap = OnvifSnapshot__create(size,buffer);
                 }else {
-                    //TODO handle error codes
-                    C_ERROR("get_http_body ERROR-1\n");
-                    soap_print_fault(soap, stderr);
-                    goto exit;
+                    if (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR){
+                        char * new_endpoint = NULL;
+                        char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
+                        new_endpoint = URL__set_port(url, master_port);
+                        if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
+                            C_WARN("Connection error. Attempting to correct URL : '%s' --> '%s'", url, new_endpoint);
+                            snap = get_http_body(self, new_endpoint, 1);
+                        }
+                        free(new_endpoint);
+                        free(master_port);
+                    } else {
+                        //TODO handle error codes
+                        C_ERROR("get_http_body ERROR-1\n");
+                        soap_print_fault(soap, stderr);
+                    }
                 }
+            } else if (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR){
+                char * new_endpoint = NULL;
+                char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
+                new_endpoint = URL__set_port(url, master_port);
+                if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
+                    C_WARN("Connection error. Attempting to correct URL : '%s' --> '%s'", url, new_endpoint);
+                    snap = get_http_body(self, new_endpoint, 1);
+                }
+                free(new_endpoint);
+                free(master_port);
+            } else {
+                //TODO handle error codes
+                C_ERROR("get_http_body ERROR-2 [%d]\n", soap->error);
+                soap_print_fault(soap, stderr);
             }
 
     } else {
         //TODO handle error codes
-        C_ERROR("get_http_body ERROR-2\n");
+        C_ERROR("get_http_body ERROR-3 [%d]\n", soap->error);
         soap_print_fault(soap, stderr);
-        goto exit;
     }
     free(user);
     free(pass);
-    
-    snap = OnvifSnapshot__create(size,buffer);
-
-exit:
     http_da_release(soap, self->snapshot_da_info);
     soap_closesock(soap);
     soap_destroy(soap);
@@ -258,7 +236,7 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
     C_DEBUG("OnvifMediaService__getSnapshot\n");
     char * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
     C_INFO("Snapshot URI : %s\n",snapshot_uri);
-    OnvifSnapshot * ret = get_http_body(self, snapshot_uri);
+    OnvifSnapshot * ret = get_http_body(self, snapshot_uri, 0);
     free(snapshot_uri);
     return ret;
 }
@@ -273,6 +251,7 @@ void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, ch
     C_TRACE("OnvifMediaService__get_profile_token\n");
     if(!OnvifMediaService__check_profiles(self)) { 
         ret[0] = '\0'; 
+        P_MUTEX_UNLOCK(self->profile_lock);
         return;
     }
 

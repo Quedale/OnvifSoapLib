@@ -85,5 +85,6 @@ SHARD_EXPORT void OnvifDeviceInformation__destroy(OnvifDeviceInformation *self){
             free(self->serialNumber);
         if(self->hardwareId)
             free(self->hardwareId);
+        free(self);
     }
 }

@@ -47,6 +47,7 @@ aux_source_directory(src/generated generated_dir)
 #########################
 add_library(gsoap STATIC ${GSOAP_SRC_DIR}/gsoap/dom.c 
                           ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
+                          ${GSOAP_SRC_DIR}/gsoap/plugin/logging.c
                           ${GSOAP_SRC_DIR}/gsoap/plugin/smdevp.c 
                           ${GSOAP_SRC_DIR}/gsoap/plugin/mecevp.c 
                           ${GSOAP_SRC_DIR}/gsoap/plugin/wsaapi.c 
@@ -84,7 +85,7 @@ endif()
 if (MSVC)
   target_compile_options(gsoap PRIVATE "SHELL: -wd4244 -wd4267")
 else()
-  target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -fPIC")
+  target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -Wno-deprecated-declarations -Wno-format -fPIC")
 endif()
 
 target_compile_options(gsoap PRIVATE "SHELL: -c -DWITH_DOM -DSOAP_H_FILE=onvifsoapH.h")
