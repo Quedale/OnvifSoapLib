@@ -125,7 +125,7 @@ void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
 
     char data_arr[strlen(device_url)+1];
     char * data = data_arr;
-    memcpy(data,device_url,strlen(device_url)+1);
+    strcpy(data,device_url);
 
     if(strstr(data,"://")){
         char * tmpprot = strtok_r ((char *)data, "://", &data);
