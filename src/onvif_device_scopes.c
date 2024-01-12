@@ -101,7 +101,7 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
                 strncpy(sval,subs+(strlen(key_w_del)),strlen(subs) - strlen(key_w_del)+1);
 
                 //Decode http string (e.g. %20 = whitespace)
-                char * output = malloc(strlen(sval)+1);
+                char output[strlen(sval)+1];
                 urldecode(output, sval);
 
                 if(ret_val == NULL){
@@ -128,6 +128,7 @@ void OnvifScopes__destroy(OnvifScopes * self){
             free(self->scopes[i]->scope);
             free(self->scopes[i]);
         }
+        self->count = 0;
         free(self->scopes);
         free(self);
     }
