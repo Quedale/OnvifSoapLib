@@ -80,6 +80,9 @@ void OnvifScopes__init(OnvifScopes * self,struct _tds__GetScopesResponse * resp)
 
 char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
     C_DEBUG("OnvifScopes__extract_scope %s\n", key);
+    if(!self){
+        return NULL;
+    }
     char* ret_val = NULL;
     const char delimeter[2] = "/";
     const char * onvif_key_del = "onvif://www.onvif.org/";

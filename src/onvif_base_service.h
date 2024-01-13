@@ -5,11 +5,12 @@ typedef struct _OnvifBaseService OnvifBaseService;
 typedef struct soap SoapDef;
 
 typedef enum {
-    ONVIF_NOT_SET = -1,
+    ONVIF_ERROR_NOT_SET = -1,
     ONVIF_ERROR_NONE = 0,
-    ONVIF_CONNECTION_ERROR = 1,
-    ONVIF_SOAP_ERROR = 2,
-    ONVIF_NOT_AUTHORIZED = 3
+    ONVIF_ERROR_CONNECTION = 1,
+    ONVIF_ERROR_SOAP = 2,
+    ONVIF_ERROR_NOT_AUTHORIZED = 3,
+    ONVIF_ERROR_NOT_VALID = 4
 } OnvifErrorTypes;
 
 #include "portable_thread.h"

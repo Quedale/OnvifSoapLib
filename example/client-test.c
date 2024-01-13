@@ -68,9 +68,9 @@ int main(int argc, char *argv[])
 	OnvifDevice__set_credentials(dev,arguments.user, arguments.pass);
 	OnvifDevice__authenticate(dev);
 	
-	char * ip = OnvifDevice__get_ip(dev);
-	C_DEBUG("dev : %s\n",ip);
-	free(ip);
+	char * host = OnvifDevice__get_host(dev);
+	C_DEBUG("dev : %s\n",host);
+	free(host);
 
 	OnvifDeviceService * device_service = OnvifDevice__get_device_service(dev);
 

@@ -13,7 +13,7 @@ void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint);
     char * endpoint = OnvifBaseService__get_endpoint(self->parent); \
     struct soap * soap = OnvifBaseService__soap_new(self->parent); \
     if(!soap){ \
-        OnvifBaseService__set_error_code(self->parent,ONVIF_CONNECTION_ERROR); \
+        OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_CONNECTION); \
         goto exit; \
     } else { \
         OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_NONE); \

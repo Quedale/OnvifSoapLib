@@ -33,11 +33,15 @@ void OnvifCredentials__destroy(OnvifCredentials * self){
 
 void OnvifCredentials__set_username(OnvifCredentials *self, const char * username){
     P_MUTEX_LOCK(self->prop_lock);
-    if(self->user){
+    if(!username){
         free(self->user);
-    }
-    if(username){
-        self->user = malloc(strlen(username)+1);
+        self->user = NULL;
+    } else {
+        if(!self->user){
+            self->user = malloc(strlen(username)+1);
+        } else {
+            self->user = realloc(self->user,strlen(username)+1);
+        }
         strcpy(self->user,username);
     }
     P_MUTEX_UNLOCK(self->prop_lock);
@@ -56,11 +60,15 @@ char * OnvifCredentials__get_username(OnvifCredentials *self){
 
 void OnvifCredentials__set_password(OnvifCredentials *self, const char * password){
     P_MUTEX_LOCK(self->prop_lock);
-    if(self->pass){
+    if(!password){
         free(self->pass);
-    }
-    if(password){
-        self->pass = malloc(strlen(password)+1);
+        self->pass = NULL;
+    } else {
+        if(!self->pass){
+            self->pass = malloc(strlen(password)+1);
+        } else {
+            self->pass = realloc(self->pass,strlen(password)+1);
+        }
         strcpy(self->pass,password);
     }
     P_MUTEX_UNLOCK(self->prop_lock);

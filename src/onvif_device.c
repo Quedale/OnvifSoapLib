@@ -5,6 +5,7 @@
 #include "wsddapi.h"
 #include "ip_match.h"
 #include "clogger.h"
+#include "url_parser.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 /* We are on Windows */
@@ -12,11 +13,7 @@
 #endif
 
 typedef struct _OnvifDevice {
-    char * protocol;
-    char * ip;
-    char * endpoint;
-    char * port;
-    char * hostname;
+    ParsedURL * purl;
     OnvifErrorTypes last_error;
     P_MUTEX_TYPE prop_lock;
     
@@ -90,14 +87,8 @@ OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self){
 }
 
 int OnvifDevice__is_valid(OnvifDevice* self){
-    if(!self->protocol){
-        return 0;
-    }
-    if(!self->hostname && !self->ip){
-        return 0;
-    }
     //According to Core specification, the device entry point it set. (5.1.1)
-    if(!self->endpoint || strcmp(self->endpoint,"onvif/device_service")){
+    if(!ParsedURL__is_valid(self->purl) || !self->purl->service || strcmp(self->purl->service,"onvif/device_service")){
         return 0;
     }
 
@@ -113,76 +104,26 @@ OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self){
     return self->media_service;
 }
 
-void OnvifDevice__init(OnvifDevice* self, const char * device_url) {
+void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     P_MUTEX_SETUP(self->prop_lock);
 
     P_MUTEX_SETUP(self->media_lock);
 
-    self->last_error = ONVIF_NOT_SET;
+    self->last_error = ONVIF_ERROR_NOT_SET;
     self->credentials = OnvifCredentials__create();
     self->device_service = OnvifDeviceService__create(self, device_url,OnvifDevice__set_last_error,self);
     self->media_service = NULL;
+    self->purl = ParsedURL__create(device_url);
 
-    char data_arr[strlen(device_url)+1];
-    char * data = data_arr;
-    strcpy(data,device_url);
-
-    if(strstr(data,"://")){
-        char * tmpprot = strtok_r ((char *)data, "://", &data);
-        self->protocol = malloc(strlen(tmpprot)+1);
-        strcpy(self->protocol,tmpprot);
-    } else {
-        self->protocol = NULL;
-    }
-
-    self->port = NULL;
-
-    char * hostorip = NULL;
-    char *hostport = strtok_r ((char *)data, "/", &data);
-    char * tmpep = strtok_r ((char *)data, "\n", &data);
-    self->endpoint = malloc(strlen(tmpep)+1);
-    strcpy(self->endpoint,tmpep);
-    //TODO Support IPv6
-    if(hostport){
-        if(strstr(hostport,":")){ //If the port is set
-            hostorip = strtok_r (hostport, ":", &hostport);
-            char * tmpport = strtok_r ((char *)hostport, "/", &hostport);
-            self->port = malloc(strlen(tmpport)+1);
-            strcpy(self->port,tmpport);
-        } else { //If no port is set
-            hostorip = strtok_r (hostport, "/", &hostport);
-        }
-    } else {
-        hostorip = NULL;
-    }
-
-    if(is_valid_ip(hostorip)){
-        self->ip = malloc(strlen(hostorip) +1);
-        strcpy(self->ip,hostorip);
-        self->hostname = NULL;
-    } else {
-        self->ip = NULL;
-        self->hostname = malloc(strlen(hostorip) +1);
-        strcpy(self->hostname,hostorip);
-    }
-
-    if(!self->port && self->protocol && !strcmp(self->protocol,"http")){
-        self->port = malloc(strlen("80")+1);
-        strcpy(self->port,"80");
-    } else if(!self->port && self->protocol && !strcmp(self->protocol,"https")){
-        self->port = malloc(strlen("443")+1);
-        strcpy(self->port,"443");
-    }
 
     C_INFO("Created Device:\n");
-    C_INFO("\tprotocol -- %s\n",self->protocol);
-    C_INFO("\tip : %s\n",self->ip);
-    C_INFO("\thostname : %s\n",self->hostname);
-    C_INFO("\tport -- %s\n",self->port);
-    C_INFO("\tendpoint : %s\n",self->endpoint);
+    C_INFO("\tprotocol -- %s\n",self->purl->protocol);
+    C_INFO("\thost : %s\n",self->purl->hostorip);
+    C_INFO("\tport -- %s\n",self->purl->port);
+    C_INFO("\tendpoint : %s\n",self->purl->service);
 }
 
-OnvifDevice * OnvifDevice__create(const char * device_url) {
+OnvifDevice * OnvifDevice__create(char * device_url) {
     C_DEBUG("OnvifDevice__create\n");
     OnvifDevice * result = malloc(sizeof(OnvifDevice));
     OnvifDevice__init(result,device_url);
@@ -197,48 +138,42 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         OnvifMediaService__destroy(device->media_service);
         P_MUTEX_CLEANUP(device->media_lock);
         P_MUTEX_CLEANUP(device->prop_lock);
-        free(device->hostname);
-        free(device->ip);
-        free(device->protocol);
-        free(device->port);
-        free(device->endpoint);
+        ParsedURL__destroy(device->purl);
         free(device);
     }
 }
 
-char * OnvifDevice__get_ip(OnvifDevice* self){
-    char * ret;
+char * OnvifDevice__get_host(OnvifDevice* self){
+    char * ret = NULL;
     P_MUTEX_LOCK(self->prop_lock);
-    if(self->ip != NULL){
-        ret = malloc(strlen(self->ip)+1);
-        strcpy(ret,self->ip);
-    } else {
-        //Something went wrong here?
-        ret = malloc(strlen("N/A")+1);
-        strcpy(ret,"N/A");
+    if(self->purl->hostorip){
+        ret = malloc(strlen(self->purl->hostorip)+1);
+        strcpy(ret,self->purl->hostorip);
     }
     P_MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }
 
-void OnvifDevice__lookup_ip(OnvifDevice* self){
-    struct hostent *host_entry = gethostbyname(self->hostname);
-    if(host_entry){
-        C_DEBUG("Resolving hostname...");
-        char * tmpip = inet_ntoa(*((struct in_addr*)
-                    host_entry->h_addr_list[0]));
-        P_MUTEX_LOCK(self->prop_lock);
-        self->ip = malloc(strlen(tmpip)+1);
-        strcpy(self->ip,tmpip);
-        P_MUTEX_UNLOCK(self->prop_lock);
-    }
-}
+// void OnvifDevice__lookup_ip(OnvifDevice* self){
+//     struct hostent *host_entry = gethostbyname(self->hostname);
+//     if(host_entry){
+//         C_DEBUG("Resolving hostname...");
+//         char * tmpip = inet_ntoa(*((struct in_addr*)
+//                     host_entry->h_addr_list[0]));
+//         P_MUTEX_LOCK(self->prop_lock);
+//         self->ip = malloc(strlen(tmpip)+1);
+//         strcpy(self->ip,tmpip);
+//         P_MUTEX_UNLOCK(self->prop_lock);
+//     }
+// }
 
 char * OnvifDevice__get_port(OnvifDevice* self){
-    char * ret;
+    char * ret = NULL;
     P_MUTEX_LOCK(self->prop_lock);
-    ret = malloc(strlen(self->port)+1);
-    strcpy(ret,self->port);
+    if(self->purl->port){
+        ret = malloc(strlen(self->purl->port)+1);
+        strcpy(ret,self->purl->port);
+    }
     P_MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }

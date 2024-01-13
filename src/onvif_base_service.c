@@ -156,13 +156,29 @@ void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * 
         error_code == SOAP_SSL_ERROR || 
         error_code == SOAP_ZLIB_ERROR){
         C_ERROR("CONNECTION ERROR\n");
-        OnvifBaseService__set_error_code(self,ONVIF_CONNECTION_ERROR);
-    } else if (strcmp(soap_fault_subcode(soap),FAULT_UNAUTHORIZED)) {
-        C_WARN("Warning : NOT AUTHORIZED\n");
-        OnvifBaseService__set_error_code(self,ONVIF_NOT_AUTHORIZED);
-    } else { //Mostly SOAP_FAULT
-        C_ERROR("SOAP ERROR %i [%s]\n",error_code, soap_fault_subcode(soap));
-        soap_print_fault(soap, stderr);
-        OnvifBaseService__set_error_code(self,ONVIF_SOAP_ERROR);
+        OnvifBaseService__set_error_code(self,ONVIF_ERROR_CONNECTION);
+    } else if(error_code == SOAP_NO_TAG){
+        C_ERROR("ERROR : Server didn't return a soap message.");
+        OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
+    } else if(error_code == 400){
+        C_ERROR("ERROR : Server returned 400 bad request");
+        OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
+    } else {
+        const char * fault_code = soap_fault_subcode(soap);
+        if (fault_code && strcmp(fault_code,FAULT_UNAUTHORIZED)) {
+            if(soap->error == 400 || //Bad request
+                soap->error == 403 || //Forbidden (soap not authorized returns a 200)
+                soap->error == 404){ //Not found
+                C_ERROR("ERROR : NOT VALID ONVIF HTTP Error code [%d]\n",soap->error);
+                OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
+            } else {
+                C_WARN("Warning : NOT AUTHORIZED HTTP Error code [%d]\n",soap->error);
+                OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_AUTHORIZED);
+            }
+        } else { //Mostly SOAP_FAULT
+            C_ERROR("SOAP ERROR %i [%s]\n",error_code, fault_code);
+            soap_print_fault(soap, stderr);
+            OnvifBaseService__set_error_code(self,ONVIF_ERROR_SOAP);
+        }
     }
 }
