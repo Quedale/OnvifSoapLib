@@ -1,4 +1,5 @@
 #include "onvif_device_interface_local.h"
+#include "clogger.h"
 
 typedef struct _OnvifInterface {
     char * token; ///< Required attribute.
@@ -48,12 +49,26 @@ void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterf
         
         if(interf.Info){
             onvifinterface->has_info = 1;
-            onvifinterface->name = (char*) malloc(strlen(interf.Info->Name)+1);
-            strcpy(onvifinterface->name,interf.Info->Name);
-            onvifinterface->mac = (char*) malloc(strlen(interf.Info->HwAddress)+1);
-            strcpy(onvifinterface->mac,interf.Info->HwAddress);
+            if(interf.Info->Name){
+                onvifinterface->name = malloc(strlen(interf.Info->Name)+1);
+                strcpy(onvifinterface->name,interf.Info->Name);
+            } else {
+                onvifinterface->name = NULL;
+            }
 
-            onvifinterface->mtu = interf.Info->MTU[0];
+            if(interf.Info->HwAddress){
+                onvifinterface->mac = (char*) malloc(strlen(interf.Info->HwAddress)+1);
+                strcpy(onvifinterface->mac,interf.Info->HwAddress);
+            } else {
+                onvifinterface->mac = NULL;
+            }
+
+
+            if(interf.Info->MTU){
+                onvifinterface->mtu = interf.Info->MTU[0];
+            } else {
+                onvifinterface->mtu = -1;
+            }
         } else {
             onvifinterface->has_info = 0;
         }
