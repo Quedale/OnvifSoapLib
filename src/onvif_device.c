@@ -14,6 +14,9 @@
 
 typedef struct _OnvifDevice {
     ParsedURL * purl;
+    time_t * datetime;
+    double time_offset;
+
     OnvifErrorTypes last_error;
     P_MUTEX_TYPE prop_lock;
     
@@ -52,10 +55,31 @@ exit:
     P_MUTEX_UNLOCK(self->media_lock);
 }
 
+time_t * OnvifDevice__getSystemDateTime(OnvifDevice * self){
+    P_MUTEX_LOCK(self->prop_lock);
+    return self->datetime;
+    P_MUTEX_UNLOCK(self->prop_lock);
+}
+
+double OnvifDevice__getTimeOffset(OnvifDevice * self){
+    return self->time_offset;
+}
+
 void OnvifDevice__authenticate(OnvifDevice* self){
     char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
     C_INFO("OnvifDevice__authenticate [%s]\n", endpoint);
     free(endpoint);
+
+    if(!self->datetime){
+        time_t t = OnvifDeviceService__getSystemDateAndTime(self->device_service);
+
+        P_MUTEX_LOCK(self->prop_lock);
+        self->time_offset = difftime(t,time(NULL));
+        self->datetime = malloc(sizeof(time_t));
+        memcpy(self->datetime, &t, sizeof(t));
+        P_MUTEX_UNLOCK(self->prop_lock);
+    }
+
 
     OnvifDevice__createMediaService(self);
     if(!self->media_service){
@@ -109,12 +133,13 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
 
     P_MUTEX_SETUP(self->media_lock);
 
+    self->time_offset = 0;
     self->last_error = ONVIF_ERROR_NOT_SET;
     self->credentials = OnvifCredentials__create();
     self->device_service = OnvifDeviceService__create(self, device_url,OnvifDevice__set_last_error,self);
     self->media_service = NULL;
     self->purl = ParsedURL__create(device_url);
-
+    self->datetime = NULL;
 
     C_INFO("Created Device:\n");
     C_INFO("\tprotocol -- %s\n",self->purl->protocol);
@@ -139,6 +164,7 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         P_MUTEX_CLEANUP(device->media_lock);
         P_MUTEX_CLEANUP(device->prop_lock);
         ParsedURL__destroy(device->purl);
+        free(device->datetime);
         free(device);
     }
 }

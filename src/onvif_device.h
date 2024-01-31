@@ -20,5 +20,7 @@ SHARD_EXPORT OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self)
 SHARD_EXPORT int OnvifDevice__is_valid(OnvifDevice* self);
 SHARD_EXPORT OnvifDeviceService * OnvifDevice__get_device_service(OnvifDevice* self);
 SHARD_EXPORT OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self);
+SHARD_EXPORT time_t * OnvifDevice__getSystemDateTime(OnvifDevice * self);
+SHARD_EXPORT double OnvifDevice__getTimeOffset(OnvifDevice * self);
 
 #endif

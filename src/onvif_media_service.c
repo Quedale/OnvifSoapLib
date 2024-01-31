@@ -234,7 +234,12 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_fla
 
 OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int profile_index){
     C_DEBUG("OnvifMediaService__getSnapshot\n");
+    //TODO check if GetSnapshotUri is support via GetServiceCapabilities
     char * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
+    if(!snapshot_uri){
+        C_WARN("No snapshot URI found.");
+        return NULL;
+    }
     C_INFO("Snapshot URI : %s\n",snapshot_uri);
     OnvifSnapshot * ret = get_http_body(self, snapshot_uri, 0);
     free(snapshot_uri);

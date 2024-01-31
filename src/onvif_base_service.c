@@ -1,7 +1,7 @@
 #include "onvif_base_service.h"
 #include "generated/DeviceBinding.nsmap"
 #include "onvif_credentials.h"
-#include "wsse2api.h"
+#include "wsseapi.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -73,8 +73,22 @@ char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
     return ret;
 }
 
-SHARD_EXPORT OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self){
+OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self){
     return self->device;
+}
+
+time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
+    double offset = OnvifDevice__getTimeOffset(self->device);
+
+    time_t now = time( NULL);
+    if(offset == 0){
+        return now;
+    }
+
+    struct tm now_tm = *localtime( &now);
+    now_tm.tm_sec += offset;
+
+    return mktime( &now_tm);
 }
 
 int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
@@ -84,7 +98,7 @@ int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
     soap_wsse_delete_Security(soap);
     if(user && pass){
         if (soap_wsse_add_Timestamp(soap, "Time", 10)
-            || soap_wsse_add_UsernameTokenDigest(soap, "Auth",user,pass)){
+            || soap_wsse_add_UsernameTokenDigest_at(soap, "Auth",user,pass,OnvifBaseService__get_offset_time(self))){ //TODO Set camera time offset
             //TODO Error handling
             C_ERROR("Unable to set wsse creds...\n");
             ret = 0;

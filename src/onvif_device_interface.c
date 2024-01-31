@@ -70,6 +70,8 @@ void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterf
                 onvifinterface->mtu = -1;
             }
         } else {
+            onvifinterface->name = NULL;
+            onvifinterface->mac = NULL;
             onvifinterface->has_info = 0;
         }
         
@@ -106,6 +108,10 @@ void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterf
             }
         } else {
             onvifinterface->ipv4_enabled = 0;
+            onvifinterface->ipv4_manual = NULL;
+            onvifinterface->ipv4_link_local = NULL;
+            onvifinterface->ipv4_from_dhcp = NULL;
+
         }
 
         //TODO IPv6

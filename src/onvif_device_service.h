@@ -23,5 +23,6 @@ SHARD_EXPORT char * OnvifDeviceService__getHostname(OnvifDeviceService * self);
 SHARD_EXPORT OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self);
 SHARD_EXPORT OnvifInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self);
+SHARD_EXPORT time_t OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);
 
 #endif
