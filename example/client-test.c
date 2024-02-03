@@ -76,7 +76,8 @@ int main(int argc, char *argv[])
 
 	char * hostname = OnvifDeviceService__getHostname(device_service);
 	C_DEBUG("Device hostname : %s",hostname);
-
+	free(hostname);
+	
 	OnvifScopes * scopes = OnvifDeviceService__getScopes(device_service);
 	char * name = OnvifScopes__extract_scope(scopes,"name");
 	char * hardware = OnvifScopes__extract_scope(scopes,"hardware");

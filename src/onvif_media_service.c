@@ -46,7 +46,6 @@ char * OnvifMediaService__get_endpoint(OnvifMediaService * self){
 
 int OnvifMediaService__check_profiles(OnvifMediaService * self){
     if(!self->profiles){
-        C_INFO("OnvifMediaService__get_profile_token : Initializing profiles\n");
         self->profiles = OnvifMediaService__getProfiles(self);
     }
 
@@ -64,7 +63,9 @@ OnvifProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
 
 OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
     if(!self){
-        C_ERROR("OnvifMediaService__getProfiles - MediaService uninitialized.\n");
+        char * endpoint = OnvifMediaService__get_endpoint(self);
+        C_ERROR("[%s] OnvifMediaService__getProfiles - MediaService uninitialized.",endpoint);
+        free(endpoint);
         return NULL;
     }
     struct _trt__GetProfiles req;
@@ -74,7 +75,7 @@ OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
 
     OnvifProfiles * profiles = NULL;
     
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetProfiles, OnvifProfiles__create, profiles, soap, endpoint, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetProfiles, OnvifProfiles__create, profiles, soap, NULL, &req,  &resp);
     
     return profiles;
 }
@@ -87,7 +88,9 @@ char * OnvifMediaService__getStreamUri_callback(struct _trt__GetStreamUriRespons
 
 char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_index){
     if(!self){
-        C_ERROR("OnvifMediaService__getStreamUri - MediaService uninitialized.\n");
+        char * endpoint = OnvifMediaService__get_endpoint(self);
+        C_ERROR("[%s] OnvifMediaService__getStreamUri - MediaService uninitialized.",endpoint);
+        free(endpoint);
         return NULL;
     }
     struct _trt__GetStreamUri req;
@@ -111,7 +114,7 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
     req.StreamSetup->Transport = &transport;
     req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
     req.StreamSetup->Transport->Tunnel = 0;
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetStreamUri, OnvifMediaService__getStreamUri_callback, streamuri, soap, endpoint, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetStreamUri, OnvifMediaService__getStreamUri_callback, streamuri, soap, NULL, &req,  &resp);
 
     return streamuri;
 }
@@ -125,23 +128,25 @@ char * OnvifMediaService__getSnapshotUri_callback(struct _trt__GetSnapshotUriRes
 
 //TODO Support timeout and invalidafter flag
 char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
+    char * endpoint = OnvifMediaService__get_endpoint(self);
+    char * ret_val = NULL;
     if(!self){
-        C_ERROR("OnvifMediaService__getSnapshotUri - MediaService uninitialized.\n");
-        return NULL;
+        C_ERROR("[%s] OnvifMediaService__getSnapshotUri - MediaService uninitialized.",endpoint);
+        goto exit;
     }
     struct _trt__GetSnapshotUri request;
     struct _trt__GetSnapshotUriResponse response;
     memset (&request, 0, sizeof (request));
     memset (&response, 0, sizeof (response));
-    char * ret_val = NULL;
 
-    C_DEBUG("OnvifMediaService__getSnapshotUri\n");
     char token[255];
     OnvifMediaService__get_profile_token(self,profile_index, token);
     request.ProfileToken = token;
 
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetSnapshotUri, OnvifMediaService__getSnapshotUri_callback, ret_val, soap, endpoint, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetSnapshotUri, OnvifMediaService__getSnapshotUri_callback, ret_val, soap, NULL, &request,  &response);
 
+exit:
+    free(endpoint);
     return ret_val;
 }
 
@@ -151,7 +156,6 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_fla
     char * buffer = NULL;
     OnvifSnapshot * snap = NULL;
 
-    C_TRACE("get_http_body\n");
     //Creating soap instance to avoid long running locks.
     struct soap * soap = soap_new1(SOAP_IO_CHUNK);
     soap->connect_timeout = 2; // 2 sec
@@ -189,14 +193,14 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_fla
                         char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
                         new_endpoint = URL__set_port(url, master_port);
                         if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
-                            C_WARN("Connection error. Attempting to correct URL : '%s' --> '%s'", url, new_endpoint);
+                            C_WARN("[%s] --> [%s] Connection error. Attempting to correct URL", url, new_endpoint);
                             snap = get_http_body(self, new_endpoint, 1);
                         }
                         free(new_endpoint);
                         free(master_port);
                     } else {
                         //TODO handle error codes
-                        C_ERROR("get_http_body ERROR-1\n");
+                        C_ERROR("[%s] get_http_body ERROR", url);
                         soap_print_fault(soap, stderr);
                     }
                 }
@@ -205,20 +209,20 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_fla
                 char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
                 new_endpoint = URL__set_port(url, master_port);
                 if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
-                    C_WARN("Connection error. Attempting to correct URL : '%s' --> '%s'", url, new_endpoint);
+                    C_WARN("[%s] --> [%s] Connection error. Attempting to correct URL", url, new_endpoint);
                     snap = get_http_body(self, new_endpoint, 1);
                 }
                 free(new_endpoint);
                 free(master_port);
             } else {
                 //TODO handle error codes
-                C_ERROR("get_http_body ERROR-2 [%d]\n", soap->error);
+                C_ERROR("[%s] get_http_body ERROR [%d]\n",url, soap->error);
                 soap_print_fault(soap, stderr);
             }
 
     } else {
         //TODO handle error codes
-        C_ERROR("get_http_body ERROR-3 [%d]\n", soap->error);
+        C_ERROR("[%s] get_http_body ERROR [%d]\n",url, soap->error);
         soap_print_fault(soap, stderr);
     }
     free(user);
@@ -233,49 +237,55 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_fla
 }
 
 OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int profile_index){
-    C_DEBUG("OnvifMediaService__getSnapshot\n");
+    char * endpoint = OnvifMediaService__get_endpoint(self);
+    C_DEBUG("[%s] OnvifMediaService__getSnapshot",endpoint);
     //TODO check if GetSnapshotUri is support via GetServiceCapabilities
     char * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
+    OnvifSnapshot * ret = NULL;
     if(!snapshot_uri){
-        C_WARN("No snapshot URI found.");
-        return NULL;
+        C_WARN("[%s] No snapshot URI found.",endpoint);
+        goto exit;
     }
-    C_INFO("Snapshot URI : %s\n",snapshot_uri);
-    OnvifSnapshot * ret = get_http_body(self, snapshot_uri, 0);
+    C_INFO("[%s] Snapshot URI : %s\n",endpoint,snapshot_uri);
+    ret = get_http_body(self, snapshot_uri, 0);
     free(snapshot_uri);
+
+exit:
+    free(endpoint);
     return ret;
 }
 
 void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, char * ret){
+    char * endpoint = OnvifMediaService__get_endpoint(self);
     if(!self){
-        C_ERROR("OnvifMediaService__get_profile_token - MediaService uninitialized.\n");
+        C_ERROR("[%s] OnvifMediaService__get_profile_token - MediaService uninitialized.",endpoint);
         ret[0] = '\0'; 
-        return;
+        goto exit;
     }
     P_MUTEX_LOCK(self->profile_lock);
-    C_TRACE("OnvifMediaService__get_profile_token\n");
+    C_TRACE("[%s] OnvifMediaService__get_profile_token %i", endpoint, index);
     if(!OnvifMediaService__check_profiles(self)) { 
         ret[0] = '\0'; 
-        P_MUTEX_UNLOCK(self->profile_lock);
-        return;
+        goto unlock_exit;
     }
 
     int profileCount = OnvifProfiles__get_size(self->profiles);
     if(index >= profileCount){
-        char * endpoint = OnvifMediaService__get_endpoint(self);
-        C_ERROR("OnvifMediaService__get_profile_token : profile index out-of-bounds. [%s]\n", endpoint);
-        free(endpoint);
+        C_ERROR("[%s] OnvifMediaService__get_profile_token : profile index out-of-bounds.", endpoint);
     } else if(profileCount > 0 && profileCount > index) {
         OnvifProfile * profile = OnvifProfiles__get_profile(self->profiles,index);
         char * token = OnvifProfile__get_token(profile);
         if(token){
-            C_TRACE("OnvifMediaService__get_profile_token : Found profile [%s]\n",token);
+            C_TRACE("[%s] OnvifMediaService__get_profile_token : Found profile [%s]",endpoint, token);
             strcpy(ret,token);
         } else {
-            C_ERROR("OnvifMediaService__get_profile_token : Found profile, but token was NULL\n");
+            C_ERROR("[%s] OnvifMediaService__get_profile_token : Found profile, but token was NULL", endpoint);
         }
     } else {
-        C_ERROR("OnvifMediaService__get_profile_token : profile not found\n");
+        C_ERROR("[%s] OnvifMediaService__get_profile_token : profile not found", endpoint);
     }
+unlock_exit:
     P_MUTEX_UNLOCK(self->profile_lock);
+exit:
+    free(endpoint);
 }

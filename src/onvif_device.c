@@ -41,7 +41,10 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
         goto exit;
     }
 
-    C_DEBUG("OnvifDevice__createMediaService\n");
+    char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
+    C_DEBUG("[%s] OnvifDevice__createMediaService\n", endpoint);
+    free(endpoint);
+
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
     if(capabilities){
         OnvifMedia * media = OnvifCapabilities__get_media(capabilities);
@@ -67,19 +70,25 @@ double OnvifDevice__getTimeOffset(OnvifDevice * self){
 
 void OnvifDevice__authenticate(OnvifDevice* self){
     char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
-    C_INFO("OnvifDevice__authenticate [%s]\n", endpoint);
-    free(endpoint);
+    C_INFO("[%s] OnvifDevice__authenticate\n", endpoint);
 
     if(!self->datetime){
         time_t t = OnvifDeviceService__getSystemDateAndTime(self->device_service);
-
-        P_MUTEX_LOCK(self->prop_lock);
-        self->time_offset = difftime(t,time(NULL));
-        self->datetime = malloc(sizeof(time_t));
-        memcpy(self->datetime, &t, sizeof(t));
-        P_MUTEX_UNLOCK(self->prop_lock);
+        if(t > 0){
+            P_MUTEX_LOCK(self->prop_lock);
+            self->time_offset = difftime(t,time(NULL));
+            self->datetime = malloc(sizeof(time_t));
+            memcpy(self->datetime, &t, sizeof(t));
+            P_MUTEX_UNLOCK(self->prop_lock);
+        }
     }
 
+    if(self->datetime){
+        char str_now[20];
+        strftime(str_now, 20, "%Y-%m-%d %H:%M:%S", localtime(self->datetime));
+        C_TRACE("[%s] Camera SystemDateAndTime : '%s'\n", endpoint, str_now);
+    }
+    free(endpoint);
 
     OnvifDevice__createMediaService(self);
     if(!self->media_service){
@@ -87,16 +96,17 @@ void OnvifDevice__authenticate(OnvifDevice* self){
     }
 
     endpoint = OnvifMediaService__get_endpoint(self->media_service);
-    C_DEBUG("Created Media soap [%s]\n",endpoint);
-    free(endpoint);
+    C_DEBUG("[%s] Successfully created Media soap \n",endpoint);
 
     char * stream_uri = OnvifMediaService__getStreamUri(self->media_service,0);
     if(!stream_uri){
-        C_ERROR("No stream uri returned...");
-        return;
+        C_ERROR("[%s] No stream uri returned...", endpoint);
+    } else {
+        C_DEBUG("[%s] StreamURI : %s\n",endpoint, stream_uri);
     }
-    C_DEBUG("StreamURI : %s\n",stream_uri);
+
     free(stream_uri);
+    free(endpoint);
 }
 
 void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass){
@@ -156,7 +166,9 @@ OnvifDevice * OnvifDevice__create(char * device_url) {
 }
 
 void OnvifDevice__destroy(OnvifDevice* device) {
-    C_DEBUG("OnvifDevice__destroy\n");
+    char * endpoint = OnvifDeviceService__get_endpoint(device->device_service);
+    C_DEBUG("[%s] OnvifDevice__destroy",endpoint);
+    free(endpoint);
     if (device) {
         OnvifCredentials__destroy(device->credentials);
         OnvifDeviceService__destroy(device->device_service);

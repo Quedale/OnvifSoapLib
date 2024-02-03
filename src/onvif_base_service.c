@@ -88,7 +88,18 @@ time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
     struct tm now_tm = *localtime( &now);
     now_tm.tm_sec += offset;
 
-    return mktime( &now_tm);
+    time_t ntime = mktime(&now_tm);
+
+    char buff1[20];
+    strftime(buff1, 20, "%Y-%m-%d %H:%M:%S", gmtime(&now));
+
+    char buff2[20];
+    strftime(buff2, 20, "%Y-%m-%d %H:%M:%S", gmtime(&ntime));
+
+    char * endpoint = OnvifBaseService__get_endpoint(self);
+    C_TRACE("[%s] Time adjustment [%s] to [%s] offset %.0lf", endpoint, buff1, buff2, offset);
+    free(endpoint);
+    return ntime;
 }
 
 int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
