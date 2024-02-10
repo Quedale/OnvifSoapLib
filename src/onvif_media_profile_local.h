@@ -9,8 +9,8 @@
 # include "generated/soapH.h"	/* or manually replace with soapcpp2-generated *H.h file */
 #endif
 
-OnvifProfile * OnvifProfile__create(struct tt__Profile * profile);
-void OnvifProfile__init(OnvifProfile * self,struct tt__Profile * profile);
+OnvifProfile * OnvifProfile__create(struct tt__Profile * profile, int index);
+void OnvifProfile__init(OnvifProfile * self,struct tt__Profile * profile, int index);
 
 OnvifProfiles * OnvifProfiles__create(struct _trt__GetProfilesResponse * resp);
 void OnvifProfiles__init(OnvifProfiles * self,struct _trt__GetProfilesResponse * resp);

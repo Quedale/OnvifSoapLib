@@ -100,6 +100,8 @@ void OnvifDevice__authenticate(OnvifDevice* self){
 
     char * stream_uri = OnvifMediaService__getStreamUri(self->media_service,0);
     if(!stream_uri){
+        OnvifMediaService__destroy(self->media_service);
+        self->media_service = NULL;
         C_ERROR("[%s] No stream uri returned...", endpoint);
     } else {
         C_DEBUG("[%s] StreamURI : %s\n",endpoint, stream_uri);
