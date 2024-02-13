@@ -15,7 +15,7 @@ void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint);
     char * svd_ptr; \
     char * tokenx = strtok_r(str_func, "_", &svd_ptr); \
     tokenx = strtok_r(svd_ptr, "_", &svd_ptr); \
-    C_TRACE("[%s] Invoking %s", privendpt, tokenx); \
+    C_DEBUG("[%s] Invoking %s", privendpt, tokenx); \
     struct soap * soap = OnvifBaseService__soap_new(self->parent); \
     if(!soap){ \
         OnvifBaseService__set_error_code(self->parent,ONVIF_ERROR_CONNECTION); \

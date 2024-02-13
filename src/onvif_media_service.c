@@ -53,6 +53,7 @@ int OnvifMediaService__check_profiles(OnvifMediaService * self){
 }
 
 OnvifProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
+    if(!self) return NULL;
     OnvifProfiles * ret;
     P_MUTEX_LOCK(self->profile_lock);
     if(!OnvifMediaService__check_profiles(self)) return NULL;

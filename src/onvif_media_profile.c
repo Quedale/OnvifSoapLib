@@ -36,7 +36,7 @@ OnvifProfile * OnvifProfile__create(struct tt__Profile * profile, int index){
 }
 
 void OnvifProfile__destroy(OnvifProfile* self){
-    if(!self){ C_WARN("Destruction failed. NULL pointer."); return;}
+    if(!self)return;
     if(self->name)
         free(self->name);
     if(self->token)
@@ -45,12 +45,12 @@ void OnvifProfile__destroy(OnvifProfile* self){
 }
 
 char * OnvifProfile__get_name(OnvifProfile* self){
-    if(!self){return NULL;}
+    if(!self)return NULL;
     return self->name;
 }
 
 char * OnvifProfile__get_token(OnvifProfile* self){
-    if(!self){return NULL;}
+    if(!self)return NULL;
     return self->token;
 }
 
@@ -139,7 +139,7 @@ int OnvifProfile__string_equals(char * str1, char * str2){
 }
 
 int OnvifProfile__equals(OnvifProfile * prof1, OnvifProfile * prof2){
-    if(prof1 == NULL && prof2 == NULL){
+    if(prof1 == prof2){
         return 1;
     }
     if( prof1 == NULL || prof2 == NULL){

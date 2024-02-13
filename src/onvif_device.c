@@ -16,6 +16,8 @@ typedef struct _OnvifDevice {
     ParsedURL * purl;
     time_t * datetime;
     double time_offset;
+    P_MUTEX_TYPE auth_lock;
+    int authenticated;
 
     OnvifErrorTypes last_error;
     P_MUTEX_TYPE prop_lock;
@@ -41,9 +43,7 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
         goto exit;
     }
 
-    char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
-    C_DEBUG("[%s] OnvifDevice__createMediaService\n", endpoint);
-    free(endpoint);
+    ONVIF_DEVICE_TRACE("[%s] OnvifDevice__createMediaService",self);
 
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
     if(capabilities){
@@ -71,6 +71,10 @@ double OnvifDevice__getTimeOffset(OnvifDevice * self){
 void OnvifDevice__authenticate(OnvifDevice* self){
     char * endpoint = OnvifDeviceService__get_endpoint(self->device_service);
     C_INFO("[%s] OnvifDevice__authenticate\n", endpoint);
+    P_MUTEX_LOCK(self->auth_lock);
+    if(self->authenticated){
+        goto exit;
+    }
 
     if(!self->datetime){
         time_t t = OnvifDeviceService__getSystemDateAndTime(self->device_service);
@@ -86,13 +90,14 @@ void OnvifDevice__authenticate(OnvifDevice* self){
     if(self->datetime){
         char str_now[20];
         strftime(str_now, 20, "%Y-%m-%d %H:%M:%S", localtime(self->datetime));
-        C_TRACE("[%s] Camera SystemDateAndTime : '%s'\n", endpoint, str_now);
+        C_INFO("[%s] Camera SystemDateAndTime : '%s'\n", endpoint, str_now);
     }
     free(endpoint);
 
     OnvifDevice__createMediaService(self);
     if(!self->media_service){
-        return;
+        ONVIF_DEVICE_ERROR("[%s] OnvifDevice__authenticate - Failed to create media service\n",self);
+        goto exit;
     }
 
     endpoint = OnvifMediaService__get_endpoint(self->media_service);
@@ -105,10 +110,24 @@ void OnvifDevice__authenticate(OnvifDevice* self){
         C_ERROR("[%s] No stream uri returned...", endpoint);
     } else {
         C_DEBUG("[%s] StreamURI : %s\n",endpoint, stream_uri);
+        P_MUTEX_LOCK(self->prop_lock);
+        self->authenticated = 1;
+        P_MUTEX_UNLOCK(self->prop_lock);
     }
 
     free(stream_uri);
     free(endpoint);
+
+exit:
+    P_MUTEX_UNLOCK(self->auth_lock);
+}
+
+int OnvifDevice__is_authenticated(OnvifDevice* self){
+    int ret;
+    P_MUTEX_LOCK(self->auth_lock);
+    ret = self->authenticated;
+    P_MUTEX_UNLOCK(self->auth_lock);
+    return ret;
 }
 
 void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass){
@@ -142,9 +161,10 @@ OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self){
 
 void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     P_MUTEX_SETUP(self->prop_lock);
-
+    P_MUTEX_SETUP(self->auth_lock);
     P_MUTEX_SETUP(self->media_lock);
 
+    self->authenticated = 0;
     self->time_offset = 0;
     self->last_error = ONVIF_ERROR_NOT_SET;
     self->credentials = OnvifCredentials__create();
@@ -168,15 +188,15 @@ OnvifDevice * OnvifDevice__create(char * device_url) {
 }
 
 void OnvifDevice__destroy(OnvifDevice* device) {
-    char * endpoint = OnvifDeviceService__get_endpoint(device->device_service);
-    C_DEBUG("[%s] OnvifDevice__destroy",endpoint);
-    free(endpoint);
     if (device) {
+        ONVIF_DEVICE_DEBUG("[%s] OnvifDevice__destroy",device);
+
         OnvifCredentials__destroy(device->credentials);
         OnvifDeviceService__destroy(device->device_service);
         OnvifMediaService__destroy(device->media_service);
         P_MUTEX_CLEANUP(device->media_lock);
         P_MUTEX_CLEANUP(device->prop_lock);
+        P_MUTEX_CLEANUP(device->auth_lock);
         ParsedURL__destroy(device->purl);
         free(device->datetime);
         free(device);
@@ -193,19 +213,6 @@ char * OnvifDevice__get_host(OnvifDevice* self){
     P_MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }
-
-// void OnvifDevice__lookup_ip(OnvifDevice* self){
-//     struct hostent *host_entry = gethostbyname(self->hostname);
-//     if(host_entry){
-//         C_DEBUG("Resolving hostname...");
-//         char * tmpip = inet_ntoa(*((struct in_addr*)
-//                     host_entry->h_addr_list[0]));
-//         P_MUTEX_LOCK(self->prop_lock);
-//         self->ip = malloc(strlen(tmpip)+1);
-//         strcpy(self->ip,tmpip);
-//         P_MUTEX_UNLOCK(self->prop_lock);
-//     }
-// }
 
 char * OnvifDevice__get_port(OnvifDevice* self){
     char * ret = NULL;
