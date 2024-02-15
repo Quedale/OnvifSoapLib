@@ -26,7 +26,7 @@ void OnvifSnapshot__destroy(OnvifSnapshot * self){
     }
 }
 
-double OnvifSnapshot__get_size(OnvifSnapshot * self){
+int OnvifSnapshot__get_size(OnvifSnapshot * self){
     return self->size;
 }
 
