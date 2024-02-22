@@ -12,6 +12,10 @@ if (MSVC)
   target_compile_options(client-test PRIVATE "SHELL: -wd4244 -wd4996 -wd5045")
 endif()
 
+
+add_executable(udp-test udp-test.c)
+target_link_libraries(udp-test onvifsoap)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)

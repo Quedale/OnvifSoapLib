@@ -728,15 +728,22 @@ if [ $SKIP_WSDL -eq 0 ]; then
     echo "Generating WSDL gsoap files..."
     rm -rf $SUBPROJECT_DIR/../src/generated
     mkdir $SUBPROJECT_DIR/../src/generated
-    wsdl2h -x -t $SUBPROJECT_DIR/../wsdl/typemap.dat -o $SUBPROJECT_DIR/../src/generated/common_service.h -c \
-    http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
-    http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl \
-    http://www.onvif.org/onvif/ver10/schema/onvif.xsd
-
-    # http://www.onvif.org/onvif/ver10/deviceio.wsdl \
-    # http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
-    # http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
-    # http://www.onvif.org/onvif/ver10/event/wsdl/event.wsdl \
+    wsdl2h -O4 -P -x -t$SUBPROJECT_DIR/../wsdl/typemap.dat -o $SUBPROJECT_DIR/../src/generated/onvif.h -c \
+      http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
+      http://www.onvif.org/onvif/ver10/events/wsdl/event.wsdl \
+      http://www.onvif.org/onvif/ver10/deviceio.wsdl \
+      http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
+      http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl \
+      http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
+      http://www.onvif.org/onvif/ver10/network/wsdl/remotediscovery.wsdl \
+      http://www.onvif.org/ver10/advancedsecurity/wsdl/advancedsecurity.wsdl
+    ret=$?
+    if [ $ret != 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** Failed to generate gsoap C header file ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      exit 1;
+    fi
     # http://www.onvif.org/onvif/ver10/display.wsdl \
     # http://www.onvif.org/onvif/ver10/receiver.wsdl \
     # http://www.onvif.org/onvif/ver10/recording.wsdl \
@@ -744,7 +751,14 @@ if [ $SKIP_WSDL -eq 0 ]; then
     # http://www.onvif.org/onvif/ver10/replay.wsdl \
     # http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl \
     # http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl \ 
-    soapcpp2 -ponvifsoap -f100 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $SUBPROJECT_DIR/../src/generated/common_service.h -d$SUBPROJECT_DIR/../src/generated
+    soapcpp2 -ponvifsoap -f100 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $SUBPROJECT_DIR/../src/generated/onvif.h -d$SUBPROJECT_DIR/../src/generated
+    ret=$?
+    if [ $ret != 0 ]; then
+      printf "${RED}*****************************\n${NC}"
+      printf "${RED}*** Failed to generate gsoap C code ${srcdir} ***\n${NC}"
+      printf "${RED}*****************************\n${NC}"
+      exit 1;
+    fi
 else
     echo "Skipping WSDL class generation..."
 fi
@@ -759,9 +773,8 @@ done
 GSOAP_ABS_DIR=$(realpath $GSOAP_SRC_DIR)
 echo "noinst_LTLIBRARIES = libgeneratedsoap.la" > $SUBPROJECT_DIR/../src/generated/Makefile.am
 echo "libgeneratedsoap_la_SOURCES = $GSOAP_ABS_DIR/gsoap/dom.c $GSOAP_ABS_DIR/gsoap/stdsoap2.c $GSOAP_ABS_DIR/gsoap/plugin/smdevp.c $GSOAP_ABS_DIR/gsoap/plugin/mecevp.c $GSOAP_ABS_DIR/gsoap/plugin/wsaapi.c $GSOAP_ABS_DIR/gsoap/plugin/wsseapi.c $GSOAP_ABS_DIR/gsoap/plugin/wsddapi.c $GSOAP_ABS_DIR/gsoap/plugin/threads.c $GSOAP_ABS_DIR/gsoap/plugin/httpda.c $GSOAP_ABS_DIR/gsoap/custom/struct_timeval.c$GENERATED_SOAP_FILES" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
-echo "libgeneratedsoap_la_CFLAGS= -c -Wall -fvisibility=hidden -DWITH_DOM -DWITH_OPENSSL -DWITH_NOEMPTYSTRUCT -DWITH_GZIP -DBUILD_SHARD -I$GSOAP_ABS_DIR/gsoap/ -I$GSOAP_ABS_DIR/gsoap/import -I$GSOAP_ABS_DIR/gsoap/custom -I$GSOAP_ABS_DIR/gsoap/plugin -I$srcdir/src/generated" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
+echo "libgeneratedsoap_la_CFLAGS= -c -w -fvisibility=hidden -DWITH_DOM -DWITH_OPENSSL -DWITH_NOEMPTYSTRUCT -DWITH_GZIP -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h -I$GSOAP_ABS_DIR/gsoap/ -I$GSOAP_ABS_DIR/gsoap/import -I$GSOAP_ABS_DIR/gsoap/custom -I$GSOAP_ABS_DIR/gsoap/plugin -I$srcdir/src/generated" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
 echo "libgeneratedsoap_la_LDFLAGS= -all-static `pkg-config --libs openssl zlib`" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
-
 
 #Initialize project
 aclocal

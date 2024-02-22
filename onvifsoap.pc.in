@@ -8,5 +8,5 @@ Description: Onvif gSoap Capability Library
 URL: https://github.com/Quedale/OnvifSoapLib.git
 Version: 0.0
 Requires: 
-Libs: -L${libdir} -lonvifsoap
+Libs: -L${libdir} -lonvifsoap -lssl -lcrypto -lz -lcutils
 Cflags: -I${includedir}

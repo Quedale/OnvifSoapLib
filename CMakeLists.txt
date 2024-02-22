@@ -4,6 +4,24 @@ project(client-test VERSION 0.1.0)
 include(CTest)
 enable_testing()
 
+include(CMakeDependentOption)
+cmake_dependent_option(
+  ONVIFSOAP_STATIC             # option variable
+  "Build static library"    # description
+  ON                        # default value if exposed; user can override
+  "NOT BUILD_SHARED_LIBS"   # condition to expose option
+  OFF                       # value if not exposed; user can't override
+)
+
+if (ONVIFSOAP_STATIC)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a;.dylib;.so;")
+  set(ONVIFSOAP_BUILD_TYPE STATIC)
+else ()
+  set(ONVIFSOAP_BUILD_TYPE SHARED)
+endif ()
+
+
+
 set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release)
 set(LIBRARY_OUTPUT_PATH    ${OUTPUT_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${OUTPUT_DIR})
@@ -39,13 +57,18 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 endif()
 
 aux_source_directory(src src_dir)
+aux_source_directory(src/discovery src_dir_disco)
 aux_source_directory(src/generated generated_dir)
+
 #########################
 #
-# gSoap library
+# onvif ibrary
 #
 #########################
-add_library(gsoap STATIC ${GSOAP_SRC_DIR}/gsoap/dom.c 
+add_library(onvifsoap ${ONVIFSOAP_BUILD_TYPE} ${src_dir}
+                                ${src_dir_disco}
+                                ${generated_dir}
+                          ${GSOAP_SRC_DIR}/gsoap/dom.c 
                           ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
                           ${GSOAP_SRC_DIR}/gsoap/plugin/logging.c
                           ${GSOAP_SRC_DIR}/gsoap/plugin/smdevp.c 
@@ -57,109 +80,56 @@ add_library(gsoap STATIC ${GSOAP_SRC_DIR}/gsoap/dom.c
                           ${GSOAP_SRC_DIR}/gsoap/plugin/httpda.c
                           ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c)
 
-if(ZLIB_FOUND)
-  target_link_libraries(gsoap PRIVATE ZLIB::ZLIB)
-  target_compile_options(gsoap PRIVATE "SHELL: -DWITH_GZIP")
-else()
-  message(WARNING "ZLIB not found...")
-endif()
-
-if(OPENSSL_FOUND)
-  target_link_libraries(gsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-  target_compile_options(gsoap PRIVATE "SHELL: -DWITH_OPENSSL")
-else()
-  message(FATAL_ERROR "OpenSSL not found...")
-endif()
-
-if(Threads_FOUND)
-  message("Linking thread")
-  target_link_libraries(gsoap PRIVATE Threads::Threads)
-else()
-  message(FATAL_ERROR  "Threads not found...")
-endif()
-
-if(WIN32)
-  target_link_libraries(gsoap PRIVATE wsock32 ws2_32)
-endif()
-
+#Ingore gsoap warnings
 if (MSVC)
-  target_compile_options(gsoap PRIVATE "SHELL: -wd4244 -wd4267")
+  # target_compile_options(gsoap PRIVATE "SHELL: -wd4244 -wd4267")
+  set_source_files_properties(${GSOAP_SRC_DIR}/gsoap/dom.c 
+                              ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/logging.c
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/smdevp.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/mecevp.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/wsaapi.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/wsseapi.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/wsddapi.c
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/threads.c
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/httpda.c
+                              ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c PROPERTIES COMPILE_FLAGS -wd4244 -wd4267)
 else()
-  target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -Wno-deprecated-declarations -Wno-format -fPIC")
+  # target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -Wno-deprecated-declarations -Wno-format -fPIC")
+  set_source_files_properties(${GSOAP_SRC_DIR}/gsoap/dom.c 
+                              ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/logging.c
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/smdevp.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/mecevp.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/wsaapi.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/wsseapi.c 
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/wsddapi.c
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/threads.c
+                              ${GSOAP_SRC_DIR}/gsoap/plugin/httpda.c
+                              ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c PROPERTIES COMPILE_FLAGS -w)
 endif()
-
-target_compile_options(gsoap PRIVATE "SHELL: -c -DWITH_DOM -DSOAP_H_FILE=onvifsoapH.h")
-
-#########################
-#
-# generated gSoap stub library
-#
-#########################
-add_library(generatedsoap STATIC    ${generated_dir})
-
-if(ZLIB_FOUND)
-  target_link_libraries(generatedsoap PRIVATE ZLIB::ZLIB)
-  target_compile_options(generatedsoap PRIVATE "SHELL: -DWITH_GZIP")
-else()
-  message(WARNING "ZLIB not found...")
-endif()
-
-if(OPENSSL_FOUND)
-  target_link_libraries(generatedsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-  target_compile_options(generatedsoap PRIVATE "SHELL: -DWITH_OPENSSL")
-else()
-  message(FATAL_ERROR "OpenSSL not found...")
-endif()
-
-if(Threads_FOUND)
-  message("Linking thread")
-  target_link_libraries(generatedsoap PRIVATE Threads::Threads)
-else()
-  message(FATAL_ERROR  "Threads not found...")
-endif()
-
-if (NOT MSVC)
-  target_compile_options(gsoap PRIVATE "SHELL: -fPIC -fvisibility=hidden")
-endif()
-
-target_compile_options(generatedsoap PRIVATE "SHELL: -c -DWITH_DOM -DSOAP_H_FILE=onvifsoapH.h")
-
-target_link_libraries(generatedsoap PRIVATE gsoap)
-if(NOT WIN32)
-  target_compile_options(generatedsoap PRIVATE "SHELL: -fvisibility=hidden")
-endif()
-#########################
-#
-# onvif ibrary
-#
-#########################
-# add_library(onvifsoapstc STATIC    ${src_dir})
-add_library(onvifsoap SHARED    ${src_dir})
 
 if(ZLIB_FOUND)
   target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
-  set(LA_LIBS "${LA_LIBS} -lz")
+  target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_GZIP")
 else()
   message(WARNING "ZLIB not found...")
 endif()
 
 if(OPENSSL_FOUND)
   target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-  set(LA_LIBS "${LA_LIBS} -lssl -lcrypto")
+  target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_OPENSSL")
 else()
   message(FATAL_ERROR "OpenSSL not found...")
 endif()
 
 if(Threads_FOUND)
   target_link_libraries(onvifsoap PRIVATE Threads::Threads)
-  if(CMAKE_USE_PTHREADS_INIT)
-    set(LA_LINK "${LA_LINK} -pthread")
-  endif()
 else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} gsoap generatedsoap)
+target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS})
 
 #I care little for MSVC warning. Support is from good faith
 if (MSVC)
@@ -170,7 +140,7 @@ if(NOT WIN32)
   target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
 endif()
 
-target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NOEMPTYSTRUCT -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
+target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NOEMPTYSTRUCT -DWITH_DOM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
 
 add_subdirectory(example)
 
@@ -194,7 +164,11 @@ set(headers ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
             ${PROJECT_SOURCE_DIR}/src/onvif_media_service.h
             ${PROJECT_SOURCE_DIR}/src/onvif_device_scopes.h
             ${PROJECT_SOURCE_DIR}/src/shard_export.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h)
+            ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h
+            ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h 
+		        ${PROJECT_SOURCE_DIR}/src/discovery/onvif_discovery.h 
+		        ${PROJECT_SOURCE_DIR}/src/discovery/probmatch.h
+            ${PROJECT_SOURCE_DIR}/src/discovery/discovered_obj.h)
 
 #Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})
@@ -206,12 +180,7 @@ if(NOT WIN32)
   #Create pkgconfig file
   configure_file(onvifsoap.pc.in onvifsoap.pc @ONLY) 
   install(FILES ${PROJECT_BINARY_DIR}/onvifsoap.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-
-  #Configure libtool file to allow hidden symbol on static link
-  configure_file(libonvifsoap.la.in libonvifsoap.la @ONLY)
-  install(FILES ${PROJECT_BINARY_DIR}/libonvifsoap.la DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 endif()
 
 install(TARGETS onvifsoap EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-# install(TARGETS onvifsoapstc EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

@@ -1,5 +1,5 @@
 #include "onvif_base_service.h"
-#include "generated/DeviceBinding.nsmap"
+#include "safe_namespace.h"
 #include "onvif_credentials.h"
 #include "wsseapi.h"
 #include <string.h>

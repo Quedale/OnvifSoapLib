@@ -1,5 +1,6 @@
 #include "onvif_device_scopes_local.h"
 #include "clogger.h"
+#include "cstring_utils.h"
 
 typedef struct _OnvifScope {
     char * scope;
@@ -41,13 +42,6 @@ void urldecode(char *dst, const char *src)
         }
     }
     *dst++ = '\0';
-}
-
-int startsWith(const char *pre, const char *str)
-{
-    size_t lenpre = strlen(pre),
-           lenstr = strlen(str);
-    return lenstr < lenpre ? 0 : memcmp(pre, str, lenpre) == 0;
 }
 
 OnvifScopes * OnvifScopes__create(struct _tds__GetScopesResponse * resp){
@@ -93,12 +87,12 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
 
     int a;
     for (a = 0 ; a < self->count ; ++a) {
-        if(startsWith(onvif_key_del, self->scopes[a]->scope)){
+        if(cstring_startsWith(onvif_key_del, self->scopes[a]->scope)){
             //Drop onvif scope prefix
             char * subs = malloc(strlen(self->scopes[a]->scope)-strlen(onvif_key_del) + 1);
             strncpy(subs,self->scopes[a]->scope+(strlen(onvif_key_del)),strlen(self->scopes[a]->scope) - strlen(onvif_key_del)+1);
 
-            if(startsWith(key_w_del,subs)){ // Found Scope
+            if(cstring_startsWith(key_w_del,subs)){ // Found Scope
                 //Extract value
                 char * sval = malloc(strlen(subs)-strlen(key_w_del) + 1);
                 strncpy(sval,subs+(strlen(key_w_del)),strlen(subs) - strlen(key_w_del)+1);
