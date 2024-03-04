@@ -5,6 +5,13 @@
 #include "clogger.h"
 
 void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint);
+int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap);
+void OnvifBaseService__lock(OnvifBaseService * self);
+void OnvifBaseService__unlock(OnvifBaseService * self);
+SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
+void OnvifBaseService__soap_destroy(OnvifBaseService * self, struct soap *soap);
+void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes code);
+void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * soap, int error_code);
 
 #define BUILD_SOAP_FUNC(a)  soap_call___##a 
 #define BUILD_SOAP_TYPE(a)  _##a 
@@ -27,12 +34,16 @@ void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint);
 #define ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, soap, action, req, resp) \
     int ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
     char * new_endpoint = NULL; \
+    if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap)) \
+        ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
     if (ret == SOAP_UDP_ERROR || ret == SOAP_TCP_ERROR){ \
         char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); \
         new_endpoint = URL__set_port(privendpt, master_port); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
             C_WARN("Connection error. Attempting to correct URL : '%s' --> '%s'", privendpt, new_endpoint); \
             ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap)) \
+                ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
         } \
         free(master_port); \
     } \
@@ -45,7 +56,7 @@ void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint);
     if (new_endpoint) free(new_endpoint); \
 prv_exit: \
     free(privendpt); \
-    OnvifBaseService__soap_destroy(soap); \
+    OnvifBaseService__soap_destroy(self->parent, soap); \
     OnvifBaseService__unlock(self->parent);
 
 

@@ -37,9 +37,11 @@ elseif (MINGW)
 endif ()
 
 set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/CUtils/build/dist/lib/pkgconfig")
+set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/libntlm/build/dist/lib/pkgconfig")
 find_package(PkgConfig)
 pkg_check_modules(CUTILS REQUIRED cutils)
-include_directories(${CUTILS_INCLUDE_DIRS})
+pkg_check_modules(NTLM REQUIRED libntlm)
+include_directories(${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS})
 
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -129,7 +131,7 @@ else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS})
+target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} ${NTLM_LDFLAGS})
 
 #I care little for MSVC warning. Support is from good faith
 if (MSVC)
@@ -140,7 +142,7 @@ if(NOT WIN32)
   target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
 endif()
 
-target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NOEMPTYSTRUCT -DWITH_DOM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
+target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NOEMPTYSTRUCT -DWITH_DOM -DWITH_NTLM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
 
 add_subdirectory(example)
 

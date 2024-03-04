@@ -21,13 +21,8 @@ typedef enum {
 OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
 void OnvifBaseService__init(OnvifBaseService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
 void OnvifBaseService__destroy(OnvifBaseService * self);
-void OnvifBaseService__lock(OnvifBaseService * self);
-void OnvifBaseService__unlock(OnvifBaseService * self);
 SHARD_EXPORT char * OnvifBaseService__get_endpoint(OnvifBaseService * self);
 SHARD_EXPORT OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self);
-SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
-void OnvifBaseService__soap_destroy(struct soap *soap);
-void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes code);
-void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * soap, int error_code);
+
 
 #endif

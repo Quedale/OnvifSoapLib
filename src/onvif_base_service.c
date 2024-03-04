@@ -1,4 +1,5 @@
 #include "onvif_base_service.h"
+#include "onvif_base_service_local.h"
 #include "safe_namespace.h"
 #include "onvif_credentials.h"
 #include "wsseapi.h"
@@ -7,6 +8,7 @@
 #include <stddef.h>
 #include "clogger.h"
 #include "plugin/logging.h"
+#include "httpda.h"
 
 #define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
 
@@ -17,6 +19,7 @@ struct _OnvifBaseService {
     P_MUTEX_TYPE prop_lock;
     void (*error_cb)(OnvifErrorTypes type, void * user_data);
     void * error_data;
+    struct http_da_info *  da_info;
 };
 
 OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
@@ -33,6 +36,8 @@ void OnvifBaseService__init(OnvifBaseService * self,OnvifDevice * device, const 
     self->endpoint = malloc(strlen(endpoint)+1);
     strcpy(self->endpoint,endpoint);
 
+    self->da_info = NULL;
+    
     P_MUTEX_SETUP(self->service_lock);
 
     P_MUTEX_SETUP(self->prop_lock);
@@ -50,6 +55,18 @@ void OnvifBaseService__destroy(OnvifBaseService * self){
         if(self->endpoint){
             free(self->endpoint);
         }
+        if(self->da_info){
+            //It might be more efficient to clean up da_info manually
+            struct soap fakesoap;
+            soap_init1(&fakesoap, SOAP_XML_CANONICAL | SOAP_C_UTFSTRING);
+            soap_register_plugin(&fakesoap, http_da);
+            http_da_release(&fakesoap, self->da_info);
+            free(self->da_info);
+            soap_destroy(&fakesoap);
+            soap_end(&fakesoap);
+            soap_done(&fakesoap);
+        }
+
         P_MUTEX_CLEANUP(self->prop_lock);
         P_MUTEX_CLEANUP(self->service_lock);
         free(self);
@@ -122,16 +139,46 @@ int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
     return ret;
 }
 
+int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap){
+    if(!soap->authrealm){
+        return 0;
+    }
+    
+    C_DEBUG("WWW-Authorization challenge '%s'",soap->authrealm);
+
+    char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(self->device));
+    char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(self->device));
+    if(!self->da_info){
+        self->da_info = malloc(sizeof(struct http_da_info));
+        memset (self->da_info, 0, sizeof(struct http_da_info));
+    }
+    http_da_save(soap, self->da_info, soap->authrealm, user, pass);
+    free(user);
+    free(pass);
+    //Reapply wsse data after challenge started
+    int wsseret = OnvifBaseService__set_wsse_data(self,soap);
+    if(!wsseret){
+        OnvifBaseService__soap_destroy(self, soap);
+        return 0;
+    }
+
+    return 1;
+}
+
 SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     struct soap * soap = soap_new1(SOAP_XML_CANONICAL | SOAP_C_UTFSTRING); //SOAP_XML_STRICT may cause crash
     soap->connect_timeout = 2; // 2 sec
     soap->recv_timeout = soap->send_timeout = 10;//10 sec
     soap_register_plugin(soap, soap_wsse);
+    soap_register_plugin(soap, http_da);
 
+    if(self->da_info)
+        http_da_restore(soap, self->da_info);
+        
     int wsseret = OnvifBaseService__set_wsse_data(self,soap);
 
     if(!wsseret){
-        OnvifBaseService__soap_destroy(soap);
+        OnvifBaseService__soap_destroy(self, soap);
         soap = NULL;
     }
 
@@ -151,7 +198,7 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     return (SoapDef *) soap;
 }
 
-void OnvifBaseService__soap_destroy(SoapDef * soap){
+void OnvifBaseService__soap_destroy(OnvifBaseService * self, SoapDef * soap){
     char *debug_flag = NULL;
 
     if (( debug_flag =getenv( "ONVIF_DEBUG" )) != NULL )

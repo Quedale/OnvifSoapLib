@@ -721,6 +721,18 @@ if [ $SKIP_GSOAP -eq 0 ] && [ $ret != 0 ]; then
     if [ $FAILED -eq 1 ]; then exit 1; fi
 fi
 
+
+NTLM_PKG=$SUBPROJECT_DIR/libntlm/build/dist/lib/pkgconfig
+PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$NTLM_PKG \
+pkg-config --exists --print-errors "libntlm >= 1.6"
+ret=$?
+if [ $ret != 0 ]; then
+  pullOrClone path=https://gitlab.com/gsasl/libntlm.git tag=v1.7
+  if [ $FAILED -eq 1 ]; then exit 1; fi
+  buildMakeProject srcdir="libntlm" prefix="$SUBPROJECT_DIR/libntlm/build/dist" configure="--enable-shared=no" #TODO support shared linking
+  if [ $FAILED -eq 1 ]; then exit 1; fi
+fi
+
 #Get out of subproject folder
 cd ..
 
@@ -773,7 +785,7 @@ done
 GSOAP_ABS_DIR=$(realpath $GSOAP_SRC_DIR)
 echo "noinst_LTLIBRARIES = libgeneratedsoap.la" > $SUBPROJECT_DIR/../src/generated/Makefile.am
 echo "libgeneratedsoap_la_SOURCES = $GSOAP_ABS_DIR/gsoap/dom.c $GSOAP_ABS_DIR/gsoap/stdsoap2.c $GSOAP_ABS_DIR/gsoap/plugin/smdevp.c $GSOAP_ABS_DIR/gsoap/plugin/mecevp.c $GSOAP_ABS_DIR/gsoap/plugin/wsaapi.c $GSOAP_ABS_DIR/gsoap/plugin/wsseapi.c $GSOAP_ABS_DIR/gsoap/plugin/wsddapi.c $GSOAP_ABS_DIR/gsoap/plugin/threads.c $GSOAP_ABS_DIR/gsoap/plugin/httpda.c $GSOAP_ABS_DIR/gsoap/custom/struct_timeval.c$GENERATED_SOAP_FILES" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
-echo "libgeneratedsoap_la_CFLAGS= -c -w -fvisibility=hidden -DWITH_DOM -DWITH_OPENSSL -DWITH_NOEMPTYSTRUCT -DWITH_GZIP -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h -I$GSOAP_ABS_DIR/gsoap/ -I$GSOAP_ABS_DIR/gsoap/import -I$GSOAP_ABS_DIR/gsoap/custom -I$GSOAP_ABS_DIR/gsoap/plugin -I$srcdir/src/generated" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
+echo "libgeneratedsoap_la_CFLAGS= -c -w -fvisibility=hidden -DWITH_DOM -DWITH_NTLM -DWITH_OPENSSL -DWITH_NOEMPTYSTRUCT -DWITH_GZIP -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h -I$GSOAP_ABS_DIR/gsoap/ -I$GSOAP_ABS_DIR/gsoap/import -I$GSOAP_ABS_DIR/gsoap/custom -I$GSOAP_ABS_DIR/gsoap/plugin -I$srcdir/src/generated" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
 echo "libgeneratedsoap_la_LDFLAGS= -all-static `pkg-config --libs openssl zlib`" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
 
 #Initialize project
