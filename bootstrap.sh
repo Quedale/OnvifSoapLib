@@ -774,22 +774,3 @@ if [ $SKIP_WSDL -eq 0 ]; then
 else
     echo "Skipping WSDL class generation..."
 fi
-
-GENERATED_SOAP_FILES=""
-search_dir=$SUBPROJECT_DIR/../src/generated
-for entry in "$search_dir"/*
-do
-  GENERATED_SOAP_FILES+=" $(basename "$entry")"
-done
-
-GSOAP_ABS_DIR=$(realpath $GSOAP_SRC_DIR)
-echo "noinst_LTLIBRARIES = libgeneratedsoap.la" > $SUBPROJECT_DIR/../src/generated/Makefile.am
-echo "libgeneratedsoap_la_SOURCES = $GSOAP_ABS_DIR/gsoap/dom.c $GSOAP_ABS_DIR/gsoap/stdsoap2.c $GSOAP_ABS_DIR/gsoap/plugin/smdevp.c $GSOAP_ABS_DIR/gsoap/plugin/mecevp.c $GSOAP_ABS_DIR/gsoap/plugin/wsaapi.c $GSOAP_ABS_DIR/gsoap/plugin/wsseapi.c $GSOAP_ABS_DIR/gsoap/plugin/wsddapi.c $GSOAP_ABS_DIR/gsoap/plugin/threads.c $GSOAP_ABS_DIR/gsoap/plugin/httpda.c $GSOAP_ABS_DIR/gsoap/custom/struct_timeval.c$GENERATED_SOAP_FILES" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
-echo "libgeneratedsoap_la_CFLAGS= -c -w -fvisibility=hidden -DWITH_DOM -DWITH_NTLM -DWITH_OPENSSL -DWITH_NOEMPTYSTRUCT -DWITH_GZIP -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h -I$GSOAP_ABS_DIR/gsoap/ -I$GSOAP_ABS_DIR/gsoap/import -I$GSOAP_ABS_DIR/gsoap/custom -I$GSOAP_ABS_DIR/gsoap/plugin -I$srcdir/src/generated" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
-echo "libgeneratedsoap_la_LDFLAGS= -all-static `pkg-config --libs openssl zlib`" >> $SUBPROJECT_DIR/../src/generated/Makefile.am
-
-#Initialize project
-aclocal
-autoconf
-automake --add-missing
-autoreconf -i

@@ -9,8 +9,9 @@ Prepare the environment
 
 Configure, Compile and install
 ```shell
-./configure --prefix=$(pwd)/build
-make
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX="$(pwd)/dist" ..
+make -j$(nproc)
 make install
 ```
 
