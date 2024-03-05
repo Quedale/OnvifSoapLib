@@ -68,6 +68,13 @@ int main(int argc, char *argv[])
 	OnvifDevice__set_credentials(dev,arguments.user, arguments.pass);
 	OnvifDevice__authenticate(dev);
 	
+	//TODO Support context-aware error handling instead of global pointer
+	if(OnvifDevice__get_last_error(dev) != ONVIF_ERROR_NONE){
+		C_ERROR("Device encountered an authentication error.");
+		OnvifDevice__destroy(dev);
+		return 1;
+	}
+	
 	char * host = OnvifDevice__get_host(dev);
 	C_DEBUG("dev : %s\n",host);
 	free(host);

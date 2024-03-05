@@ -41,6 +41,7 @@ OnvifBaseService * OnvifMediaService__get_parent(OnvifMediaService * self){
 }
 
 char * OnvifMediaService__get_endpoint(OnvifMediaService * self){
+    if(!self) return NULL;
     return OnvifBaseService__get_endpoint(self->parent);
 }
 
@@ -94,15 +95,17 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
         free(endpoint);
         return NULL;
     }
+
+    char token[255];
+    memset(&token,0,sizeof(token));
+    OnvifMediaService__get_profile_token(self,profile_index, token);
+    if(strlen(token) == 0) { C_WARN("Profile token not found."); return NULL; }
+
     struct _trt__GetStreamUri req;
     struct _trt__GetStreamUriResponse resp;
     char * streamuri = NULL;
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
-
-    char token[255];
-    memset(&token,0,sizeof(token));
-    OnvifMediaService__get_profile_token(self,profile_index, token);
     req.ProfileToken = token;
 
     struct tt__StreamSetup ssetup;

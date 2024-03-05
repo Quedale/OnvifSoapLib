@@ -24,6 +24,23 @@ typedef struct _OnvifDevice OnvifDevice;
 #define ONVIF_DEVICE_ERROR(fmt,dev, ...) ONVIF_DEVICE_LOG(fmt,dev,ERROR,##__VA_ARGS__)
 #define ONVIF_DEVICE_FATAL(fmt,dev, ...) ONVIF_DEVICE_LOG(fmt,dev,FATAL,##__VA_ARGS__)
 
+#define ONVIF_MEDIA_LOG(fmt, dev, level, ...) \
+  if(dev){ \
+    char * asdendpoint = OnvifMediaService__get_endpoint(OnvifDevice__get_media_service(dev)); \
+    C_##level(fmt,asdendpoint,##__VA_ARGS__); \
+    free(asdendpoint); \
+  } else { \
+    C_##level(fmt,NULL,##__VA_ARGS__); \
+  }
+
+#define ONVIF_MEDIA_TRAIL(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,TRAIL,##__VA_ARGS__)
+#define ONVIF_MEDIA_TRACE(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,TRACE,##__VA_ARGS__)
+#define ONVIF_MEDIA_DEBUG(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,DEBUG,##__VA_ARGS__)
+#define ONVIF_MEDIA_INFO(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,INFO,##__VA_ARGS__)
+#define ONVIF_MEDIA_WARN(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,WARN,##__VA_ARGS__)
+#define ONVIF_MEDIA_ERROR(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,ERROR,##__VA_ARGS__)
+#define ONVIF_MEDIA_FATAL(fmt,dev, ...) ONVIF_MEDIA_LOG(fmt,dev,FATAL,##__VA_ARGS__)
+
 SHARD_EXPORT OnvifDevice * OnvifDevice__create(char * device_url);
 SHARD_EXPORT void OnvifDevice__destroy(OnvifDevice* device); 
 SHARD_EXPORT char * OnvifDevice__get_host(OnvifDevice* self);
