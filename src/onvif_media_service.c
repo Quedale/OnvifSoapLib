@@ -2,6 +2,7 @@
 #include "onvif_media_profile_local.h"
 #include "onvif_base_service_local.h"
 #include "httpda.h"
+#include "plugin/logging.h"
 #include "clogger.h"
 
 typedef struct _OnvifMediaService {
@@ -30,8 +31,18 @@ void OnvifMediaService__destroy(OnvifMediaService * self){
         OnvifBaseService__destroy(self->parent);
         OnvifProfiles__destroy(self->profiles);
         P_MUTEX_CLEANUP(self->profile_lock);
-        if(self->snapshot_da_info)
+        if(self->snapshot_da_info){
+            //It might be more efficient to clean up da_info manually
+            struct soap fakesoap;
+            soap_init1(&fakesoap, SOAP_XML_CANONICAL | SOAP_C_UTFSTRING);
+            soap_register_plugin(&fakesoap, http_da);
+            http_da_release(&fakesoap, self->snapshot_da_info);
             free(self->snapshot_da_info);
+            soap_destroy(&fakesoap);
+            soap_end(&fakesoap);
+            soap_done(&fakesoap);
+        }
+
         free(self);
     }
 }
@@ -154,89 +165,98 @@ exit:
     return ret_val;
 }
 
-OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url, int retry_flag)
+OnvifSnapshot * get_http_body(OnvifMediaService *self, struct soap * soap, char * url, int retry_flag)
 {   
     size_t size = 0;
     char * buffer = NULL;
     OnvifSnapshot * snap = NULL;
 
-    //Creating soap instance to avoid long running locks.
-    struct soap * soap = soap_new1(SOAP_IO_CHUNK);
-    soap->connect_timeout = 2; // 2 sec
-    soap->recv_timeout = soap->send_timeout = 10;//10 sec
-    if (!self->snapshot_da_info){
-        self->snapshot_da_info = malloc(sizeof(struct http_da_info));
-        memset (self->snapshot_da_info, 0, sizeof(struct http_da_info));
-    }
-
-    soap_register_plugin(soap, http_da);
-
-    if (self->snapshot_da_info->authrealm){
-        http_da_restore(soap, self->snapshot_da_info);
-    }
-    char * user = NULL;
-    char * pass = NULL;
-    if (soap_GET(soap, url, NULL)
-            || soap_begin_recv(soap)
-            || (buffer = soap_http_get_body(soap, &size)) != NULL
-            || soap_end_recv(soap)){
-            if(soap->error == SOAP_OK){
-                snap = OnvifSnapshot__create(size,buffer);
-            } else if (soap->error == 401){
-                user = OnvifCredentials__get_username(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
-                pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
-                http_da_save(soap, self->snapshot_da_info, soap->authrealm, user, pass);
-                if (soap_GET(soap, url, NULL)
-                    || soap_begin_recv(soap)
-                    || (buffer = soap_http_get_body(soap, &size)) != NULL
-                    || soap_end_recv(soap)){
-                    snap = OnvifSnapshot__create(size,buffer);
-                }else {
-                    if (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR){
-                        char * new_endpoint = NULL;
-                        char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
-                        new_endpoint = URL__set_port(url, master_port);
-                        if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
-                            C_WARN("[%s] --> [%s] Connection error. Attempting to correct URL", url, new_endpoint);
-                            snap = get_http_body(self, new_endpoint, 1);
-                        }
-                        free(new_endpoint);
-                        free(master_port);
-                    } else {
-                        //TODO handle error codes
-                        C_ERROR("[%s] get_http_body ERROR", url);
-                        soap_print_fault(soap, stderr);
-                    }
-                }
-            } else if (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR){
-                char * new_endpoint = NULL;
-                char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
-                new_endpoint = URL__set_port(url, master_port);
-                if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
-                    C_WARN("[%s] --> [%s] Connection error. Attempting to correct URL", url, new_endpoint);
-                    snap = get_http_body(self, new_endpoint, 1);
-                }
-                free(new_endpoint);
-                free(master_port);
+    if (soap_GET(soap, url, NULL) || soap_begin_recv(soap) || (buffer = soap_http_get_body(soap, &size)) != NULL || soap_end_recv(soap)){
+        if(soap->error == SOAP_OK){ //Successfully
+            snap = OnvifSnapshot__create(size,buffer);
+            goto exit;
+        } else if (soap->error == 401){ //HTTP authentication challenge
+            C_DEBUG("Snapshot WWW-Authorization challenge '%s'",soap->authrealm);
+            if(!self->snapshot_da_info){
+                self->snapshot_da_info = malloc(sizeof(struct http_da_info));
+                memset (self->snapshot_da_info, 0, sizeof(struct http_da_info));
             } else {
-                //TODO handle error codes
-                C_ERROR("[%s] get_http_body ERROR [%d]\n",url, soap->error);
-                soap_print_fault(soap, stderr);
+                http_da_release(soap, self->snapshot_da_info);
             }
 
-    } else {
-        //TODO handle error codes
-        C_ERROR("[%s] get_http_body ERROR [%d]\n",url, soap->error);
-        soap_print_fault(soap, stderr);
+            char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
+            char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
+            http_da_save(soap, self->snapshot_da_info, soap->authrealm, user, pass);
+            free(user);
+            free(pass);
+            if ((soap_GET(soap, url, NULL) || soap_begin_recv(soap) || (buffer = soap_http_get_body(soap, &size)) != NULL || soap_end_recv(soap)) && soap->error == SOAP_OK){
+                snap = OnvifSnapshot__create(size,buffer);
+            }
+        }
     }
-    free(user);
-    free(pass);
-    http_da_release(soap, self->snapshot_da_info);
-    soap_closesock(soap);
-    soap_destroy(soap);
-    soap_end(soap);
-    soap_done(soap);
-    soap_free(soap);
+
+
+    //Extracting original error message to print error associated with the returned URL, not the fallback ones
+    const char * original_fstr = NULL;
+    const char * original_fdtl = NULL;
+    if ((soap->error != SOAP_OK && soap->error != SOAP_UDP_ERROR && soap->error != SOAP_TCP_ERROR) || !retry_flag) {
+        //TODO handle error codes
+        original_fstr = *soap_faultstring(soap);
+        original_fdtl = *soap_faultdetail(soap);
+    }
+
+    //Root url fallback
+    if (!retry_flag && (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR)){
+        char * new_endpoint = NULL;
+        char * tmp_endpoint = NULL;
+        char * master_host = OnvifDevice__get_host(OnvifBaseService__get_device(self->parent));
+        char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
+        tmp_endpoint = URL__set_port(url, master_port);
+        new_endpoint = URL__set_host(tmp_endpoint, master_host);
+        free(tmp_endpoint);
+        free(master_host);
+        free(master_port);
+        if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
+            C_WARN("Connection error. Attempting to correct root URL : [%s] --> [%s]", url, new_endpoint);
+            snap = get_http_body(self, soap, new_endpoint, 1);
+        }
+        free(new_endpoint);
+        if(snap) goto exit;
+    }
+
+    //Port fallback
+    if (!retry_flag && (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR)){
+        char * new_endpoint = NULL;
+        char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); 
+        new_endpoint = URL__set_port(url, master_port);
+        if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
+            C_WARN("Connection error. Attempting to correct URL port : [%s] --> [%s]", url, new_endpoint);
+            snap = get_http_body(self, soap, new_endpoint, 1);
+        }
+        free(new_endpoint);
+        free(master_port);
+        if(snap) goto exit;
+    }
+
+    //Hostname fallback
+    if (!retry_flag && (soap->error == SOAP_UDP_ERROR || soap->error == SOAP_TCP_ERROR)){
+        char * new_endpoint = NULL;
+        char * master_host = OnvifDevice__get_host(OnvifBaseService__get_device(self->parent)); 
+        new_endpoint = URL__set_host(url, master_host);
+        if(strcmp(new_endpoint,url) != 0){ /* TODO compare port before constructing new URL */
+            C_WARN("Connection error. Attempting to correct URL host : [%s] --> [%s]", url, new_endpoint);
+            snap = get_http_body(self, soap, new_endpoint, 1);
+        }
+        free(new_endpoint);
+        free(master_host);
+        if(snap) goto exit;
+    }
+
+    if ((soap->error != SOAP_OK && soap->error != SOAP_UDP_ERROR && soap->error != SOAP_TCP_ERROR) || !retry_flag) {
+        C_ERROR("[%s] Failed to retrieve snapshot: %s [%s][%d]", url, original_fstr,original_fdtl,soap->error);
+    }
+
+exit:
     return snap;
 }
 
@@ -251,7 +271,25 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
         goto exit;
     }
     C_INFO("[%s] Snapshot URI : %s\n",endpoint,snapshot_uri);
-    ret = get_http_body(self, snapshot_uri, 0);
+
+    //Creating soap instance to avoid long running locks.
+    struct soap * soap = soap_new(); //SOAP_XML_STRICT may cause crash - SOAP_IO_CHUNK doesnt support HTTP auth challenge?
+    soap->connect_timeout = 2; // 2 sec
+    soap->recv_timeout = soap->send_timeout = 10;//10 sec
+    soap_register_plugin(soap, http_da);
+
+    if (self->snapshot_da_info){
+        http_da_restore(soap, self->snapshot_da_info);
+    }
+
+    ret = get_http_body(self, soap, snapshot_uri, 0);
+
+    soap_closesock(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+
     free(snapshot_uri);
 
 exit:

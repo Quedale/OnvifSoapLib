@@ -119,6 +119,9 @@ int main(int argc, char *argv[])
 				FILE* image = fopen(name, "wb");
 				fwrite(OnvifSnapshot__get_buffer(snapshot), OnvifSnapshot__get_size(snapshot), 1, image);
 				fclose(image);
+				C_DEBUG("Successfully retrieved snapshot. Saved at './%d.jpg'",i);
+			} else {
+				C_ERROR("Failed to retrieve snapshot.");
 			}
 
 			free(stream_uri);
