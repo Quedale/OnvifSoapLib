@@ -154,7 +154,7 @@ void OnvifInterfaces__destroy(OnvifInterfaces * self){
             
             free(self->interfaces[i]);
         }
-
+        free(self->interfaces);
         free(self);
     }
 }
