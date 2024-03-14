@@ -273,7 +273,7 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
     C_INFO("[%s] Snapshot URI : %s\n",endpoint,snapshot_uri);
 
     //Creating soap instance to avoid long running locks.
-    struct soap * soap = soap_new(); //SOAP_XML_STRICT may cause crash - SOAP_IO_CHUNK doesnt support HTTP auth challenge?
+    struct soap * soap = soap_new2(SOAP_IO_CHUNK, SOAP_IO_DEFAULT); //SOAP_XML_STRICT may cause crash - SOAP_IO_CHUNK doesnt support HTTP auth challenge?
     soap->connect_timeout = 2; // 2 sec
     soap->recv_timeout = soap->send_timeout = 10;//10 sec
     soap_register_plugin(soap, http_da);
@@ -281,7 +281,7 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
     char *debug_flag = NULL;
 
     if (( debug_flag =getenv( "SNAP_DEBUG" )) != NULL )
-        C_INFO("SNAP_DEBUG variable set. '%s'",debug_flag) ;
+        C_INFO("SNAP_DEBUG (using io chunk) variable set. '%s'",debug_flag) ;
 
     if(debug_flag){
         soap_register_plugin(soap, logging);
