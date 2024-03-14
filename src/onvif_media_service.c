@@ -278,6 +278,17 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
     soap->recv_timeout = soap->send_timeout = 10;//10 sec
     soap_register_plugin(soap, http_da);
 
+    char *debug_flag = NULL;
+
+    if (( debug_flag =getenv( "SNAP_DEBUG" )) != NULL )
+        C_INFO("SNAP_DEBUG variable set. '%s'",debug_flag) ;
+
+    if(debug_flag){
+        soap_register_plugin(soap, logging);
+        soap_set_logging_outbound(soap,stdout);
+        soap_set_logging_inbound(soap,stdout);
+    }
+
     if (self->snapshot_da_info){
         http_da_restore(soap, self->snapshot_da_info);
     }
