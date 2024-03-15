@@ -5,7 +5,7 @@
 #include "clogger.h"
 
 void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint);
-int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap);
+int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, char* url);
 void OnvifBaseService__lock(OnvifBaseService * self);
 void OnvifBaseService__unlock(OnvifBaseService * self);
 SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
@@ -34,15 +34,15 @@ void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * 
 #define ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, soap, action, req, resp) \
     int ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
     char * new_endpoint = NULL; \
-    if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap)) \
+    if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap,privendpt)) \
         ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
     if (ret == SOAP_UDP_ERROR || ret == SOAP_TCP_ERROR){ /*Port fallback*/ \
         char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(self->parent)); \
         new_endpoint = URL__set_port(privendpt, master_port); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
-            C_WARN("Connection error. Attempting to correct port. URL : '%s' --> '%s'", privendpt, new_endpoint); \
+            C_WARN("[%s] Attempting to correct URL port to [%s]", privendpt, new_endpoint); \
             ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
-            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap)) \
+            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap,new_endpoint)) \
                 ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
         } \
         free(master_port); \
@@ -52,9 +52,9 @@ void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * 
         char * master_host = OnvifDevice__get_host(OnvifBaseService__get_device(self->parent)); \
         new_endpoint = URL__set_host(privendpt, master_host); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
-            C_WARN("Connection error. Attempting to correct host. URL : '%s' --> '%s'", privendpt, new_endpoint); \
+            C_WARN("[%s] Attempting to correct URL host : to [%s]", privendpt, new_endpoint); \
             ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
-            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap)) \
+            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap,new_endpoint)) \
                 ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
         } \
         free(master_host); \
@@ -66,9 +66,9 @@ void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * 
         char * tmp_endpoint = URL__set_host(privendpt, master_host); \
         new_endpoint = URL__set_port(tmp_endpoint, master_port); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
-            C_WARN("Connection error. Attempting to correct host and port. URL : '%s' --> '%s'", privendpt, new_endpoint); \
+            C_WARN("[%s] Attempting to correct root URL to [%s]", privendpt, new_endpoint); \
             ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
-            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap)) \
+            if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap,new_endpoint)) \
                 ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
         } \
         free(tmp_endpoint); \

@@ -139,12 +139,12 @@ int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
     return ret;
 }
 
-int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap){
+int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, char * url){
     if(!soap->authrealm){
         return 0;
     }
     
-    C_DEBUG("WWW-Authorization challenge '%s'",soap->authrealm);
+    C_DEBUG("[%s] WWW-Authorization challenge '%s'",url,soap->authrealm);
 
     char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(self->device));
     char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(self->device));
