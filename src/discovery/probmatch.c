@@ -88,6 +88,14 @@ ProbMatch* ProbMatch__create() {
 }
 
 void ProbMatch__set_prob_uuid(ProbMatch* self, char * prob_uuid){
+    if(!prob_uuid){
+        if(self->prob_uuid){
+            free(self->prob_uuid);
+            self->prob_uuid = NULL;
+        }
+        return;
+    }
+
     if(!self->prob_uuid){
         self->prob_uuid = malloc(strlen(prob_uuid) + 1);
     } else {

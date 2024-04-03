@@ -67,7 +67,7 @@ void wsdd_event_ProbeMatches(struct soap *soap, unsigned int InstanceId, const c
   struct MessageEntry * entry = (struct MessageEntry *) soap->user;
 
   //Check if message actually relates to our probe
-  if (strcmp(RelatesTo,entry->id)!=0) {
+  if (RelatesTo && strcmp(RelatesTo,entry->id)!=0) {
     C_WARN("Unrelated id received. Expecting [%s] but was [%s].", RelatesTo, entry->id);
     return;
   }
