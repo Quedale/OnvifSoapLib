@@ -216,7 +216,11 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
 retry:
     if (soap_GET(soap, url, NULL) || soap_begin_recv(soap) || (buffer = soap_http_get_body(soap, &size)) != NULL || soap_end_recv(soap)){
         if(soap->error == SOAP_OK){ //Successfully
-            snap = OnvifSnapshot__create(size,buffer);
+            if(size > 0){
+                snap = OnvifSnapshot__create(size,buffer);
+            } else {
+                C_ERROR("[%s] Device returned successful empty snapshot response.",url);
+            }
         } else if (soap->error == 401){ //HTTP authentication challenge
             C_DEBUG("[%s] Snapshot WWW-Authorization challenge '%s'",url, soap->authrealm);
 
@@ -224,7 +228,11 @@ retry:
             char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
             http_da_save(soap, &snapshot_da_info, soap->authrealm, user, pass);
             if ((soap_GET(soap, url, NULL) || soap_begin_recv(soap) || (buffer = soap_http_get_body(soap, &size)) != NULL || soap_end_recv(soap)) && soap->error == SOAP_OK){
-                snap = OnvifSnapshot__create(size,buffer);
+                if(size > 0){
+                    snap = OnvifSnapshot__create(size,buffer);
+                } else {
+                    C_ERROR("[%s] Device returned successful empty snapshot response.",url);
+                }
             }
             free(user);
             free(pass);
