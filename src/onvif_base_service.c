@@ -1,6 +1,6 @@
 #include "onvif_base_service.h"
 #include "onvif_base_service_local.h"
-#include "safe_namespace.h"
+#include "generated/onvifsoap.nsmap"
 #include "onvif_credentials.h"
 #include "wsseapi.h"
 #include <string.h>
@@ -171,6 +171,7 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     soap->recv_timeout = soap->send_timeout = 10;//10 sec
     soap_register_plugin(soap, soap_wsse);
     soap_register_plugin(soap, http_da);
+    soap_set_namespaces(soap, onvifsoap_namespaces);
 
     if(self->da_info)
         http_da_restore(soap, self->da_info);

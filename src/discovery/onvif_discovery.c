@@ -4,6 +4,7 @@
 #else
 # include "generated/soapH.h"	/* or manually replace with soapcpp2-generated *H.h file */
 #endif
+#include "wsdd.nsmap"
 #include "plugin/logging.h"
 #include "wsddapi.h"
 // #include "generated/wsdd.nsmap"
@@ -169,6 +170,7 @@ void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *)){
 
   memset((void*)&serv, 0, sizeof(serv));
   soap_init1(&serv,SOAP_IO_UDP);
+  soap_set_namespaces(&serv, disco_namespaces);
   soap_register_plugin(&serv, soap_wsa);
 
   if(debug_flag){
@@ -208,7 +210,7 @@ void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *)){
   C_DEBUG("Sending NVT probe...");
   priv_sendProbe(&serv, "\"http://www.onvif.org/ver10/network/wsdl\":NetworkVideoTransmitter", msg->id);
 
-  // C_TRACE("Sending NVT probe...");
+  // C_TRACE("Sending NVD probe...");
   // priv_sendProbe(&serv, "\"http://www.onvif.org/ver10/network/wsdl\":NetworkVideoDisplay", msg->id);
 
   

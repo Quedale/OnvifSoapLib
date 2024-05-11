@@ -142,7 +142,7 @@ if(NOT WIN32)
   target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
 endif()
 
-target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NOEMPTYSTRUCT -DWITH_DOM -DWITH_NTLM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
+target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NONAMESPACES -DWITH_NOEMPTYSTRUCT -DWITH_NOEMPTYNAMESPACES -DWITH_DOM -DWITH_NTLM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
 
 add_subdirectory(example)
 
