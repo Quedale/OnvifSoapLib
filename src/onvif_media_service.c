@@ -174,6 +174,42 @@ int ssl_verify_callback(int ok, X509_STORE_CTX *store)
     return ok;
 }
 
+void send_http_get(struct soap * soap, char * url, char ** buffer, size_t * size){
+    if(soap_GET(soap, url, NULL) != SOAP_OK){
+        C_ERROR("Failed get");
+        return;
+    }
+
+    if(soap_begin_recv(soap) != SOAP_OK){
+        C_ERROR("Failed begin recv");
+        return;
+    }
+
+    /*
+    * In the case of "https://github.com/roleoroleo/yi-hack-Allwinner-v2", No "Content-Length" is set
+    *  and "Transfer-Encoding" isn't set to "chunked"
+    **/
+    if(soap->mode != SOAP_IO_CHUNK && soap->length == 0){
+        C_WARN("No content-length set. Forcing buffer flush.");
+        //Cheat to force reading socket until server closes it
+        soap->length = soap->recv_maxlength;
+    }
+
+    if((*buffer = soap_http_get_body(soap, size)) == NULL){
+        C_ERROR("Failed get body recv");
+        return;
+    }
+
+    if(soap_end_recv(soap) != SOAP_OK){
+        C_ERROR("Failed end recv");
+    }
+
+//  return soap_GET(soap, url, NULL) || 
+//      soap_begin_recv(soap) || 
+//      (*buffer = soap_http_get_body(soap, size)) != NULL || 
+//      soap_end_recv(soap);
+}
+
 OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
 {   
     size_t size = 0;
@@ -184,7 +220,7 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
     char * new_endpoint = NULL;
 
     //Creating seperate soap instance to avoid long running locks.
-    struct soap * soap = soap_new2(SOAP_IO_DEFAULT, SOAP_IO_DEFAULT); //SOAP_XML_STRICT may cause crash - SOAP_IO_CHUNK doesnt support HTTP auth challenge?
+    struct soap * soap = soap_new1(SOAP_IO_DEFAULT); //SOAP_XML_STRICT may cause crash - SOAP_IO_CHUNK doesnt support HTTP auth challenge?
     soap->connect_timeout = 2; // 2 sec
     soap->recv_timeout = soap->send_timeout = 10;//10 sec
     soap_register_plugin(soap, http_da);
@@ -214,29 +250,27 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
     memset (&snapshot_da_info, 0, sizeof(struct http_da_info));
 
 retry:
-    if (soap_GET(soap, url, NULL) || soap_begin_recv(soap) || (buffer = soap_http_get_body(soap, &size)) != NULL || soap_end_recv(soap)){
-        if(soap->error == SOAP_OK){ //Successfully
-            if(size > 0){
-                snap = OnvifSnapshot__create(size,buffer);
-            } else {
-                C_ERROR("[%s] Device returned successful empty snapshot response.",url);
-            }
-        } else if (soap->error == 401){ //HTTP authentication challenge
-            C_DEBUG("[%s] Snapshot WWW-Authorization challenge '%s'",url, soap->authrealm);
-
-            char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
-            char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
-            http_da_save(soap, &snapshot_da_info, soap->authrealm, user, pass);
-            if ((soap_GET(soap, url, NULL) || soap_begin_recv(soap) || (buffer = soap_http_get_body(soap, &size)) != NULL || soap_end_recv(soap)) && soap->error == SOAP_OK){
-                if(size > 0){
-                    snap = OnvifSnapshot__create(size,buffer);
-                } else {
-                    C_ERROR("[%s] Device returned successful empty snapshot response.",url);
-                }
-            }
-            free(user);
-            free(pass);
+    send_http_get(soap,url,&buffer,&size);
+    if(soap->error == SOAP_OK){ //Successfully
+        if(size > 0){
+            snap = OnvifSnapshot__create(size,buffer);
+        } else {
+            C_ERROR("[%s] Device returned successful empty snapshot response.",url);
         }
+    } else if (soap->error == 401){ //HTTP authentication challenge
+        C_DEBUG("[%s] Snapshot WWW-Authorization challenge '%s'",url, soap->authrealm);
+
+        char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
+        char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(OnvifBaseService__get_device(self->parent)));
+        http_da_save(soap, &snapshot_da_info, soap->authrealm, user, pass);
+        send_http_get(soap,url,&buffer,&size);
+        if(size > 0){
+            snap = OnvifSnapshot__create(size,buffer);
+        } else {
+            C_ERROR("[%s] Device returned successful empty snapshot response.",url);
+        }
+        free(user);
+        free(pass);
     }
 
     if(redirect_count < 10 && soap->error >= 301 && soap->error <= 308 && strncmp(url, soap->endpoint, 6)){
