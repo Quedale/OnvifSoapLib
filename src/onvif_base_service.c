@@ -99,6 +99,9 @@ time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
 
     time_t now = time( NULL);
     if(offset == 0){
+        char * endpoint = OnvifBaseService__get_endpoint(self);
+        C_TRACE("[%s] No time adjustment required. Camera in sync with client.",endpoint);
+        free(endpoint);
         return now;
     }
 

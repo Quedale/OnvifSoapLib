@@ -142,8 +142,11 @@ OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self) {
 }
 
 char * OnvifDeviceService__getHostname_callback(struct _tds__GetHostnameResponse * response){
-    char * ret = malloc(strlen(response->HostnameInformation->Name)+1); 
-    strcpy(ret,response->HostnameInformation->Name);
+    char * ret = NULL;
+    if(response && response->HostnameInformation){
+        ret = malloc(strlen(response->HostnameInformation->Name)+1); 
+        strcpy(ret,response->HostnameInformation->Name);
+    }
     return ret;
 }
 
