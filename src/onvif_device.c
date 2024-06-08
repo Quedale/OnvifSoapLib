@@ -1,7 +1,5 @@
 #include "onvif_device.h"
 #include "onvif_credentials.h"
-#include "onvif_device_service.h"
-#include "onvif_media_service.h"
 #include "ip_match.h"
 #include "clogger.h"
 #include "url_parser.h"

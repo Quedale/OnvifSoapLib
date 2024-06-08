@@ -10,7 +10,8 @@
 #include "plugin/logging.h"
 #include "httpda.h"
 
-#define FAULT_UNAUTHORIZED "[\"http://www.onvif.org/ver10/error\":NotAuthorized]"
+#define FAULT_UNAUTHORIZED "\"http://www.onvif.org/ver10/error\":NotAuthorized"
+#define FAULT_ACTIONNOTSUPPORTED "\"http://www.onvif.org/ver10/error\":ActionNotSupported"
 
 struct _OnvifBaseService {
     OnvifDevice * device;
@@ -241,18 +242,20 @@ void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * 
         OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
     } else {
         const char * fault_code = soap_fault_subcode(soap);
-        if (fault_code && strcmp(fault_code,FAULT_UNAUTHORIZED)) {
-            if(soap->error == 400 || //Bad request
-                soap->error == 403 || //Forbidden (soap not authorized returns a 200)
-                soap->error == 404){ //Not found
-                C_ERROR("ERROR : NOT VALID ONVIF HTTP Error code [%d]\n",soap->error);
-                OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
-            } else {
-                C_WARN("Warning : NOT AUTHORIZED HTTP Error code [%d]\n",soap->error);
-                OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_AUTHORIZED);
-            }
+        if(soap->error == 400 || //Bad request
+            soap->error == 403 || //Forbidden (soap not authorized returns a 200)
+            soap->error == 404){ //Not found
+            C_ERROR("ERROR : NOT VALID ONVIF HTTP Error code [%d]\n",soap->error);
+            OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
+        } else if (soap->error == 401 || (fault_code && !strcmp(fault_code,FAULT_UNAUTHORIZED))) {
+            C_WARN("Warning : Not Authorized Error\n",soap->error);
+            OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_AUTHORIZED);
+        } else if (fault_code && !strcmp(fault_code,FAULT_ACTIONNOTSUPPORTED)) {
+            C_WARN("Warning : Action Not Supported Soap Error\n",soap->error);
+            OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_SUPPORTED);
         } else { //Mostly SOAP_FAULT
-            C_ERROR("SOAP ERROR %i [%s]\n",error_code, fault_code);
+            C_FATAL("[%s] == [%s]",fault_code,FAULT_ACTIONNOTSUPPORTED);
+            C_ERROR("Unhandled ERROR %i [%s]\n",error_code, fault_code);
             soap_print_fault(soap, stderr);
             OnvifBaseService__set_error_code(self,ONVIF_ERROR_SOAP);
         }

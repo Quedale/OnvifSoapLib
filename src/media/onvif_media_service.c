@@ -5,32 +5,47 @@
 #include "plugin/logging.h"
 #include "clogger.h"
 #include "url_parser.h"
+#include "onvif_media_service_capabilities_local.h"
 
 typedef struct _OnvifMediaService {
     OnvifBaseService * parent;
     OnvifProfiles * profiles;
+    OnvifMediaServiceCapabilities * capabilities;
     P_MUTEX_TYPE profile_lock;
+    P_MUTEX_TYPE caps_lock;
 } OnvifMediaService;
+
+OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self);
 
 OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     OnvifMediaService * self = malloc(sizeof(OnvifMediaService));
     OnvifMediaService__init(self,device, endpoint, error_cb, error_data);
+
+    OnvifMediaService__getServiceCapabilities(self);
+    if(!self->capabilities){
+        OnvifMediaService__destroy(self);
+        self = NULL;
+    }
     return self;
 }
 
 void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
     self->parent = OnvifBaseService__create(device, endpoint, error_cb, error_data);
     P_MUTEX_SETUP(self->profile_lock);
-
+    P_MUTEX_SETUP(self->caps_lock);
     self->profiles = NULL;
+    self->capabilities = NULL;
 }
 
 void OnvifMediaService__destroy(OnvifMediaService * self){
     if(self){
         OnvifBaseService__destroy(self->parent);
         OnvifProfiles__destroy(self->profiles);
+        // OnvifMediaServiceCapabilities__destroy(self->capabilities);
+        if(self->capabilities)
+            g_object_unref(self->capabilities);
         P_MUTEX_CLEANUP(self->profile_lock);
-
+        P_MUTEX_CLEANUP(self->caps_lock);
         free(self);
     }
 }
@@ -60,6 +75,29 @@ OnvifProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
     ret = OnvifProfiles__copy(self->profiles);
     P_MUTEX_UNLOCK(self->profile_lock);
     return ret;
+}
+
+OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self){
+
+    struct _trt__GetServiceCapabilities req;
+    struct _trt__GetServiceCapabilitiesResponse resp;
+    memset (&req, 0, sizeof (req));
+    memset (&resp, 0, sizeof (resp));
+
+    OnvifMediaServiceCapabilities * retval = NULL;
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetServiceCapabilities, OnvifMediaServiceCapabilities__new, retval, soap, NULL, &req,  &resp);
+    
+    return retval;
+
+}
+
+OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities(OnvifMediaService* self){
+    P_MUTEX_LOCK(self->caps_lock);
+    if(!self->capabilities){
+        self->capabilities = OnvifMediaService__getServiceCapabilities_private(self);
+    }
+    P_MUTEX_UNLOCK(self->caps_lock);
+    return self->capabilities;
 }
 
 OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
@@ -133,10 +171,17 @@ char * OnvifMediaService__getSnapshotUri_callback(struct _trt__GetSnapshotUriRes
 char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
     char * endpoint = OnvifMediaService__get_endpoint(self);
     char * ret_val = NULL;
-    if(!self){
+    if(!self || !self->capabilities){
         C_ERROR("[%s] OnvifMediaService__getSnapshotUri - MediaService uninitialized.",endpoint);
         goto exit;
     }
+
+    //Service Capabilities Check
+    // if(!OnvifMediaServiceCapabilities__get_snapshot_uri(self->capabilities)){
+    //     C_INFO("[%s] OnvifMediaService__getSnapshotUri - MediaService doesn't support snapshots.",endpoint);
+    //     goto exit;
+    // }
+
     struct _trt__GetSnapshotUri request;
     struct _trt__GetSnapshotUriResponse response;
     memset (&request, 0, sizeof (request));

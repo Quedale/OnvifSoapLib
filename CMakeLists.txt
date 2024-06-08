@@ -41,7 +41,10 @@ set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subp
 find_package(PkgConfig)
 pkg_check_modules(CUTILS REQUIRED cutils)
 pkg_check_modules(NTLM REQUIRED libntlm)
-include_directories(${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS})
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
+include_directories(${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${GOBJECT_INCLUDE_DIRS})
+link_directories(${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
 
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -59,6 +62,8 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 endif()
 
 aux_source_directory(src src_dir)
+aux_source_directory(src/devicemgmt src_devicemgmt)
+aux_source_directory(src/media src_media)
 aux_source_directory(src/discovery src_dir_disco)
 aux_source_directory(src/generated generated_dir)
 
@@ -70,6 +75,8 @@ aux_source_directory(src/generated generated_dir)
 add_library(onvifsoap ${ONVIFSOAP_BUILD_TYPE} ${src_dir}
                                 ${src_dir_disco}
                                 ${generated_dir}
+                                ${src_devicemgmt}
+                                ${src_media}
                           ${GSOAP_SRC_DIR}/gsoap/dom.c 
                           ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
                           ${GSOAP_SRC_DIR}/gsoap/plugin/logging.c
@@ -131,7 +138,7 @@ else()
   message(FATAL_ERROR  "Threads not found...")
 endif()
 
-target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} ${NTLM_LDFLAGS})
+target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
 
 #I care little for MSVC warning. Support is from good faith
 if (MSVC)
@@ -155,22 +162,26 @@ set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 include(CPack)
 
 #Defining headers to export
-set(headers ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
-		        ${PROJECT_SOURCE_DIR}/src/onvif_device_capabilities.h
-		        ${PROJECT_SOURCE_DIR}/src/onvif_credentials.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_device.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_media_profile.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_device_service.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_device_info.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_device_interface.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_media_service.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_device_scopes.h
-            ${PROJECT_SOURCE_DIR}/src/shard_export.h
-            ${PROJECT_SOURCE_DIR}/src/onvif_media_snapshot.h
-            ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h 
+set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h 
 		        ${PROJECT_SOURCE_DIR}/src/discovery/onvif_discovery.h 
 		        ${PROJECT_SOURCE_DIR}/src/discovery/probmatch.h
-            ${PROJECT_SOURCE_DIR}/src/discovery/discovered_obj.h)
+            ${PROJECT_SOURCE_DIR}/src/discovery/discovered_obj.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
+		        ${PROJECT_SOURCE_DIR}/src/onvif_credentials.h
+            ${PROJECT_SOURCE_DIR}/src/onvif_device.h
+            ${PROJECT_SOURCE_DIR}/src/shard_export.h
+            ${PROJECT_SOURCE_DIR}/src/SoapObject.h)
+set(devicemgmt_headers 
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_capabilities.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_info.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_interface.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_scopes.h)
+set(media_headers
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profile.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service_capabilities.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot.h)
 
 #Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})
@@ -185,4 +196,6 @@ if(NOT WIN32)
 endif()
 
 install(TARGETS onvifsoap EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${headers} ${devicemgmt_headers} ${media_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${devicemgmt_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/devicemgmt")
+install(FILES ${media_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/media")

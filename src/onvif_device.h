@@ -4,8 +4,8 @@
 typedef struct _OnvifDevice OnvifDevice;
 
 #include "shard_export.h"
-#include "onvif_device_service.h"
-#include "onvif_media_service.h"
+#include "devicemgmt/onvif_device_service.h"
+#include "media/onvif_media_service.h"
 
 #define ONVIF_DEVICE_LOG(fmt, dev, level, ...) \
   if(dev){ \

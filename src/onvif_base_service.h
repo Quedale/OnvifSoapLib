@@ -10,7 +10,8 @@ typedef enum {
     ONVIF_ERROR_CONNECTION = 1,
     ONVIF_ERROR_SOAP = 2,
     ONVIF_ERROR_NOT_AUTHORIZED = 3,
-    ONVIF_ERROR_NOT_VALID = 4
+    ONVIF_ERROR_NOT_SUPPORTED = 4,
+    ONVIF_ERROR_NOT_VALID = 5
 } OnvifErrorTypes;
 
 #include "portable_thread.h"
