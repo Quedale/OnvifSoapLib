@@ -18,8 +18,11 @@ G_DECLARE_FINAL_TYPE (SoapObject, SoapObject_, SOAP, OBJECT, GObject)
 
 typedef enum {
     SOAP_FAULT_NONE         = 0,
-    SOAP_FAULT_UNAUTHORIZED         = 1,
-    SOAP_FAULT_ACTION_NOT_SUPPORTED = 1
+    SOAP_FAULT_CONNECTION_ERROR = 1,
+    SOAP_FAULT_NOT_VALID = 2,
+    SOAP_FAULT_UNAUTHORIZED         = 3,
+    SOAP_FAULT_ACTION_NOT_SUPPORTED = 4,
+    SOAP_FAULT_UNEXPECTED = 5
 } SoapFault;
 
 #ifndef g_enum_to_nick
@@ -49,6 +52,7 @@ struct _SoapObjectClass
  */
 SoapObject * SoapObject__new (void);
 SoapFault * SoapObject__get_fault(SoapObject * self);
+void SoapObject__set_fault(SoapObject * self, SoapFault fault);
 
 G_END_DECLS
 

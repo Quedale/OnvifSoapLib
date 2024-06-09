@@ -181,7 +181,8 @@ set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profile.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service_capabilities.h
-            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot.h)
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot_uri.h)
 
 #Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})

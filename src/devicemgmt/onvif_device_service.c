@@ -79,7 +79,7 @@ time_t OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self){
     memset (&request, 0, sizeof (request));
     memset (&response, 0, sizeof (response));
 
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetSystemDateAndTime, OnvifDeviceService__getSystemDateAndTime_callback, ret_val, soap, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, tds__GetSystemDateAndTime, OnvifDeviceService__getSystemDateAndTime_callback, ret_val, soap, NULL, &request,  &response);
 
     return ret_val;
 }
@@ -96,7 +96,7 @@ OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self
     request.__sizeCategory = 1;
     request.Category = v;
 
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetCapabilities, OnvifCapabilities__create, capabilities, soap, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, tds__GetCapabilities, OnvifCapabilities__create, capabilities, soap, NULL, &request,  &response);
 
     return capabilities;
 }
@@ -110,7 +110,7 @@ OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceSer
 
     OnvifDeviceInformation *dev_info = NULL;
 
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetDeviceInformation, OnvifDeviceInformation__create, dev_info, soap, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, tds__GetDeviceInformation, OnvifDeviceInformation__create, dev_info, soap, NULL, &request,  &response);
 
     return dev_info;
 }
@@ -123,7 +123,7 @@ OnvifInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * 
 
     OnvifInterfaces * interfaces = NULL;
 
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetNetworkInterfaces, OnvifInterfaces__create, interfaces, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, tds__GetNetworkInterfaces, OnvifInterfaces__create, interfaces, soap, NULL, &req,  &resp);
 
     return interfaces;
 }
@@ -136,7 +136,7 @@ OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self) {
 
     OnvifScopes * scopes = NULL;
     
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetScopes, OnvifScopes__create, scopes, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, tds__GetScopes, OnvifScopes__create, scopes, soap, NULL, &req,  &resp);
 
     return scopes;
 }
@@ -158,7 +158,7 @@ char * OnvifDeviceService__getHostname(OnvifDeviceService * self) {
 
     char * hostname = NULL;
 
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetHostname, OnvifDeviceService__getHostname_callback, hostname, soap, NULL, &gethostname,  &response);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, tds__GetHostname, OnvifDeviceService__getHostname_callback, hostname, soap, NULL, &gethostname,  &response);
 
     return hostname;
 }

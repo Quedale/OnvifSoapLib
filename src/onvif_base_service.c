@@ -10,9 +10,6 @@
 #include "plugin/logging.h"
 #include "httpda.h"
 
-#define FAULT_UNAUTHORIZED "\"http://www.onvif.org/ver10/error\":NotAuthorized"
-#define FAULT_ACTIONNOTSUPPORTED "\"http://www.onvif.org/ver10/error\":ActionNotSupported"
-
 struct _OnvifBaseService {
     OnvifDevice * device;
     char * endpoint;
@@ -226,7 +223,7 @@ void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes c
     if(self->error_cb) self->error_cb(code,self->error_data);
 }
 
-void OnvifBaseService__handle_soap_error(OnvifBaseService * self, struct soap * soap, int error_code){
+void OnvifBaseService__handle_soap_error_old(OnvifBaseService * self, struct soap * soap, int error_code){
     if (error_code == SOAP_UDP_ERROR || 
         error_code == SOAP_TCP_ERROR || 
         error_code == SOAP_HTTP_ERROR || 

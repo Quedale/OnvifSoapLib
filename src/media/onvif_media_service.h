@@ -8,6 +8,7 @@ typedef struct _OnvifMediaService OnvifMediaService;
 #include "onvif_credentials.h"
 #include "onvif_media_profile.h"
 #include "onvif_media_snapshot.h"
+#include "onvif_media_snapshot_uri.h"
 #include "onvif_media_service_capabilities.h"
 #include "onvif_device.h"
 
@@ -27,7 +28,7 @@ SHARD_EXPORT OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabi
 
 //Remote Sevice function
 SHARD_EXPORT OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self);
-SHARD_EXPORT char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index);
+SHARD_EXPORT OnvifSnapshotUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index);
 SHARD_EXPORT OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int profile_index);
 SHARD_EXPORT char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_index);
 

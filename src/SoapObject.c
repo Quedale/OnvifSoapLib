@@ -1,7 +1,7 @@
 #include "SoapObject.h"
 
 typedef struct {
-  SoapFault * fault;
+  SoapFault fault;
 } SoapObjectPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (SoapObject, SoapObject_, G_TYPE_OBJECT)
@@ -43,9 +43,16 @@ SoapObject * SoapObject__new (void){
     return g_object_new (SOAP_TYPE_OBJECT, NULL);
 }
 
+void SoapObject__set_fault(SoapObject * self, SoapFault fault){
+    g_return_if_fail (self != NULL);
+    g_return_if_fail (SOAP_IS_OBJECT (self));
+    SoapObjectPrivate *priv = SoapObject__get_instance_private (self);
+    priv->fault = fault;
+}
+
 SoapFault * SoapObject__get_fault(SoapObject * self){
     g_return_val_if_fail (self != NULL,NULL);
     g_return_val_if_fail (SOAP_IS_OBJECT (self),NULL);
     SoapObjectPrivate *priv = SoapObject__get_instance_private (self);
-    return priv->fault;
+    return &priv->fault;
 }

@@ -1,5 +1,7 @@
 #include "onvif_media_service.h"
 #include "onvif_media_profile_local.h"
+#include "onvif_media_snapshot_local.h"
+#include "onvif_media_snapshot_uri_local.h"
 #include "onvif_base_service_local.h"
 #include "httpda.h"
 #include "plugin/logging.h"
@@ -85,7 +87,7 @@ OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_privat
     memset (&resp, 0, sizeof (resp));
 
     OnvifMediaServiceCapabilities * retval = NULL;
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetServiceCapabilities, OnvifMediaServiceCapabilities__new, retval, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, trt__GetServiceCapabilities, OnvifMediaServiceCapabilities__new, retval, soap, NULL, &req,  &resp);
     
     return retval;
 
@@ -114,7 +116,7 @@ OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
 
     OnvifProfiles * profiles = NULL;
     
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetProfiles, OnvifProfiles__create, profiles, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, trt__GetProfiles, OnvifProfiles__create, profiles, soap, NULL, &req,  &resp);
     
     return profiles;
 }
@@ -155,32 +157,19 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
     req.StreamSetup->Transport = &transport;
     req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
     req.StreamSetup->Transport->Tunnel = 0;
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetStreamUri, OnvifMediaService__getStreamUri_callback, streamuri, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL_OLD(self, trt__GetStreamUri, OnvifMediaService__getStreamUri_callback, streamuri, soap, NULL, &req,  &resp);
 
     return streamuri;
 }
 
 
-char * OnvifMediaService__getSnapshotUri_callback(struct _trt__GetSnapshotUriResponse * response){
-    char * ret_val = malloc(strlen(response->MediaUri->Uri) + 1);
-    strcpy(ret_val,response->MediaUri->Uri);
-    return ret_val;
-}
-
-//TODO Support timeout and invalidafter flag
-char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
+OnvifSnapshotUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
     char * endpoint = OnvifMediaService__get_endpoint(self);
-    char * ret_val = NULL;
+    OnvifSnapshotUri * ret_val = NULL;
     if(!self || !self->capabilities){
         C_ERROR("[%s] OnvifMediaService__getSnapshotUri - MediaService uninitialized.",endpoint);
         goto exit;
     }
-
-    //Service Capabilities Check
-    // if(!OnvifMediaServiceCapabilities__get_snapshot_uri(self->capabilities)){
-    //     C_INFO("[%s] OnvifMediaService__getSnapshotUri - MediaService doesn't support snapshots.",endpoint);
-    //     goto exit;
-    // }
 
     struct _trt__GetSnapshotUri request;
     struct _trt__GetSnapshotUriResponse response;
@@ -191,7 +180,7 @@ char * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_in
     OnvifMediaService__get_profile_token(self,profile_index, token);
     request.ProfileToken = token;
 
-    ONVIF_INVOKE_SOAP_CALL(self, trt__GetSnapshotUri, OnvifMediaService__getSnapshotUri_callback, ret_val, soap, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetSnapshotUri, OnvifSnapshotUri__new, ret_val, soap, NULL, &request,  &response);
 
 exit:
     free(endpoint);
@@ -221,12 +210,12 @@ int ssl_verify_callback(int ok, X509_STORE_CTX *store)
 
 void send_http_get(struct soap * soap, char * url, char ** buffer, size_t * size){
     if(soap_GET(soap, url, NULL) != SOAP_OK){
-        C_ERROR("Failed get");
+        C_ERROR("[%s] Failed GET getting snapshot", url);
         return;
     }
 
     if(soap_begin_recv(soap) != SOAP_OK){
-        C_ERROR("Failed begin recv");
+        C_TRACE("[%s] Failed begin recv getting snapshot", url); //Happens on redirect, auth challenge, etc...
         return;
     }
 
@@ -235,24 +224,19 @@ void send_http_get(struct soap * soap, char * url, char ** buffer, size_t * size
     *  and "Transfer-Encoding" isn't set to "chunked"
     **/
     if(soap->mode != SOAP_IO_CHUNK && soap->length == 0){
-        C_WARN("No content-length set. Forcing buffer flush.");
+        C_WARN("[%s] No content-length set getting snapshot. Forcing buffer flush.", url);
         //Cheat to force reading socket until server closes it
         soap->length = soap->recv_maxlength;
     }
 
     if((*buffer = soap_http_get_body(soap, size)) == NULL){
-        C_ERROR("Failed get body recv");
+        C_ERROR("[%s] Failed get body recv getting snapshot", url);
         return;
     }
 
     if(soap_end_recv(soap) != SOAP_OK){
-        C_ERROR("Failed end recv");
+        C_ERROR("[%s] Failed end recv getting snapshot", url);
     }
-
-//  return soap_GET(soap, url, NULL) || 
-//      soap_begin_recv(soap) || 
-//      (*buffer = soap_http_get_body(soap, size)) != NULL || 
-//      soap_end_recv(soap);
 }
 
 OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
@@ -298,7 +282,7 @@ retry:
     send_http_get(soap,url,&buffer,&size);
     if(soap->error == SOAP_OK){ //Successfully
         if(size > 0){
-            snap = OnvifSnapshot__create(size,buffer);
+            snap = OnvifSnapshot__new(size,buffer);
         } else {
             C_ERROR("[%s] Device returned successful empty snapshot response.",url);
         }
@@ -310,7 +294,7 @@ retry:
         http_da_save(soap, &snapshot_da_info, soap->authrealm, user, pass);
         send_http_get(soap,url,&buffer,&size);
         if(size > 0){
-            snap = OnvifSnapshot__create(size,buffer);
+            snap = OnvifSnapshot__new(size,buffer);
         } else {
             C_ERROR("[%s] Device returned successful empty snapshot response.",url);
         }
@@ -428,22 +412,40 @@ retry:
 }
 
 OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int profile_index){
+    char * uri;
     char * endpoint = OnvifMediaService__get_endpoint(self);
     C_DEBUG("[%s] OnvifMediaService__getSnapshot",endpoint);
-    //TODO check if GetSnapshotUri is support via GetServiceCapabilities
-    char * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
+    /*
+    * We don't check if GetSnapshotUri if is supported via GetServiceCapabilities
+    * because some cameras like IMOU returns false, while still providing the capability
+    */
+    OnvifSnapshotUri * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
+    SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(snapshot_uri));
     OnvifSnapshot * ret = NULL;
-    if(!snapshot_uri){
-        C_WARN("[%s] No snapshot URI found.",endpoint);
-        goto exit;
+    switch(*fault){
+        case SOAP_FAULT_NONE:
+            uri = OnvifSnapshotUri__get_uri(snapshot_uri);
+            if(!uri){
+                C_WARN("[%s] No snapshot URI provided.",endpoint);
+                ret = OnvifSnapshot__new(0,NULL);
+                SoapObject__set_fault(SOAP_OBJECT(ret),*fault);
+            } else {
+                C_INFO("[%s] Snapshot URI : %s\n",endpoint,uri);
+                ret = get_http_body(self, uri);
+            }
+            break;
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            ret = OnvifSnapshot__new(0,NULL);
+            SoapObject__set_fault(SOAP_OBJECT(ret),*fault);
+            break;
     }
-    C_INFO("[%s] Snapshot URI : %s\n",endpoint,snapshot_uri);
 
-    ret = get_http_body(self, snapshot_uri);
-
-    free(snapshot_uri);
-
-exit:
+    g_object_unref(snapshot_uri);
     free(endpoint);
     return ret;
 }

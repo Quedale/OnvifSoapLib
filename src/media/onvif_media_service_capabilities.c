@@ -16,7 +16,12 @@ static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
 OnvifMediaServiceCapabilities__set_soap(OnvifMediaServiceCapabilities * self, struct _trt__GetServiceCapabilitiesResponse * resp){
-    OnvifMediaServiceCapabilitiesPrivate *priv = OnvifMediaServiceCapabilities__get_instance_private (self);
+    OnvifMediaServiceCapabilitiesPrivate * priv = OnvifMediaServiceCapabilities__get_instance_private (self);
+    if(!resp){
+        priv->snapshot_uri = 0;
+        return;
+    }
+    
     struct trt__Capabilities * caps = resp->Capabilities;
     // struct trt__ProfileCapabilities*     ProfileCapabilities = caps->ProfileCapabilities;
     // struct trt__StreamingCapabilities*   StreamingCapabilities = caps->StreamingCapabilities;
@@ -57,7 +62,6 @@ OnvifMediaServiceCapabilities__set_property (GObject      *object,
                           GParamSpec   *pspec)
 {
     OnvifMediaServiceCapabilities * self = ONVIF_MEDIASERVICECAPABILITIES (object);
-    // OnvifMediaServiceCapabilitiesPrivate *priv = OnvifMediaServiceCapabilities__get_instance_private (self);
     switch (prop_id){
         case PROP_SOAP:
             OnvifMediaServiceCapabilities__set_soap(self,g_value_get_pointer (value));
@@ -74,8 +78,6 @@ OnvifMediaServiceCapabilities__get_property (GObject    *object,
                           GValue     *value,
                           GParamSpec *pspec)
 {
-    // OnvifMediaServiceCapabilities *thread = ONVIF_MEDIASERVICECAPABILITIES (object);
-    // OnvifMediaServiceCapabilitiesPrivate *priv = OnvifMediaServiceCapabilities__get_instance_private (thread);
     switch (prop_id){
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
