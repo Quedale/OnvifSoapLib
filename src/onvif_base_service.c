@@ -174,6 +174,16 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     soap_register_plugin(soap, http_da);
     soap_set_namespaces(soap, onvifsoap_namespaces);
 
+    soap_ssl_client_context(soap,
+        SOAP_SSL_SKIP_HOST_CHECK,
+        NULL,          /* no keyfile */
+        NULL,          /* no keyfile password */
+        NULL,  /* self-signed certificate cacert.pem */
+        NULL,          /* no capath to trusted certificates */
+        NULL           /* no random data to seed randomness */
+    );
+    soap->fsslverify = OnvifBaseService__ssl_verify_callback;
+
     if(self->da_info)
         http_da_restore(soap, self->da_info);
         
@@ -224,37 +234,58 @@ void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes c
 }
 
 void OnvifBaseService__handle_soap_error_old(OnvifBaseService * self, struct soap * soap, int error_code){
+    char * endpoint = OnvifBaseService__get_endpoint(self);
     if (error_code == SOAP_UDP_ERROR || 
         error_code == SOAP_TCP_ERROR || 
         error_code == SOAP_HTTP_ERROR || 
         error_code == SOAP_SSL_ERROR || 
         error_code == SOAP_ZLIB_ERROR){
-        C_ERROR("CONNECTION ERROR\n");
+        C_ERROR("[%s] CONNECTION ERROR\n",endpoint);
         OnvifBaseService__set_error_code(self,ONVIF_ERROR_CONNECTION);
     } else if(error_code == SOAP_NO_TAG){
-        C_ERROR("ERROR : Server didn't return a soap message.");
+        C_ERROR("[%s] Server didn't return a soap message.",endpoint);
         OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
     } else if(error_code == 400){
-        C_ERROR("ERROR : Server returned 400 bad request");
+        C_ERROR("[%s] Server returned 400 bad request",endpoint);
         OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
     } else {
         const char * fault_code = soap_fault_subcode(soap);
         if(soap->error == 400 || //Bad request
             soap->error == 403 || //Forbidden (soap not authorized returns a 200)
             soap->error == 404){ //Not found
-            C_ERROR("ERROR : NOT VALID ONVIF HTTP Error code [%d]\n",soap->error);
+            C_ERROR("[%s] NOT VALID ONVIF HTTP Error code [%d]\n",endpoint,soap->error);
             OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
         } else if (soap->error == 401 || (fault_code && !strcmp(fault_code,FAULT_UNAUTHORIZED))) {
-            C_WARN("Warning : Not Authorized Error\n",soap->error);
+            C_WARN("[%s] Not Authorized Error\n",endpoint,soap->error);
             OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_AUTHORIZED);
         } else if (fault_code && !strcmp(fault_code,FAULT_ACTIONNOTSUPPORTED)) {
-            C_WARN("Warning : Action Not Supported Soap Error\n",soap->error);
+            C_WARN("[%s] Action Not Supported Soap Error\n",endpoint,soap->error);
             OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_SUPPORTED);
         } else { //Mostly SOAP_FAULT
-            C_FATAL("[%s] == [%s]",fault_code,FAULT_ACTIONNOTSUPPORTED);
-            C_ERROR("Unhandled ERROR %i [%s]\n",error_code, fault_code);
+            C_ERROR("[%s] Unhandled ERROR %i [%s]\n",endpoint,error_code, fault_code);
             soap_print_fault(soap, stderr);
             OnvifBaseService__set_error_code(self,ONVIF_ERROR_SOAP);
         }
     }
+    free(endpoint);
+}
+
+//TODO Placeholder until user-input is implemented
+int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store)
+{
+    if (!ok){
+        int err = X509_STORE_CTX_get_error(store);
+        switch (err){
+            case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+            case X509_V_ERR_UNABLE_TO_GET_CRL:
+            case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+                X509_STORE_CTX_set_error(store, X509_V_OK);
+                ok = 1;
+                break;
+            default:
+                C_ERROR("SSL ERROR : %d",err);
+                break;
+        }
+    }
+    return ok;
 }

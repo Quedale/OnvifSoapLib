@@ -3,6 +3,7 @@
 
 #include "url_parser.h"
 #include "clogger.h"
+#include "httpda.h"
 
 #define FAULT_UNAUTHORIZED "\"http://www.onvif.org/ver10/error\":NotAuthorized"
 #define FAULT_ACTIONNOTSUPPORTED "\"http://www.onvif.org/ver10/error\":ActionNotSupported"
@@ -15,6 +16,7 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
 void OnvifBaseService__soap_destroy(OnvifBaseService * self, struct soap *soap);
 void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes code);
 void OnvifBaseService__handle_soap_error_old(OnvifBaseService * self, struct soap * soap, int error_code);
+int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store);
 
 #define BUILD_SOAP_FUNC(a)  soap_call___##a 
 #define BUILD_SOAP_TYPE(a)  _##a 
@@ -34,7 +36,32 @@ void OnvifBaseService__handle_soap_error_old(OnvifBaseService * self, struct soa
     }
 
 #define ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, soap, action, req, resp) \
-    int ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
+    int ret; \
+    int redirect_count = 0; \
+retry: \
+    ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
+    /* Untested, need a camera setup with HTTPS on top of soap */ \
+    if(redirect_count < 10 && soap->error >= 301 && soap->error <= 308){ \
+        redirect_count++; \
+        /*302 = contruct new uri */ \
+        if(soap->error == 302){ \
+            ParsedURL * purl = ParsedURL__create(privendpt); \
+            ParsedURL * npurl = ParsedURL__create(soap->endpoint); \
+            ParsedURL__set_host(purl,ParsedURL__get_host(npurl)); \
+            ParsedURL__set_port(purl,ParsedURL__get_port(npurl)); \
+            ParsedURL__set_protocol(purl,ParsedURL__get_protocol(npurl)); \
+            free(privendpt); \
+            privendpt = ParsedURL__toString(purl); \
+            ParsedURL__destroy(purl); \
+            ParsedURL__destroy(npurl); \
+        } else { \
+            free(privendpt); \
+            privendpt = malloc(strlen(soap->endpoint)+1); \
+            strcpy(privendpt,soap->endpoint); \
+        } \
+        C_WARN("Redirecting to : %s [%d]",privendpt, soap->error); \
+        goto retry; \
+    } \
     char * new_endpoint = NULL; \
     if(soap->error == 401 && OnvifBaseService__http_challenge(self->parent,soap,privendpt)) \
         ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
@@ -81,36 +108,38 @@ void OnvifBaseService__handle_soap_error_old(OnvifBaseService * self, struct soa
     if (ret == SOAP_OK){ \
         vo = (*(vocreator))(resp); \
     } else { \
+        char * endpt = OnvifBaseService__get_endpoint(self->parent); \
         vo = (*(vocreator))(NULL); \
         if (soap->error == SOAP_UDP_ERROR || \
             soap->error == SOAP_TCP_ERROR || \
             soap->error == SOAP_HTTP_ERROR || \
             soap->error == SOAP_SSL_ERROR || \
             soap->error == SOAP_ZLIB_ERROR){ \
-            C_ERROR("CONNECTION ERROR\n"); \
+            C_ERROR("[%s] CONNECTION ERROR\n",endpt); \
             SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_CONNECTION_ERROR); \
         } else if(soap->error == SOAP_NO_TAG){ \
-            C_ERROR("ERROR : Server didn't return a soap message."); \
+            C_ERROR("[%s] Server didn't return a soap message.",endpt); \
             SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_NOT_VALID); \
         } else if(soap->error == 400 || \
                     soap->error == 403 || /* Forbidden (soap not authorized returns a 200) */ \
                     soap->error == 404){ /* Not found */ \
-            C_ERROR("ERROR : Server returned 400 bad request"); \
+            C_ERROR("[%s] Server returned 400 bad request",endpt); \
             SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_NOT_VALID); \
         } else { \
             const char * fault_code = soap_fault_subcode(soap); \
             if (soap->error == 401 || (fault_code && !strcmp(fault_code,FAULT_UNAUTHORIZED))) { \
-                C_WARN("Warning : Not Authorized Error\n",soap->error); \
+                C_WARN("[%s] Not Authorized Error\n",endpt); \
                 SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_UNAUTHORIZED); \
             } else if (fault_code && !strcmp(fault_code,FAULT_ACTIONNOTSUPPORTED)) { \
-                C_WARN("Warning : Action Not Supported Soap Error\n",soap->error); \
+                C_WARN("[%s] Action Not Supported Soap Error\n",endpt); \
                 SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_ACTION_NOT_SUPPORTED); \
             } else { /* Mostly SOAP_FAULT */ \
-                C_ERROR("Unhandled ERROR %i [%s]\n",soap->error, fault_code); \
+                C_ERROR("[%s] Unhandled ERROR %i [%s]\n",endpt,soap->error, fault_code); \
                 soap_print_fault(soap, stderr); \
                 SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_UNEXPECTED); \
             } \
         } \
+        free(endpt); \
     } \
     if (new_endpoint) free(new_endpoint); \
 prv_exit: \

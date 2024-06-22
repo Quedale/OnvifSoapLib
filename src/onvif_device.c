@@ -29,9 +29,10 @@ typedef struct _OnvifDevice {
 
 void OnvifDevice__set_last_error(OnvifErrorTypes error, void * error_data);
 
-void OnvifDevice__createMediaService(OnvifDevice* self){
+SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
+    SoapFault ret_fault = SOAP_FAULT_NONE;
     if(self->media_service){
-        return;
+        return ret_fault;
     }
 
     P_MUTEX_LOCK(self->media_lock);
@@ -43,17 +44,37 @@ void OnvifDevice__createMediaService(OnvifDevice* self){
 
     ONVIF_DEVICE_TRACE("[%s] OnvifDevice__createMediaService",self);
 
+    OnvifMedia * media;
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
-    if(capabilities){
-        OnvifMedia * media = OnvifCapabilities__get_media(capabilities);
-        self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media),OnvifDevice__set_last_error,self);
-        OnvifCapabilities__destroy(capabilities);
-    } else {
-        C_WARN("No capabilities...\n");
+    SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
+    SoapFault service_fault;
+    switch(*caps_fault){
+        case SOAP_FAULT_NONE:
+            media = OnvifCapabilities__get_media(capabilities);
+            self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media),OnvifDevice__set_last_error,self);
+            service_fault = OnvifMediaService__get_fault(self->media_service);
+            if(service_fault != SOAP_FAULT_NONE){
+                ret_fault = service_fault;
+                OnvifMediaService__destroy(self->media_service);
+                self->media_service = NULL;
+            }
+            break;
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            ONVIF_DEVICE_ERROR("[%s] Failed to retrieve capabilities capabilities...\n", self);
+            ret_fault = *caps_fault;
+            break;
     }
+
+    g_object_unref(capabilities);
 
 exit:
     P_MUTEX_UNLOCK(self->media_lock);
+    return ret_fault;
 }
 
 time_t * OnvifDevice__getSystemDateTime(OnvifDevice * self){
@@ -66,55 +87,100 @@ double OnvifDevice__getTimeOffset(OnvifDevice * self){
     return self->time_offset;
 }
 
-void OnvifDevice__authenticate(OnvifDevice* self){
+SoapFault OnvifDevice__authenticate(OnvifDevice* self){
     ONVIF_DEVICE_INFO("[%s] OnvifDevice__authenticate",self);
+    SoapFault ret_fault;
 
     P_MUTEX_LOCK(self->auth_lock);
     if(self->authenticated){
+        ret_fault = SOAP_FAULT_NONE;
         goto exit;
     }
 
     if(!self->datetime){
-        time_t t = OnvifDeviceService__getSystemDateAndTime(self->device_service);
-        if(t > 0){
-            P_MUTEX_LOCK(self->prop_lock);
-            self->time_offset = difftime(t,time(NULL));
-            self->datetime = malloc(sizeof(time_t));
-            memcpy(self->datetime, &t, sizeof(t));
-            P_MUTEX_UNLOCK(self->prop_lock);
+        OnvifDateTime * onviftime = OnvifDeviceService__getSystemDateAndTime(self->device_service);
+        time_t datetime;
+        ret_fault = *SoapObject__get_fault(SOAP_OBJECT(onviftime));
+        switch(ret_fault){
+            case SOAP_FAULT_NONE:
+                datetime = *OnvifDateTime__get_datetime(onviftime);
+                if(datetime > 0){
+                    P_MUTEX_LOCK(self->prop_lock);
+                    self->time_offset = difftime(datetime,time(NULL));
+                    self->datetime = malloc(sizeof(time_t));
+                    memcpy(self->datetime, &datetime, sizeof(datetime));
+
+                    char str_now[20];
+                    strftime(str_now, 20, "%Y-%m-%d %H:%M:%S", localtime(self->datetime));
+                    ONVIF_DEVICE_INFO("[%s] Camera SystemDateAndTime : '%s'\n",self, str_now);
+
+                    P_MUTEX_UNLOCK(self->prop_lock);
+                } else {
+                    ONVIF_DEVICE_ERROR("[%s] Camera SystemDateAndTime not set\n",self);
+                }
+                g_object_unref(onviftime);
+                break;
+            case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+            case SOAP_FAULT_CONNECTION_ERROR:
+            case SOAP_FAULT_NOT_VALID:
+            case SOAP_FAULT_UNAUTHORIZED:
+            case SOAP_FAULT_UNEXPECTED:
+            default:
+                ONVIF_DEVICE_ERROR("[%s] OnvifDevice__authenticate - Failed to retrieve SystemDateTime [%d]\n",self, ret_fault);
+                g_object_unref(onviftime);
+                goto exit;
         }
     }
 
-    if(self->datetime){
-        char str_now[20];
-        strftime(str_now, 20, "%Y-%m-%d %H:%M:%S", localtime(self->datetime));
-        ONVIF_DEVICE_INFO("[%s] Camera SystemDateAndTime : '%s'\n",self, str_now);
+    ret_fault = OnvifDevice__createMediaService(self);
+    switch(ret_fault){
+        case SOAP_FAULT_NONE:
+            ONVIF_MEDIA_DEBUG("[%s] Successfully created Media soap",self);
+            break;
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            ONVIF_DEVICE_ERROR("[%s] OnvifDevice__authenticate - Failed to create media service [%d]\n",self, ret_fault);
+            goto exit;
     }
 
-    OnvifDevice__createMediaService(self);
-    if(!self->media_service){
-        ONVIF_DEVICE_ERROR("[%s] OnvifDevice__authenticate - Failed to create media service\n",self);
-        goto exit;
+    char * uri = NULL;
+    OnvifMediaUri * media_uri = OnvifMediaService__getStreamUri(self->media_service,0);
+    ret_fault = *SoapObject__get_fault(SOAP_OBJECT(media_uri));
+    switch(ret_fault){
+        case SOAP_FAULT_NONE:
+            uri = OnvifMediaUri__get_uri(media_uri);
+            if(!uri){
+                ONVIF_MEDIA_ERROR("[%s] No StreamURI provided...",self);
+                OnvifMediaService__destroy(self->media_service);
+                self->media_service = NULL;
+            } else {
+                ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",self, uri);
+                P_MUTEX_LOCK(self->prop_lock);
+                self->authenticated = 1;
+                P_MUTEX_UNLOCK(self->prop_lock);
+            }
+            break;
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            ONVIF_MEDIA_ERROR("[%s] Failed to retrieve StreamURI...",self);
+            OnvifMediaService__destroy(self->media_service);
+            self->media_service = NULL;
+            break;
     }
-
-    ONVIF_MEDIA_DEBUG("[%s] Successfully created Media soap",self);
-
-    char * stream_uri = OnvifMediaService__getStreamUri(self->media_service,0);
-    if(!stream_uri){
-        ONVIF_MEDIA_ERROR("[%s] No stream uri returned...",self);
-        OnvifMediaService__destroy(self->media_service);
-        self->media_service = NULL;
-    } else {
-        ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",self, stream_uri);
-        P_MUTEX_LOCK(self->prop_lock);
-        self->authenticated = 1;
-        P_MUTEX_UNLOCK(self->prop_lock);
-    }
-
-    free(stream_uri);
+    
+    g_object_unref(media_uri);
 
 exit:
     P_MUTEX_UNLOCK(self->auth_lock);
+    return ret_fault;
 }
 
 int OnvifDevice__is_authenticated(OnvifDevice* self){

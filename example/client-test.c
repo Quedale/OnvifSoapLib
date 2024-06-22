@@ -43,6 +43,100 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 //Initialize argp context
 static struct argp argp = { options, parse_opt, NULL, doc, 0, 0, 0 };
 
+void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_service, OnvifDevice * dev){
+	for (int i = 0; i < OnvifMediaProfiles__get_size(profiles); i++){
+		OnvifProfile * profile = OnvifMediaProfiles__get_profile(profiles,i);
+		C_DEBUG("Profile name: %s\n", OnvifProfile__get_name(profile));
+		C_DEBUG("Profile token: %s\n", OnvifProfile__get_token(profile));
+
+		OnvifMediaUri * stream_uri = OnvifMediaService__getStreamUri(media_service, i);
+		SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(stream_uri));
+		char * uri;
+		switch(*fault){
+			case SOAP_FAULT_NONE:
+				uri = OnvifMediaUri__get_uri(stream_uri);
+				if(!uri){
+					ONVIF_MEDIA_ERROR("[%s] No StreamURI provided...",dev);
+				} else {
+					ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",dev, uri);
+				}
+				break;
+			case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+			case SOAP_FAULT_CONNECTION_ERROR:
+			case SOAP_FAULT_NOT_VALID:
+			case SOAP_FAULT_UNAUTHORIZED:
+			case SOAP_FAULT_UNEXPECTED:
+			default:
+				ONVIF_MEDIA_ERROR("[%s] Failed to retrieve StreamURI...",dev);
+				break;
+		}
+
+		g_object_unref(stream_uri);
+
+		OnvifMediaServiceCapabilities * media_caps = OnvifMediaService__getServiceCapabilities(media_service);
+		if(!OnvifMediaServiceCapabilities__get_snapshot_uri(media_caps)){
+			C_INFO("SnapshotUri feature not supported. Trying anyway...");
+		}
+		OnvifMediaUri * snapshot_uri = OnvifMediaService__getSnapshotUri(media_service, i);
+		fault = SoapObject__get_fault(SOAP_OBJECT(snapshot_uri));
+		switch(*fault){
+			case SOAP_FAULT_NONE:
+				if(!OnvifMediaServiceCapabilities__get_snapshot_uri(media_caps)){
+					C_WARN("GetSnapshotUri suprisingly works!!");
+				}
+				char * snap_uri = OnvifMediaUri__get_uri(snapshot_uri);
+				if(snap_uri){
+					C_DEBUG("SnapshotUri : %s\n",snap_uri);
+				} else {
+					C_DEBUG("No SnapshotUri provided.\n");
+					g_object_unref(snapshot_uri);
+					continue;
+				}
+				break;
+			case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+				C_WARN("SnapshotUri not supported.");
+				g_object_unref(snapshot_uri);
+				continue;
+			case SOAP_FAULT_CONNECTION_ERROR:
+			case SOAP_FAULT_NOT_VALID:
+			case SOAP_FAULT_UNAUTHORIZED:
+			case SOAP_FAULT_UNEXPECTED:
+			default:
+				C_ERROR("Failed to retrieve snapshot.");
+				g_object_unref(snapshot_uri);
+				continue;
+		}
+		g_object_unref(snapshot_uri);
+
+		OnvifSnapshot * snapshot = OnvifMediaService__getSnapshot(media_service, i);
+		fault = SoapObject__get_fault(SOAP_OBJECT(snapshot));
+		switch(*fault){
+			case SOAP_FAULT_NONE:
+				if(OnvifSnapshot__get_size(snapshot) > 0){
+					char name[24];
+					snprintf(name, sizeof(name), "%d.jpg",i);
+					FILE* image = fopen(name, "wb");
+					fwrite(OnvifSnapshot__get_buffer(snapshot), OnvifSnapshot__get_size(snapshot), 1, image);
+					fclose(image);
+					C_DEBUG("Successfully retrieved snapshot. Saved at './%d.jpg'",i);
+				} else {
+					C_ERROR("Snapshot return is an empty buffer");
+				}
+				break;
+			case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+				C_WARN("SnapshotUri not supported.");
+				break;
+			case SOAP_FAULT_CONNECTION_ERROR:
+			case SOAP_FAULT_NOT_VALID:
+			case SOAP_FAULT_UNAUTHORIZED:
+			case SOAP_FAULT_UNEXPECTED:
+			default:
+				C_ERROR("Failed to retrieve snapshot.");
+				break;
+		}
+		g_object_unref(snapshot);
+	}
+}
 int main(int argc, char *argv[])
 {
 
@@ -69,7 +163,7 @@ int main(int argc, char *argv[])
 	OnvifDevice__authenticate(dev);
 	
 	//TODO Support context-aware error handling instead of global pointer
-	if(OnvifDevice__get_last_error(dev) != ONVIF_ERROR_NONE){
+	if(!OnvifDevice__is_authenticated(dev)){
 		C_ERROR("Device encountered an authentication error.");
 		OnvifDevice__destroy(dev);
 		return 1;
@@ -101,59 +195,22 @@ int main(int argc, char *argv[])
 	
 	OnvifDeviceInformation * devinfo = OnvifDeviceService__getDeviceInformation(device_service);
 	if (devinfo){
-		OnvifProfiles * profiles = OnvifMediaService__get_profiles(media_service);
-		for (int i = 0; i < OnvifProfiles__get_size(profiles); i++){
-			OnvifProfile * profile = OnvifProfiles__get_profile(profiles,i);
-			C_DEBUG("Profile name: %s\n", OnvifProfile__get_name(profile));
-			C_DEBUG("Profile token: %s\n", OnvifProfile__get_token(profile));
-
-			char * stream_uri = OnvifMediaService__getStreamUri(media_service, i);
-			C_DEBUG("StreamUri : %s\n", stream_uri);
-			free(stream_uri);
-
-			OnvifMediaServiceCapabilities * media_caps = OnvifMediaService__getServiceCapabilities(media_service);
-            if(!OnvifMediaServiceCapabilities__get_snapshot_uri(media_caps)){
-				C_INFO("SnapshotUri feature not supported. Trying anyway...");
-			}
-			OnvifSnapshotUri * snapshot_uri = OnvifMediaService__getSnapshotUri(media_service, i);
-			char * snap_uri = OnvifSnapshotUri__get_uri(snapshot_uri);
-
-			C_DEBUG("SnapshotUri : %s\n",snap_uri);
-
-			OnvifSnapshot * snapshot = OnvifMediaService__getSnapshot(media_service, i);
-			SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(snapshot));
-			switch(*fault){
-				case SOAP_FAULT_NONE:
-					if(!OnvifMediaServiceCapabilities__get_snapshot_uri(media_caps)){
-						C_WARN("SnapshotUri suprisingly works!!");
-					}
-					if(OnvifSnapshot__get_size(snapshot) > 0){
-						char name[24];
-						snprintf(name, sizeof(name), "%d.jpg",i);
-						FILE* image = fopen(name, "wb");
-						fwrite(OnvifSnapshot__get_buffer(snapshot), OnvifSnapshot__get_size(snapshot), 1, image);
-						fclose(image);
-						C_DEBUG("Successfully retrieved snapshot. Saved at './%d.jpg'",i);
-					} else {
-						C_ERROR("Snapshot return is an empty buffer");
-					}
-					break;
-				case SOAP_FAULT_ACTION_NOT_SUPPORTED:
-					C_WARN("SnapshotUri not supported.");
-					break;
-				case SOAP_FAULT_CONNECTION_ERROR:
-				case SOAP_FAULT_NOT_VALID:
-				case SOAP_FAULT_UNAUTHORIZED:
-				case SOAP_FAULT_UNEXPECTED:
-				default:
-					C_ERROR("Failed to retrieve snapshot.");
-					break;
-			}
-
-			g_object_unref(snapshot_uri);
-			g_object_unref(snapshot);
+		OnvifMediaProfiles * profiles = OnvifMediaService__get_profiles(media_service);
+		SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(profiles));
+		switch(*fault){
+			case SOAP_FAULT_NONE:
+				loop_profiles(profiles,media_service, dev);
+				break;
+			case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+			case SOAP_FAULT_CONNECTION_ERROR:
+			case SOAP_FAULT_NOT_VALID:
+			case SOAP_FAULT_UNAUTHORIZED:
+			case SOAP_FAULT_UNEXPECTED:
+			default:
+				C_ERROR("Failed to retrieve MediaProfiles.");
+				break;
 		}
-		OnvifProfiles__destroy(profiles);
+		g_object_unref(profiles);
 	}      
 
 	OnvifDeviceInformation__destroy(devinfo);

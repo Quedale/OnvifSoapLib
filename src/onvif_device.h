@@ -6,6 +6,7 @@ typedef struct _OnvifDevice OnvifDevice;
 #include "shard_export.h"
 #include "devicemgmt/onvif_device_service.h"
 #include "media/onvif_media_service.h"
+#include "SoapObject.h"
 
 #define ONVIF_DEVICE_LOG(fmt, dev, level, ...) \
   if(dev){ \
@@ -47,7 +48,7 @@ SHARD_EXPORT char * OnvifDevice__get_host(OnvifDevice* self);
 // SHARD_EXPORT void OnvifDevice__lookup_ip(OnvifDevice* self);
 SHARD_EXPORT char * OnvifDevice__get_port(OnvifDevice* self);
 SHARD_EXPORT OnvifErrorTypes OnvifDevice__get_last_error(OnvifDevice * self);
-SHARD_EXPORT void OnvifDevice__authenticate(OnvifDevice* self);
+SHARD_EXPORT SoapFault OnvifDevice__authenticate(OnvifDevice* self);
 SHARD_EXPORT int OnvifDevice__is_authenticated(OnvifDevice* self);
 SHARD_EXPORT void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass);
 SHARD_EXPORT OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self);

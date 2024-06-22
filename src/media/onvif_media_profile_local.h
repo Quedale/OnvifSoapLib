@@ -10,9 +10,9 @@
 #endif
 
 OnvifProfile * OnvifProfile__create(struct tt__Profile * profile, int index);
-void OnvifProfile__init(OnvifProfile * self,struct tt__Profile * profile, int index);
+SHARD_EXPORT void OnvifProfile__real_destroy(OnvifProfile* self);
 
-OnvifProfiles * OnvifProfiles__create(struct _trt__GetProfilesResponse * resp);
-void OnvifProfiles__init(OnvifProfiles * self,struct _trt__GetProfilesResponse * resp);
+OnvifMediaProfiles * OnvifMediaProfiles__new(struct _trt__GetProfilesResponse * resp);
+void OnvifMediaProfiles__insert(OnvifMediaProfiles * self,OnvifProfile * profile);
 
 #endif

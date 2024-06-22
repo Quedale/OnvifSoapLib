@@ -10,6 +10,7 @@ typedef struct _OnvifDeviceService OnvifDeviceService;
 #include "onvif_device_interface.h"
 #include "onvif_device_capabilities.h"
 #include "onvif_device_scopes.h"
+#include "onvif_datetime.h"
 #include "onvif_device.h"
 
 SHARD_EXPORT OnvifDeviceService * OnvifDeviceService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
@@ -23,6 +24,6 @@ SHARD_EXPORT char * OnvifDeviceService__getHostname(OnvifDeviceService * self);
 SHARD_EXPORT OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self);
 SHARD_EXPORT OnvifInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self);
-SHARD_EXPORT time_t OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);
+SHARD_EXPORT OnvifDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);
 
 #endif

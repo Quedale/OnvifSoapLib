@@ -172,6 +172,7 @@ set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h
             ${PROJECT_SOURCE_DIR}/src/shard_export.h
             ${PROJECT_SOURCE_DIR}/src/SoapObject.h)
 set(devicemgmt_headers 
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_datetime.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_capabilities.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_info.h
@@ -182,7 +183,7 @@ set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service_capabilities.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot.h
-            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot_uri.h)
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_uri.h)
 
 #Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})

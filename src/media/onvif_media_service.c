@@ -1,7 +1,7 @@
 #include "onvif_media_service.h"
 #include "onvif_media_profile_local.h"
 #include "onvif_media_snapshot_local.h"
-#include "onvif_media_snapshot_uri_local.h"
+#include "onvif_media_uri_local.h"
 #include "onvif_base_service_local.h"
 #include "httpda.h"
 #include "plugin/logging.h"
@@ -11,10 +11,11 @@
 
 typedef struct _OnvifMediaService {
     OnvifBaseService * parent;
-    OnvifProfiles * profiles;
+    OnvifMediaProfiles * profiles;
     OnvifMediaServiceCapabilities * capabilities;
     P_MUTEX_TYPE profile_lock;
     P_MUTEX_TYPE caps_lock;
+    SoapFault fault;
 } OnvifMediaService;
 
 OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self);
@@ -24,9 +25,10 @@ OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char *
     OnvifMediaService__init(self,device, endpoint, error_cb, error_data);
 
     OnvifMediaService__getServiceCapabilities(self);
-    if(!self->capabilities){
-        OnvifMediaService__destroy(self);
-        self = NULL;
+    if(!self->capabilities || *SoapObject__get_fault(SOAP_OBJECT(self->capabilities)) != SOAP_FAULT_NONE){
+        self->fault = *SoapObject__get_fault(SOAP_OBJECT(self->capabilities));
+    } else {
+        self->fault = SOAP_FAULT_NONE;
     }
     return self;
 }
@@ -42,8 +44,8 @@ void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, con
 void OnvifMediaService__destroy(OnvifMediaService * self){
     if(self){
         OnvifBaseService__destroy(self->parent);
-        OnvifProfiles__destroy(self->profiles);
-        // OnvifMediaServiceCapabilities__destroy(self->capabilities);
+        if(self->profiles)
+            g_object_unref(self->profiles);
         if(self->capabilities)
             g_object_unref(self->capabilities);
         P_MUTEX_CLEANUP(self->profile_lock);
@@ -61,22 +63,22 @@ char * OnvifMediaService__get_endpoint(OnvifMediaService * self){
     return OnvifBaseService__get_endpoint(self->parent);
 }
 
-int OnvifMediaService__check_profiles(OnvifMediaService * self){
-    if(!self->profiles){
+SoapFault OnvifMediaService__check_profiles(OnvifMediaService * self){
+    if(!self->profiles || *SoapObject__get_fault(SOAP_OBJECT(self->profiles)) != SOAP_FAULT_NONE){
+        if(self->profiles) g_object_unref(self->profiles);
         self->profiles = OnvifMediaService__getProfiles(self);
     }
 
-    return self->profiles != NULL;
+    return *SoapObject__get_fault(SOAP_OBJECT(self->profiles));
 }
 
-OnvifProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
+OnvifMediaProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
     if(!self) return NULL;
-    OnvifProfiles * ret;
     P_MUTEX_LOCK(self->profile_lock);
-    if(!OnvifMediaService__check_profiles(self)) return NULL;
-    ret = OnvifProfiles__copy(self->profiles);
+    OnvifMediaService__check_profiles(self);
+    g_object_ref(self->profiles);//Adding ref on behalf of the caller
     P_MUTEX_UNLOCK(self->profile_lock);
-    return ret;
+    return self->profiles;
 }
 
 OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self){
@@ -87,7 +89,7 @@ OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_privat
     memset (&resp, 0, sizeof (resp));
 
     OnvifMediaServiceCapabilities * retval = NULL;
-    ONVIF_INVOKE_SOAP_CALL_OLD(self, trt__GetServiceCapabilities, OnvifMediaServiceCapabilities__new, retval, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetServiceCapabilities, OnvifMediaServiceCapabilities__new, retval, soap, NULL, &req,  &resp);
     
     return retval;
 
@@ -95,14 +97,18 @@ OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_privat
 
 OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities(OnvifMediaService* self){
     P_MUTEX_LOCK(self->caps_lock);
-    if(!self->capabilities){
+    if(!self->capabilities || *SoapObject__get_fault(SOAP_OBJECT(self->capabilities)) != SOAP_FAULT_NONE){
+        if(self->capabilities){
+            g_object_unref(self->capabilities);
+            self->capabilities = NULL;
+        }
         self->capabilities = OnvifMediaService__getServiceCapabilities_private(self);
     }
     P_MUTEX_UNLOCK(self->caps_lock);
     return self->capabilities;
 }
 
-OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
+OnvifMediaProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
     if(!self){
         char * endpoint = OnvifMediaService__get_endpoint(self);
         C_ERROR("[%s] OnvifMediaService__getProfiles - MediaService uninitialized.",endpoint);
@@ -114,35 +120,44 @@ OnvifProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
 
-    OnvifProfiles * profiles = NULL;
+    OnvifMediaProfiles * profiles = NULL;
     
-    ONVIF_INVOKE_SOAP_CALL_OLD(self, trt__GetProfiles, OnvifProfiles__create, profiles, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetProfiles, OnvifMediaProfiles__new, profiles, soap, NULL, &req,  &resp);
     
     return profiles;
 }
 
-char * OnvifMediaService__getStreamUri_callback(struct _trt__GetStreamUriResponse * resp){
-    char * ret = malloc(strlen(resp->MediaUri->Uri)+1);
-    strcpy(ret,resp->MediaUri->Uri);
-    return ret;
-}
+OnvifMediaUri * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_index){
+    char * endpoint = OnvifMediaService__get_endpoint(self);
+    OnvifMediaUri * streamuri = NULL;
 
-char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_index){
     if(!self){
-        char * endpoint = OnvifMediaService__get_endpoint(self);
         C_ERROR("[%s] OnvifMediaService__getStreamUri - MediaService uninitialized.",endpoint);
-        free(endpoint);
-        return NULL;
+        streamuri = OnvifStreamUri__new(NULL);
+        SoapObject__set_fault(SOAP_OBJECT(streamuri),SOAP_FAULT_UNEXPECTED);
+        goto exit;
     }
 
     char token[255];
     memset(&token,0,sizeof(token));
-    OnvifMediaService__get_profile_token(self,profile_index, token);
-    if(strlen(token) == 0) { C_WARN("Profile token not found."); return NULL; }
+    SoapFault fault = OnvifMediaService__get_profile_token(self,profile_index, token);
+    if(fault != SOAP_FAULT_NONE){
+        C_WARN("Profile token not found %d.",fault); 
+        streamuri = OnvifStreamUri__new(NULL);
+        SoapObject__set_fault(SOAP_OBJECT(streamuri),fault);
+        goto exit;
+    }
+
+    if(strlen(token) == 0) { 
+        C_WARN("Profile token not found."); 
+        streamuri = OnvifStreamUri__new(NULL);
+        SoapObject__set_fault(SOAP_OBJECT(streamuri),SOAP_FAULT_UNEXPECTED);
+        goto exit;
+    }
 
     struct _trt__GetStreamUri req;
     struct _trt__GetStreamUriResponse resp;
-    char * streamuri = NULL;
+
     memset (&req, 0, sizeof (req));
     memset (&resp, 0, sizeof (resp));
     req.ProfileToken = token;
@@ -157,17 +172,21 @@ char * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_inde
     req.StreamSetup->Transport = &transport;
     req.StreamSetup->Transport->Protocol = tt__TransportProtocol__UDP;
     req.StreamSetup->Transport->Tunnel = 0;
-    ONVIF_INVOKE_SOAP_CALL_OLD(self, trt__GetStreamUri, OnvifMediaService__getStreamUri_callback, streamuri, soap, NULL, &req,  &resp);
+    ONVIF_INVOKE_SOAP_CALL(self, trt__GetStreamUri, OnvifStreamUri__new, streamuri, soap, NULL, &req,  &resp);
 
+exit:
+    free(endpoint);
     return streamuri;
 }
 
 
-OnvifSnapshotUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
+OnvifMediaUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
     char * endpoint = OnvifMediaService__get_endpoint(self);
-    OnvifSnapshotUri * ret_val = NULL;
+    OnvifMediaUri * ret_val = NULL;
     if(!self || !self->capabilities){
         C_ERROR("[%s] OnvifMediaService__getSnapshotUri - MediaService uninitialized.",endpoint);
+        ret_val = OnvifSnapshotUri__new(NULL);
+        SoapObject__set_fault(SOAP_OBJECT(ret_val),SOAP_FAULT_UNEXPECTED);
         goto exit;
     }
 
@@ -177,7 +196,21 @@ OnvifSnapshotUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, in
     memset (&response, 0, sizeof (response));
 
     char token[255];
-    OnvifMediaService__get_profile_token(self,profile_index, token);
+    SoapFault fault = OnvifMediaService__get_profile_token(self,profile_index, token);
+    if(fault != SOAP_FAULT_NONE){
+        C_WARN("[%s] Profile token not found %d.",endpoint, fault); 
+        ret_val = OnvifSnapshotUri__new(NULL);
+        SoapObject__set_fault(SOAP_OBJECT(ret_val),fault);
+        goto exit;
+    }
+
+    if(strlen(token) == 0) { 
+        C_WARN("[%s] Profile token not found.", endpoint); 
+        ret_val = OnvifSnapshotUri__new(NULL);
+        SoapObject__set_fault(SOAP_OBJECT(ret_val),SOAP_FAULT_UNEXPECTED);
+        goto exit;
+    }
+
     request.ProfileToken = token;
 
     ONVIF_INVOKE_SOAP_CALL(self, trt__GetSnapshotUri, OnvifSnapshotUri__new, ret_val, soap, NULL, &request,  &response);
@@ -187,26 +220,6 @@ exit:
     return ret_val;
 }
 
-
-//TODO Placeholder until user-input is implemented
-int ssl_verify_callback(int ok, X509_STORE_CTX *store)
-{
-    if (!ok){
-        int err = X509_STORE_CTX_get_error(store);
-        switch (err){
-            case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-            case X509_V_ERR_UNABLE_TO_GET_CRL:
-            case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-                X509_STORE_CTX_set_error(store, X509_V_OK);
-                ok = 1;
-                break;
-            default:
-                C_ERROR("SSL ERROR : %d",err);
-                break;
-        }
-    }
-    return ok;
-}
 
 void send_http_get(struct soap * soap, char * url, char ** buffer, size_t * size){
     if(soap_GET(soap, url, NULL) != SOAP_OK){
@@ -262,7 +275,7 @@ OnvifSnapshot * get_http_body(OnvifMediaService *self, char * url)
         NULL,          /* no capath to trusted certificates */
         NULL           /* no random data to seed randomness */
     );
-    soap->fsslverify = ssl_verify_callback;
+    soap->fsslverify = OnvifBaseService__ssl_verify_callback;
 
     char *debug_flag = NULL;
 
@@ -302,7 +315,7 @@ retry:
         free(pass);
     }
 
-    if(redirect_count < 10 && soap->error >= 301 && soap->error <= 308 && strncmp(url, soap->endpoint, 6)){
+    if(redirect_count < 10 && soap->error >= 301 && soap->error <= 308){
         if(new_endpoint){
             free(new_endpoint);
             new_endpoint = NULL;
@@ -419,12 +432,12 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
     * We don't check if GetSnapshotUri if is supported via GetServiceCapabilities
     * because some cameras like IMOU returns false, while still providing the capability
     */
-    OnvifSnapshotUri * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
+    OnvifMediaUri * snapshot_uri = OnvifMediaService__getSnapshotUri(self, profile_index);
     SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(snapshot_uri));
     OnvifSnapshot * ret = NULL;
     switch(*fault){
         case SOAP_FAULT_NONE:
-            uri = OnvifSnapshotUri__get_uri(snapshot_uri);
+            uri = OnvifMediaUri__get_uri(snapshot_uri);
             if(!uri){
                 C_WARN("[%s] No snapshot URI provided.",endpoint);
                 ret = OnvifSnapshot__new(0,NULL);
@@ -450,25 +463,28 @@ OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int prof
     return ret;
 }
 
-void OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, char * ret){
+SoapFault OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, char * ret){
     char * endpoint = OnvifMediaService__get_endpoint(self);
+    SoapFault ret_fault = SOAP_FAULT_NONE;
     if(!self){
         C_ERROR("[%s] OnvifMediaService__get_profile_token - MediaService uninitialized.",endpoint);
-        ret[0] = '\0'; 
+        ret[0] = '\0';
+        ret_fault = SOAP_FAULT_UNEXPECTED;
         goto exit;
     }
     P_MUTEX_LOCK(self->profile_lock);
     C_TRACE("[%s] OnvifMediaService__get_profile_token %i", endpoint, index);
-    if(!OnvifMediaService__check_profiles(self)) { 
+    ret_fault = OnvifMediaService__check_profiles(self);
+    if(ret_fault != SOAP_FAULT_NONE){
         ret[0] = '\0'; 
         goto unlock_exit;
     }
 
-    int profileCount = OnvifProfiles__get_size(self->profiles);
+    int profileCount = OnvifMediaProfiles__get_size(self->profiles);
     if(index >= profileCount){
         C_ERROR("[%s] OnvifMediaService__get_profile_token : profile index out-of-bounds.", endpoint);
     } else if(profileCount > 0 && profileCount > index) {
-        OnvifProfile * profile = OnvifProfiles__get_profile(self->profiles,index);
+        OnvifProfile * profile = OnvifMediaProfiles__get_profile(self->profiles,index);
         char * token = OnvifProfile__get_token(profile);
         if(token){
             C_TRACE("[%s] OnvifMediaService__get_profile_token : Found profile [%s]",endpoint, token);
@@ -483,4 +499,9 @@ unlock_exit:
     P_MUTEX_UNLOCK(self->profile_lock);
 exit:
     free(endpoint);
+    return ret_fault;
+}
+
+SoapFault OnvifMediaService__get_fault(OnvifMediaService *self){
+    return self->fault;
 }
