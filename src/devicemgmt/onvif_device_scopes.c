@@ -2,17 +2,136 @@
 #include "clogger.h"
 #include "cstring_utils.h"
 
+enum
+{
+  PROP_SOAP = 1,
+  N_PROPERTIES
+};
+
 typedef struct _OnvifScope {
     char * scope;
     int editable;
 } OnvifScope;
 
-typedef struct _OnvifScopes {
+typedef struct {
     int count;
     OnvifScope ** scopes;
-} OnvifScopes;
+} OnvifScopesPrivate;
 
+G_DEFINE_TYPE_WITH_PRIVATE(OnvifScopes, OnvifScopes_, SOAP_TYPE_OBJECT)
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
+static void
+OnvifScopes__dispose (GObject *self)
+{
+    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
+    if(priv->scopes){
+        int i;
+        for(i=0;i<priv->count;i++){
+            free(priv->scopes[i]->scope);
+            free(priv->scopes[i]);
+        }
+        priv->count = 0;
+        free(priv->scopes);
+        priv->scopes = NULL;
+    }
+}
+
+static void
+OnvifScopes__set_soap(OnvifScopes * self, struct _tds__GetScopesResponse * resp){
+    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
+
+    OnvifScopes__dispose(G_OBJECT(self));
+
+    if(!resp){
+        return;
+    }
+
+    priv->scopes = malloc(0);
+    priv->count = 0;
+
+    int i;
+    for(i=0;i<resp->__sizeScopes;i++){
+        struct tt__Scope scope = resp->Scopes[i];
+        // tt__ScopeDefinition scopedef = scope.ScopeDef;
+        xsd__anyURI scopeitem = scope.ScopeItem;
+
+        OnvifScope * onvifscope = malloc(sizeof(OnvifScope));
+        onvifscope->scope = (char*) malloc(strlen(scopeitem)+1);
+        strcpy(onvifscope->scope,scopeitem);
+
+        priv->count++;
+        priv->scopes = realloc (priv->scopes, sizeof (OnvifScope*) * priv->count);
+        priv->scopes[priv->count-1] = onvifscope;
+
+        // tt__ScopeDefinition__Fixed : tt__ScopeDefinition__Fixed || tt__ScopeDefinition__Configurable
+    }
+}
+
+static void
+OnvifScopes__set_property (GObject      *object,
+                          guint         prop_id,
+                          const GValue *value,
+                          GParamSpec   *pspec)
+{
+    OnvifScopes * self = ONVIF_DEVICE_SCOPES (object);
+    // OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (self);
+    switch (prop_id){
+        case PROP_SOAP:
+            OnvifScopes__set_soap(self,g_value_get_pointer (value));
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+static void
+OnvifScopes__get_property (GObject    *object,
+                          guint       prop_id,
+                          GValue     *value,
+                          GParamSpec *pspec)
+{
+    switch (prop_id){
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+static void
+OnvifScopes__class_init (OnvifScopesClass * klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->dispose = OnvifScopes__dispose;
+    object_class->set_property = OnvifScopes__set_property;
+    object_class->get_property = OnvifScopes__get_property;
+    obj_properties[PROP_SOAP] =
+        g_param_spec_pointer ("soap",
+                            "SoapMessage",
+                            "Pointer to original soap message.",
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+
+    g_object_class_install_properties (object_class,
+                                        N_PROPERTIES,
+                                        obj_properties);
+}
+
+static void
+OnvifScopes__init (OnvifScopes * self)
+{
+    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
+    priv->scopes = NULL;
+    priv->count = 0;
+}
+
+OnvifScopes* OnvifScopes__new(struct _tds__GetScopesResponse * resp){
+    return g_object_new (ONVIF_TYPE_DEVICE_SCOPES, "soap", resp, NULL);
+}
+
+/// @brief 
+/// @param dst 
+/// @param src 
 void urldecode(char *dst, const char *src)
 {
     char a, b;
@@ -44,38 +163,11 @@ void urldecode(char *dst, const char *src)
     *dst++ = '\0';
 }
 
-OnvifScopes * OnvifScopes__create(struct _tds__GetScopesResponse * resp){
-    OnvifScopes * self = malloc(sizeof(OnvifScopes));
-    OnvifScopes__init(self,resp);
-    return self;
-}
-
-void OnvifScopes__init(OnvifScopes * self,struct _tds__GetScopesResponse * resp){
-    self->scopes = malloc(0);
-    self->count = 0;
-
-    int i;
-    for(i=0;i<resp->__sizeScopes;i++){
-        struct tt__Scope scope = resp->Scopes[i];
-        // tt__ScopeDefinition scopedef = scope.ScopeDef;
-        xsd__anyURI scopeitem = scope.ScopeItem;
-
-        OnvifScope * onvifscope = malloc(sizeof(OnvifScope));
-        onvifscope->scope = (char*) malloc(strlen(scopeitem)+1);
-        strcpy(onvifscope->scope,scopeitem);
-
-        self->count++;
-        self->scopes = realloc (self->scopes, sizeof (OnvifScope*) * self->count);
-        self->scopes[self->count-1] = onvifscope;
-
-        // tt__ScopeDefinition__Fixed : tt__ScopeDefinition__Fixed || tt__ScopeDefinition__Configurable
-    }
-}
-
 char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
-    if(!self){
-        return NULL;
-    }
+    g_return_val_if_fail (self != NULL, 0);
+    g_return_val_if_fail (ONVIF_IS_DEVICE_SCOPES (self), 0);
+    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
+
     char* ret_val = NULL;
     const char delimeter[2] = "/";
     const char * onvif_key_del = "onvif://www.onvif.org/";
@@ -85,11 +177,11 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
     strcat(key_w_del, delimeter);
 
     int a;
-    for (a = 0 ; a < self->count ; ++a) {
-        if(cstring_startsWith(onvif_key_del, self->scopes[a]->scope)){
+    for (a = 0 ; a < priv->count ; ++a) {
+        if(cstring_startsWith(onvif_key_del, priv->scopes[a]->scope)){
             //Drop onvif scope prefix
-            char * subs = malloc(strlen(self->scopes[a]->scope)-strlen(onvif_key_del) + 1);
-            strncpy(subs,self->scopes[a]->scope+(strlen(onvif_key_del)),strlen(self->scopes[a]->scope) - strlen(onvif_key_del)+1);
+            char * subs = malloc(strlen(priv->scopes[a]->scope)-strlen(onvif_key_del) + 1);
+            strncpy(subs,priv->scopes[a]->scope+(strlen(onvif_key_del)),strlen(priv->scopes[a]->scope) - strlen(onvif_key_del)+1);
 
             if(cstring_startsWith(key_w_del,subs)){ // Found Scope
                 //Extract value
@@ -114,18 +206,5 @@ char * OnvifScopes__extract_scope(OnvifScopes * self, char * key){
         }
     }
     free(key_w_del);
-  return ret_val;
-}
-
-void OnvifScopes__destroy(OnvifScopes * self){
-    if(self){
-        int i;
-        for(i=0;i<self->count;i++){
-            free(self->scopes[i]->scope);
-            free(self->scopes[i]);
-        }
-        self->count = 0;
-        free(self->scopes);
-        free(self);
-    }
+    return ret_val;
 }

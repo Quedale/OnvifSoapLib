@@ -1,7 +1,13 @@
 #include "onvif_device_interface_local.h"
 #include "clogger.h"
 
-typedef struct _OnvifInterface {
+enum
+{
+  PROP_SOAP = 1,
+  N_PROPERTIES
+};
+
+typedef struct _OnvifDeviceInterface {
     char * token; ///< Required attribute.
     int enabled; ///< Required element.
 
@@ -22,27 +28,61 @@ typedef struct _OnvifInterface {
 
     //TODO Support IPv6
 
-} OnvifInterface;
+} OnvifDeviceInterface;
 
-typedef struct _OnvifInterfaces {
+typedef struct {
     int count;
-    OnvifInterface ** interfaces;
-} OnvifInterfaces;
+    OnvifDeviceInterface ** interfaces;
+} OnvifDeviceInterfacesPrivate;
 
-OnvifInterfaces * OnvifInterfaces__create(struct _tds__GetNetworkInterfacesResponse * intefaces){
-    OnvifInterfaces * self = malloc(sizeof(OnvifInterfaces));
-    OnvifInterfaces__init(self,intefaces);
-    return self;
+G_DEFINE_TYPE_WITH_PRIVATE(OnvifDeviceInterfaces, OnvifDeviceInterfaces_, SOAP_TYPE_OBJECT)
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
+
+static void
+OnvifDeviceInterfaces__dispose (GObject *self)
+{
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
+    if(priv->interfaces){
+        for(int i=0;i<priv->count;i++){
+            free(priv->interfaces[i]->token);
+            if(priv->interfaces[i]->name)
+                free(priv->interfaces[i]->name);
+            if(priv->interfaces[i]->mac)
+                free(priv->interfaces[i]->mac);
+            if(priv->interfaces[i]->ipv4_manual){
+                for(int a=0;a<priv->interfaces[i]->ipv4_manual_count;a++){
+                    free(priv->interfaces[i]->ipv4_manual[a]);
+                }
+                free(priv->interfaces[i]->ipv4_manual);
+            }
+            if(priv->interfaces[i]->ipv4_link_local)
+                free(priv->interfaces[i]->ipv4_link_local);
+            if(priv->interfaces[i]->ipv4_from_dhcp)
+                free(priv->interfaces[i]->ipv4_from_dhcp);
+            
+            free(priv->interfaces[i]);
+        }
+        free(priv->interfaces);
+        priv->interfaces = NULL;
+        priv->count = 0;
+    }
 }
 
-void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterfacesResponse * resp){  
-    self->interfaces = malloc(0);
-    self->count = 0;
+static void
+OnvifDeviceInterfaces__set_soap(OnvifDeviceInterfaces * self, struct _tds__GetNetworkInterfacesResponse * resp){
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
 
+    OnvifDeviceInterfaces__dispose(G_OBJECT(self));
+
+    if(!resp){
+        return;
+    }
+
+    priv->interfaces = malloc(0);
     int i;
     for(i=0;i<resp->__sizeNetworkInterfaces;i++){
         struct tt__NetworkInterface interf = resp->NetworkInterfaces[i];
-        OnvifInterface * onvifinterface = malloc(sizeof(OnvifInterface));
+        OnvifDeviceInterface * onvifinterface = malloc(sizeof(OnvifDeviceInterface));
         onvifinterface->enabled = interf.Enabled;
         onvifinterface->token = (char*) malloc(strlen(interf.token)+1);
         strcpy(onvifinterface->token,interf.token);
@@ -116,94 +156,135 @@ void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterf
 
         //TODO IPv6
 
-        self->count++;
-        self->interfaces = realloc (self->interfaces, sizeof (OnvifInterface *) * self->count);
-        self->interfaces[self->count-1] = onvifinterface;
+        priv->count++;
+        priv->interfaces = realloc (priv->interfaces, sizeof (OnvifDeviceInterface *) * priv->count);
+        priv->interfaces[priv->count-1] = onvifinterface;
     }
 }
 
-int OnvifInterfaces__get_count(OnvifInterfaces * self){
-    return self->count;
+static void
+OnvifDeviceInterfaces__set_property (GObject      *object,
+                          guint         prop_id,
+                          const GValue *value,
+                          GParamSpec   *pspec)
+{
+    OnvifDeviceInterfaces * self = ONVIF_DEVICE_INTERFACES (object);
+    // OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (self);
+    switch (prop_id){
+        case PROP_SOAP:
+            OnvifDeviceInterfaces__set_soap(self,g_value_get_pointer (value));
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
 }
 
-OnvifInterface * OnvifInterfaces__get_interface(OnvifInterfaces * self, int index){
-    if(index >= self->count){
+static void
+OnvifDeviceInterfaces__get_property (GObject    *object,
+                          guint       prop_id,
+                          GValue     *value,
+                          GParamSpec *pspec)
+{
+    switch (prop_id){
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+static void
+OnvifDeviceInterfaces__class_init (OnvifDeviceInterfacesClass * klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->dispose = OnvifDeviceInterfaces__dispose;
+    object_class->set_property = OnvifDeviceInterfaces__set_property;
+    object_class->get_property = OnvifDeviceInterfaces__get_property;
+    obj_properties[PROP_SOAP] =
+        g_param_spec_pointer ("soap",
+                            "SoapMessage",
+                            "Pointer to original soap message.",
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+
+    g_object_class_install_properties (object_class,
+                                        N_PROPERTIES,
+                                        obj_properties);
+}
+
+static void
+OnvifDeviceInterfaces__init (OnvifDeviceInterfaces * self)
+{
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
+    priv->interfaces = NULL;
+    priv->count = 0;
+}
+
+OnvifDeviceInterfaces* OnvifDeviceInterfaces__new(struct _tds__GetNetworkInterfacesResponse * resp){
+    return g_object_new (ONVIF_TYPE_DEVICE_INTERFACES, "soap", resp, NULL);
+}
+
+int OnvifDeviceInterfaces__get_count(OnvifDeviceInterfaces * self){
+    g_return_val_if_fail (self != NULL, 0);
+    g_return_val_if_fail (ONVIF_IS_DEVICE_INTERFACES (self), 0);
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
+    return priv->count;
+}
+
+OnvifDeviceInterface * OnvifDeviceInterfaces__get_interface(OnvifDeviceInterfaces * self, int index){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE_INTERFACES (self), NULL);
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
+    if(index >= priv->count){
         return NULL;
     }
-    return self->interfaces[index];
-}
-
-void OnvifInterfaces__destroy(OnvifInterfaces * self){
-    if(self){
-        for(int i=0;i<self->count;i++){
-            free(self->interfaces[i]->token);
-            if(self->interfaces[i]->name)
-                free(self->interfaces[i]->name);
-            if(self->interfaces[i]->mac)
-                free(self->interfaces[i]->mac);
-            if(self->interfaces[i]->ipv4_manual){
-                for(int a=0;a<self->interfaces[i]->ipv4_manual_count;a++){
-                    free(self->interfaces[i]->ipv4_manual[a]);
-                }
-                free(self->interfaces[i]->ipv4_manual);
-            }
-            if(self->interfaces[i]->ipv4_link_local)
-                free(self->interfaces[i]->ipv4_link_local);
-            if(self->interfaces[i]->ipv4_from_dhcp)
-                free(self->interfaces[i]->ipv4_from_dhcp);
-            
-            free(self->interfaces[i]);
-        }
-        free(self->interfaces);
-        free(self);
-    }
+    return priv->interfaces[index];
 }
 
 
-char * OnvifInterface__get_token(OnvifInterface * self){
+char * OnvifDeviceInterface__get_token(OnvifDeviceInterface * self){
     return self->token;
 }
 
-int OnvifInterface__get_enabled(OnvifInterface * self){
+int OnvifDeviceInterface__get_enabled(OnvifDeviceInterface * self){
     return self->enabled;
 }
 
-int OnvifInterface__has_info(OnvifInterface * self){
+int OnvifDeviceInterface__has_info(OnvifDeviceInterface * self){
     return self->has_info;
 }
 
-char * OnvifInterface__get_name(OnvifInterface * self){
+char * OnvifDeviceInterface__get_name(OnvifDeviceInterface * self){
     return self->name;
 }
 
-char * OnvifInterface__get_mac(OnvifInterface * self){
+char * OnvifDeviceInterface__get_mac(OnvifDeviceInterface * self){
     return self->mac;
 }
 
-int OnvifInterface__get_mtu(OnvifInterface * self){
+int OnvifDeviceInterface__get_mtu(OnvifDeviceInterface * self){
     return self->mtu;
 }
 
-int OnvifInterface__is_ipv4_enabled(OnvifInterface * self){
+int OnvifDeviceInterface__is_ipv4_enabled(OnvifDeviceInterface * self){
     return self->ipv4_enabled;
 }
 
-int OnvifInterface__get_ipv4_dhcp(OnvifInterface * self){
+int OnvifDeviceInterface__get_ipv4_dhcp(OnvifDeviceInterface * self){
     return self->ipv4_dhcp;
 }
 
-int OnvifInterface__get_ipv4_manual_count(OnvifInterface * self){
+int OnvifDeviceInterface__get_ipv4_manual_count(OnvifDeviceInterface * self){
     return self->ipv4_manual_count;
 }
 
-char ** OnvifInterface__get_ipv4_manual(OnvifInterface * self){
+char ** OnvifDeviceInterface__get_ipv4_manual(OnvifDeviceInterface * self){
     return self->ipv4_manual;
 }
 
-char * OnvifInterface__get_ipv4_link_local(OnvifInterface * self){
+char * OnvifDeviceInterface__get_ipv4_link_local(OnvifDeviceInterface * self){
     return self->ipv4_link_local;
 }
 
-char * OnvifInterface__get_ipv4_from_dhcp(OnvifInterface * self){
+char * OnvifDeviceInterface__get_ipv4_from_dhcp(OnvifDeviceInterface * self){
     return self->ipv4_from_dhcp;
 }

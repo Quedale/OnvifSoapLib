@@ -15,20 +15,16 @@ struct _OnvifBaseService {
     char * endpoint;
     P_MUTEX_TYPE service_lock;
     P_MUTEX_TYPE prop_lock;
-    void (*error_cb)(OnvifErrorTypes type, void * user_data);
-    void * error_data;
     struct http_da_info *  da_info;
 };
 
-OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint){
     OnvifBaseService * self = malloc(sizeof(OnvifBaseService));
-    OnvifBaseService__init(self,device, endpoint, error_cb, error_data);
+    OnvifBaseService__init(self,device, endpoint);
     return self;
 }
 
-void OnvifBaseService__init(OnvifBaseService * self,OnvifDevice * device, const  char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
-    self->error_cb = error_cb;
-    self->error_data = error_data;
+void OnvifBaseService__init(OnvifBaseService * self,OnvifDevice * device, const  char * endpoint){
     self->device = device;
 
     self->endpoint = malloc(strlen(endpoint)+1);
@@ -227,47 +223,6 @@ void OnvifBaseService__soap_destroy(OnvifBaseService * self, SoapDef * soap){
     soap_end(soap);
     soap_done(soap);
     soap_free(soap);
-}
-
-void OnvifBaseService__set_error_code(OnvifBaseService * self, OnvifErrorTypes code){
-    if(self->error_cb) self->error_cb(code,self->error_data);
-}
-
-void OnvifBaseService__handle_soap_error_old(OnvifBaseService * self, struct soap * soap, int error_code){
-    char * endpoint = OnvifBaseService__get_endpoint(self);
-    if (error_code == SOAP_UDP_ERROR || 
-        error_code == SOAP_TCP_ERROR || 
-        error_code == SOAP_HTTP_ERROR || 
-        error_code == SOAP_SSL_ERROR || 
-        error_code == SOAP_ZLIB_ERROR){
-        C_ERROR("[%s] CONNECTION ERROR\n",endpoint);
-        OnvifBaseService__set_error_code(self,ONVIF_ERROR_CONNECTION);
-    } else if(error_code == SOAP_NO_TAG){
-        C_ERROR("[%s] Server didn't return a soap message.",endpoint);
-        OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
-    } else if(error_code == 400){
-        C_ERROR("[%s] Server returned 400 bad request",endpoint);
-        OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
-    } else {
-        const char * fault_code = soap_fault_subcode(soap);
-        if(soap->error == 400 || //Bad request
-            soap->error == 403 || //Forbidden (soap not authorized returns a 200)
-            soap->error == 404){ //Not found
-            C_ERROR("[%s] NOT VALID ONVIF HTTP Error code [%d]\n",endpoint,soap->error);
-            OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_VALID);
-        } else if (soap->error == 401 || (fault_code && !strcmp(fault_code,FAULT_UNAUTHORIZED))) {
-            C_WARN("[%s] Not Authorized Error\n",endpoint,soap->error);
-            OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_AUTHORIZED);
-        } else if (fault_code && !strcmp(fault_code,FAULT_ACTIONNOTSUPPORTED)) {
-            C_WARN("[%s] Action Not Supported Soap Error\n",endpoint,soap->error);
-            OnvifBaseService__set_error_code(self,ONVIF_ERROR_NOT_SUPPORTED);
-        } else { //Mostly SOAP_FAULT
-            C_ERROR("[%s] Unhandled ERROR %i [%s]\n",endpoint,error_code, fault_code);
-            soap_print_fault(soap, stderr);
-            OnvifBaseService__set_error_code(self,ONVIF_ERROR_SOAP);
-        }
-    }
-    free(endpoint);
 }
 
 //TODO Placeholder until user-input is implemented

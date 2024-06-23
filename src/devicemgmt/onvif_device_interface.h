@@ -2,25 +2,44 @@
 #define ONVIF_DEV_INTERFACE_H_
 
 #include "shard_export.h"
+#include "SoapObject.h"
 
-typedef struct _OnvifInterface OnvifInterface;
-typedef struct _OnvifInterfaces OnvifInterfaces;
+G_BEGIN_DECLS
 
-SHARD_EXPORT int OnvifInterfaces__get_count(OnvifInterfaces * self);
-SHARD_EXPORT OnvifInterface * OnvifInterfaces__get_interface(OnvifInterfaces * self, int index);
-SHARD_EXPORT void OnvifInterfaces__destroy(OnvifInterfaces * self);
+#define ONVIF_TYPE_DEVICE_INTERFACES OnvifDeviceInterfaces__get_type()
+G_DECLARE_FINAL_TYPE (OnvifDeviceInterfaces, OnvifDeviceInterfaces_, ONVIF, DEVICE_INTERFACES, SoapObject)
 
-SHARD_EXPORT char * OnvifInterface__get_token(OnvifInterface * self);
-SHARD_EXPORT int OnvifInterface__get_enabled(OnvifInterface * self);
-SHARD_EXPORT int OnvifInterface__has_info(OnvifInterface * self);
-SHARD_EXPORT char * OnvifInterface__get_name(OnvifInterface * self);
-SHARD_EXPORT char * OnvifInterface__get_mac(OnvifInterface * self);
-SHARD_EXPORT int OnvifInterface__get_mtu(OnvifInterface * self);
-SHARD_EXPORT int OnvifInterface__is_ipv4_enabled(OnvifInterface * self);
-SHARD_EXPORT int OnvifInterface__get_ipv4_dhcp(OnvifInterface * self);
-SHARD_EXPORT int OnvifInterface__get_ipv4_manual_count(OnvifInterface * self);
-SHARD_EXPORT char ** OnvifInterface__get_ipv4_manual(OnvifInterface * self);
-SHARD_EXPORT char * OnvifInterface__get_ipv4_link_local(OnvifInterface * self);
-SHARD_EXPORT char * OnvifInterface__get_ipv4_from_dhcp(OnvifInterface * self);
+typedef struct _OnvifDeviceInterface OnvifDeviceInterface;
+
+struct _OnvifDeviceInterfaces
+{
+    SoapObject parent_instance;
+};
+
+
+struct _OnvifDeviceInterfacesClass
+{
+    SoapObjectClass parent_class;
+};
+
+SHARD_EXPORT int OnvifDeviceInterfaces__get_count(OnvifDeviceInterfaces * self);
+SHARD_EXPORT OnvifDeviceInterface * OnvifDeviceInterfaces__get_interface(OnvifDeviceInterfaces * self, int index);
+
+SHARD_EXPORT char * OnvifDeviceInterface__get_token(OnvifDeviceInterface * self);
+SHARD_EXPORT int OnvifDeviceInterface__get_enabled(OnvifDeviceInterface * self);
+SHARD_EXPORT int OnvifDeviceInterface__has_info(OnvifDeviceInterface * self);
+SHARD_EXPORT char * OnvifDeviceInterface__get_name(OnvifDeviceInterface * self);
+SHARD_EXPORT char * OnvifDeviceInterface__get_mac(OnvifDeviceInterface * self);
+SHARD_EXPORT int OnvifDeviceInterface__get_mtu(OnvifDeviceInterface * self);
+SHARD_EXPORT int OnvifDeviceInterface__is_ipv4_enabled(OnvifDeviceInterface * self);
+SHARD_EXPORT int OnvifDeviceInterface__get_ipv4_dhcp(OnvifDeviceInterface * self);
+SHARD_EXPORT int OnvifDeviceInterface__get_ipv4_manual_count(OnvifDeviceInterface * self);
+SHARD_EXPORT char ** OnvifDeviceInterface__get_ipv4_manual(OnvifDeviceInterface * self);
+SHARD_EXPORT char * OnvifDeviceInterface__get_ipv4_link_local(OnvifDeviceInterface * self);
+SHARD_EXPORT char * OnvifDeviceInterface__get_ipv4_from_dhcp(OnvifDeviceInterface * self);
+
+
+G_END_DECLS
+
 
 #endif

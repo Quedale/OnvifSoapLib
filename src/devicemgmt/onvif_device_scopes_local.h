@@ -9,7 +9,6 @@
 # include "generated/soapH.h"	/* or manually replace with soapcpp2-generated *H.h file */
 #endif
 
-OnvifScopes * OnvifScopes__create(struct _tds__GetScopesResponse * resp);
-void OnvifScopes__init(OnvifScopes * self,struct _tds__GetScopesResponse * resp);
+OnvifScopes * OnvifScopes__new(struct _tds__GetScopesResponse * resp);
 
 #endif

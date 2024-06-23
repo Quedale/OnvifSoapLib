@@ -20,9 +20,9 @@ typedef struct _OnvifMediaService {
 
 OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self);
 
-OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
+OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint){
     OnvifMediaService * self = malloc(sizeof(OnvifMediaService));
-    OnvifMediaService__init(self,device, endpoint, error_cb, error_data);
+    OnvifMediaService__init(self,device, endpoint);
 
     OnvifMediaService__getServiceCapabilities(self);
     if(!self->capabilities || *SoapObject__get_fault(SOAP_OBJECT(self->capabilities)) != SOAP_FAULT_NONE){
@@ -33,8 +33,8 @@ OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char *
     return self;
 }
 
-void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data){
-    self->parent = OnvifBaseService__create(device, endpoint, error_cb, error_data);
+void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint){
+    self->parent = OnvifBaseService__create(device, endpoint);
     P_MUTEX_SETUP(self->profile_lock);
     P_MUTEX_SETUP(self->caps_lock);
     self->profiles = NULL;

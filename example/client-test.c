@@ -175,45 +175,88 @@ int main(int argc, char *argv[])
 
 	OnvifDeviceService * device_service = OnvifDevice__get_device_service(dev);
 
-	char * hostname = OnvifDeviceService__getHostname(device_service);
-	C_DEBUG("Device hostname : %s",hostname);
-	free(hostname);
+	OnvifDeviceHostnameInfo * hostname = OnvifDeviceService__getHostname(device_service);
+	SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(hostname));
+	switch(*fault){
+		case SOAP_FAULT_NONE:
+			C_DEBUG("Device hostname : %s",OnvifDeviceHostnameInfo__get_name(hostname));
+			break;
+		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+		case SOAP_FAULT_CONNECTION_ERROR:
+		case SOAP_FAULT_NOT_VALID:
+		case SOAP_FAULT_UNAUTHORIZED:
+		case SOAP_FAULT_UNEXPECTED:
+		default:
+			C_ERROR("Failed to retrieve hostname %d",*fault);
+			break;
+	}
+	g_object_unref(hostname);
 	
 	OnvifScopes * scopes = OnvifDeviceService__getScopes(device_service);
-	char * name = OnvifScopes__extract_scope(scopes,"name");
-	char * hardware = OnvifScopes__extract_scope(scopes,"hardware");
-	char * location = OnvifScopes__extract_scope(scopes,"location");
-	C_DEBUG("OnvifScope name : %s",name);
-	C_DEBUG("OnvifScope hardware : %s",hardware);
-	C_DEBUG("OnvifScope location : %s",location);
-	free(name);
-	free(hardware);
-	free(location);
-	OnvifScopes__destroy(scopes);
+	fault = SoapObject__get_fault(SOAP_OBJECT(scopes));
+	switch(*fault){
+		case SOAP_FAULT_NONE:
+			char * name = OnvifScopes__extract_scope(scopes,"name");
+			char * hardware = OnvifScopes__extract_scope(scopes,"hardware");
+			char * location = OnvifScopes__extract_scope(scopes,"location");
+			C_DEBUG("OnvifScope name : %s",name);
+			C_DEBUG("OnvifScope hardware : %s",hardware);
+			C_DEBUG("OnvifScope location : %s",location);
+			free(name);
+			free(hardware);
+			free(location);
+			break;
+		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+		case SOAP_FAULT_CONNECTION_ERROR:
+		case SOAP_FAULT_NOT_VALID:
+		case SOAP_FAULT_UNAUTHORIZED:
+		case SOAP_FAULT_UNEXPECTED:
+		default:
+			C_ERROR("Failed to retrieve Device Scopes.");
+			break;
+	}
+	g_object_unref(scopes);
 
 	OnvifMediaService * media_service = OnvifDevice__get_media_service(dev);
 	
 	OnvifDeviceInformation * devinfo = OnvifDeviceService__getDeviceInformation(device_service);
-	if (devinfo){
-		OnvifMediaProfiles * profiles = OnvifMediaService__get_profiles(media_service);
-		SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(profiles));
-		switch(*fault){
-			case SOAP_FAULT_NONE:
-				loop_profiles(profiles,media_service, dev);
-				break;
-			case SOAP_FAULT_ACTION_NOT_SUPPORTED:
-			case SOAP_FAULT_CONNECTION_ERROR:
-			case SOAP_FAULT_NOT_VALID:
-			case SOAP_FAULT_UNAUTHORIZED:
-			case SOAP_FAULT_UNEXPECTED:
-			default:
-				C_ERROR("Failed to retrieve MediaProfiles.");
-				break;
-		}
-		g_object_unref(profiles);
-	}      
+	fault = SoapObject__get_fault(SOAP_OBJECT(devinfo));
+	switch(*fault){
+		case SOAP_FAULT_NONE:
+			C_DEBUG("Device Manufacturer : %s", OnvifDeviceInformation__get_manufacturer(devinfo));
+			C_DEBUG("Device Model : %s", OnvifDeviceInformation__get_model(devinfo));
+			C_DEBUG("Device FirmwareVersion : %s", OnvifDeviceInformation__get_firmwareVersion(devinfo));
+			C_DEBUG("Device SerialNumber : %s", OnvifDeviceInformation__get_serialNumber(devinfo));
+			C_DEBUG("Device HardwareId : %s", OnvifDeviceInformation__get_hardwareId(devinfo));
+			break;
+		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+		case SOAP_FAULT_CONNECTION_ERROR:
+		case SOAP_FAULT_NOT_VALID:
+		case SOAP_FAULT_UNAUTHORIZED:
+		case SOAP_FAULT_UNEXPECTED:
+		default:
+			C_ERROR("Failed to retrieve DeviceInformation.");
+			break;
+	}
+	g_object_unref(devinfo);
 
-	OnvifDeviceInformation__destroy(devinfo);
+	OnvifMediaProfiles * profiles = OnvifMediaService__get_profiles(media_service);
+	fault = SoapObject__get_fault(SOAP_OBJECT(profiles));
+	switch(*fault){
+		case SOAP_FAULT_NONE:
+			loop_profiles(profiles,media_service, dev);
+			break;
+		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+		case SOAP_FAULT_CONNECTION_ERROR:
+		case SOAP_FAULT_NOT_VALID:
+		case SOAP_FAULT_UNAUTHORIZED:
+		case SOAP_FAULT_UNEXPECTED:
+		default:
+			C_ERROR("Failed to retrieve MediaProfiles.");
+			break;
+	}
+	g_object_unref(profiles);
+
 	OnvifDevice__destroy(dev);
 	return 0;
 

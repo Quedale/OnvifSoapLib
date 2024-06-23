@@ -174,10 +174,11 @@ set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h
 set(devicemgmt_headers 
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_datetime.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_capabilities.h
-            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_hostnameinfo.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_info.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_interface.h
-            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_scopes.h)
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_scopes.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h)
 set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profile.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h

@@ -13,8 +13,8 @@ typedef struct _OnvifMediaService OnvifMediaService;
 #include "onvif_device.h"
 
 //Generic Service functions
-SHARD_EXPORT OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
-SHARD_EXPORT void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint, void (*error_cb)(OnvifErrorTypes type, void * user_data), void * error_data);
+SHARD_EXPORT OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint);
+SHARD_EXPORT void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint);
 SHARD_EXPORT void OnvifMediaService__destroy(OnvifMediaService * self);
 SHARD_EXPORT OnvifBaseService * OnvifMediaService__get_parent(OnvifMediaService * self);
 

@@ -17,7 +17,6 @@ typedef struct _OnvifDevice {
     P_MUTEX_TYPE auth_lock;
     int authenticated;
 
-    OnvifErrorTypes last_error;
     P_MUTEX_TYPE prop_lock;
     
     OnvifDeviceService * device_service;
@@ -26,8 +25,6 @@ typedef struct _OnvifDevice {
 
     OnvifCredentials * credentials;
 } OnvifDevice;
-
-void OnvifDevice__set_last_error(OnvifErrorTypes error, void * error_data);
 
 SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
     SoapFault ret_fault = SOAP_FAULT_NONE;
@@ -51,7 +48,7 @@ SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
     switch(*caps_fault){
         case SOAP_FAULT_NONE:
             media = OnvifCapabilities__get_media(capabilities);
-            self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media),OnvifDevice__set_last_error,self);
+            self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media));
             service_fault = OnvifMediaService__get_fault(self->media_service);
             if(service_fault != SOAP_FAULT_NONE){
                 ret_fault = service_fault;
@@ -227,9 +224,8 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
 
     self->authenticated = 0;
     self->time_offset = 0;
-    self->last_error = ONVIF_ERROR_NOT_SET;
     self->credentials = OnvifCredentials__create();
-    self->device_service = OnvifDeviceService__create(self, device_url,OnvifDevice__set_last_error,self);
+    self->device_service = OnvifDeviceService__create(self, device_url);
     self->media_service = NULL;
     self->purl = ParsedURL__create(device_url);
     self->datetime = NULL;
@@ -282,21 +278,6 @@ char * OnvifDevice__get_port(OnvifDevice* self){
         ret = malloc(strlen(self->purl->port)+1);
         strcpy(ret,self->purl->port);
     }
-    P_MUTEX_UNLOCK(self->prop_lock);
-    return ret;
-}
-
-void OnvifDevice__set_last_error(OnvifErrorTypes error, void * error_data){
-    OnvifDevice * self = (OnvifDevice *) error_data;
-    P_MUTEX_LOCK(self->prop_lock);
-    self->last_error = error;
-    P_MUTEX_UNLOCK(self->prop_lock);
-}
-
-OnvifErrorTypes OnvifDevice__get_last_error(OnvifDevice * self){
-    OnvifErrorTypes ret;
-    P_MUTEX_LOCK(self->prop_lock);
-    ret = self->last_error;
     P_MUTEX_UNLOCK(self->prop_lock);
     return ret;
 }

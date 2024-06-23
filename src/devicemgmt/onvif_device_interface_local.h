@@ -9,7 +9,6 @@
 # include "generated/soapH.h"	/* or manually replace with soapcpp2-generated *H.h file */
 #endif
 
-OnvifInterfaces * OnvifInterfaces__create(struct _tds__GetNetworkInterfacesResponse * intefaces);
-void OnvifInterfaces__init(OnvifInterfaces * self, struct _tds__GetNetworkInterfacesResponse * interfaces);
+OnvifDeviceInterfaces * OnvifDeviceInterfaces__new(struct _tds__GetNetworkInterfacesResponse * intefaces);
 
 #endif
