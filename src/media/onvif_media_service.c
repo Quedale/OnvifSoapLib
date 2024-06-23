@@ -12,10 +12,8 @@
 typedef struct _OnvifMediaService {
     OnvifBaseService * parent;
     OnvifMediaProfiles * profiles;
-    OnvifMediaServiceCapabilities * capabilities;
     P_MUTEX_TYPE profile_lock;
     P_MUTEX_TYPE caps_lock;
-    SoapFault fault;
 } OnvifMediaService;
 
 OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self);
@@ -24,12 +22,6 @@ OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char *
     OnvifMediaService * self = malloc(sizeof(OnvifMediaService));
     OnvifMediaService__init(self,device, endpoint);
 
-    OnvifMediaService__getServiceCapabilities(self);
-    if(!self->capabilities || *SoapObject__get_fault(SOAP_OBJECT(self->capabilities)) != SOAP_FAULT_NONE){
-        self->fault = *SoapObject__get_fault(SOAP_OBJECT(self->capabilities));
-    } else {
-        self->fault = SOAP_FAULT_NONE;
-    }
     return self;
 }
 
@@ -38,7 +30,6 @@ void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, con
     P_MUTEX_SETUP(self->profile_lock);
     P_MUTEX_SETUP(self->caps_lock);
     self->profiles = NULL;
-    self->capabilities = NULL;
 }
 
 void OnvifMediaService__destroy(OnvifMediaService * self){
@@ -46,8 +37,6 @@ void OnvifMediaService__destroy(OnvifMediaService * self){
         OnvifBaseService__destroy(self->parent);
         if(self->profiles)
             g_object_unref(self->profiles);
-        if(self->capabilities)
-            g_object_unref(self->capabilities);
         P_MUTEX_CLEANUP(self->profile_lock);
         P_MUTEX_CLEANUP(self->caps_lock);
         free(self);
@@ -81,7 +70,7 @@ OnvifMediaProfiles * OnvifMediaService__get_profiles(OnvifMediaService * self){
     return self->profiles;
 }
 
-OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_private(OnvifMediaService* self){
+OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities(OnvifMediaService* self){
 
     struct _trt__GetServiceCapabilities req;
     struct _trt__GetServiceCapabilitiesResponse resp;
@@ -93,19 +82,6 @@ OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities_privat
     
     return retval;
 
-}
-
-OnvifMediaServiceCapabilities * OnvifMediaService__getServiceCapabilities(OnvifMediaService* self){
-    P_MUTEX_LOCK(self->caps_lock);
-    if(!self->capabilities || *SoapObject__get_fault(SOAP_OBJECT(self->capabilities)) != SOAP_FAULT_NONE){
-        if(self->capabilities){
-            g_object_unref(self->capabilities);
-            self->capabilities = NULL;
-        }
-        self->capabilities = OnvifMediaService__getServiceCapabilities_private(self);
-    }
-    P_MUTEX_UNLOCK(self->caps_lock);
-    return self->capabilities;
 }
 
 OnvifMediaProfiles * OnvifMediaService__getProfiles(OnvifMediaService* self){
@@ -183,7 +159,7 @@ exit:
 OnvifMediaUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
     char * endpoint = OnvifMediaService__get_endpoint(self);
     OnvifMediaUri * ret_val = NULL;
-    if(!self || !self->capabilities){
+    if(!self){
         C_ERROR("[%s] OnvifMediaService__getSnapshotUri - MediaService uninitialized.",endpoint);
         ret_val = OnvifSnapshotUri__new(NULL);
         SoapObject__set_fault(SOAP_OBJECT(ret_val),SOAP_FAULT_UNEXPECTED);
@@ -500,8 +476,4 @@ unlock_exit:
 exit:
     free(endpoint);
     return ret_fault;
-}
-
-SoapFault OnvifMediaService__get_fault(OnvifMediaService *self){
-    return self->fault;
 }

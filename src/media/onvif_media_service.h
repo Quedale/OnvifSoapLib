@@ -31,6 +31,5 @@ SHARD_EXPORT OnvifMediaProfiles * OnvifMediaService__getProfiles(OnvifMediaServi
 SHARD_EXPORT OnvifMediaUri * OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index);
 SHARD_EXPORT OnvifSnapshot * OnvifMediaService__getSnapshot(OnvifMediaService *self, int profile_index);
 SHARD_EXPORT OnvifMediaUri * OnvifMediaService__getStreamUri(OnvifMediaService* self, int profile_index);
-SoapFault OnvifMediaService__get_fault(OnvifMediaService *self);
 
 #endif

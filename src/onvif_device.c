@@ -44,17 +44,10 @@ SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
     OnvifMedia * media;
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
     SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
-    SoapFault service_fault;
     switch(*caps_fault){
         case SOAP_FAULT_NONE:
             media = OnvifCapabilities__get_media(capabilities);
             self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media));
-            service_fault = OnvifMediaService__get_fault(self->media_service);
-            if(service_fault != SOAP_FAULT_NONE){
-                ret_fault = service_fault;
-                OnvifMediaService__destroy(self->media_service);
-                self->media_service = NULL;
-            }
             break;
         case SOAP_FAULT_ACTION_NOT_SUPPORTED:
         case SOAP_FAULT_CONNECTION_ERROR:

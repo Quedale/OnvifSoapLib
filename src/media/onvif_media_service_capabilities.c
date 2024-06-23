@@ -28,7 +28,7 @@ OnvifMediaServiceCapabilities__set_soap(OnvifMediaServiceCapabilities * self, st
     if(!caps){
         C_ERROR("Media GetServiceCapabilities returned NULL. Default capabilities");
         priv->snapshot_uri = 0;
-        return;ONVIF_MEDIASERVICECAPABILITIES_H_
+        return;
     }
 
     // enum xsd__boolean * Rotation = caps->Rotation;

@@ -181,8 +181,9 @@ void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *)){
 
   if (!soap_valid_socket(soap_bind(&serv, NULL, 0, 1000)))
   {
-          soap_print_fault(&serv, stderr);
-          exit(1);
+    C_ERROR("Failed to bind discovery socket");
+    soap_print_fault(&serv, stderr);
+    goto exit;
   }
 
   //TODO Support provided setting
@@ -220,6 +221,7 @@ void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *)){
     C_ERROR("error listening prob...");
   }
 
+exit:
   if(debug_flag){
     soap_set_logging_outbound(&serv,NULL);
     soap_set_logging_inbound(&serv,NULL);
