@@ -106,6 +106,7 @@ void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_serv
 				g_object_unref(snapshot_uri);
 				continue;
 		}
+		g_object_unref(media_caps);
 		g_object_unref(snapshot_uri);
 
 		OnvifSnapshot * snapshot = OnvifMediaService__getSnapshot(media_service, i);
@@ -257,6 +258,28 @@ int main(int argc, char *argv[])
 	}
 	g_object_unref(profiles);
 
+
+	OnvifCapabilities* caps = OnvifDeviceService__getCapabilities(device_service);
+	fault = SoapObject__get_fault(SOAP_OBJECT(caps));
+    switch(*fault){
+        case SOAP_FAULT_NONE:
+            OnvifDeviceCapabilities * device_caps = OnvifCapabilities__get_device(caps);
+            OnvifSystemCapabilities * sys_caps = OnvifDeviceCapabilities__get_system(device_caps);
+			int major = OnvifSystemCapabilities__get_majorVersion(sys_caps);
+			int minor = OnvifSystemCapabilities__get_minorVersion(sys_caps);
+            C_DEBUG("ONVIF Version : %d.%02d",major,minor);
+            break;
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            C_ERROR("Failed to retrieve Device Capabilities");
+            break;
+    }
+	g_object_unref(caps);
+	
 	OnvifDevice__destroy(dev);
 	return 0;
 
