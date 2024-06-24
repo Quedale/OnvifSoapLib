@@ -104,6 +104,7 @@ OnvifMediaUri__dispose (GObject *self)
         free(priv->timeout);
         priv->timeout = NULL;
     }
+    G_OBJECT_CLASS (OnvifMediaUri__parent_class)->dispose (self);
 }
 
 static void

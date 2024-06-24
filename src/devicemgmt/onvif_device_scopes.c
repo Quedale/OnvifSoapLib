@@ -22,26 +22,13 @@ G_DEFINE_TYPE_WITH_PRIVATE(OnvifScopes, OnvifScopes_, SOAP_TYPE_OBJECT)
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifScopes__dispose (GObject *self)
-{
-    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
-    if(priv->scopes){
-        int i;
-        for(i=0;i<priv->count;i++){
-            free(priv->scopes[i]->scope);
-            free(priv->scopes[i]);
-        }
-        priv->count = 0;
-        free(priv->scopes);
-        priv->scopes = NULL;
-    }
-}
+OnvifScopes__reset (OnvifScopes *self);
 
 static void
 OnvifScopes__set_soap(OnvifScopes * self, struct _tds__GetScopesResponse * resp){
     OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
 
-    OnvifScopes__dispose(G_OBJECT(self));
+    OnvifScopes__reset(self);
 
     if(!resp){
         return;
@@ -97,6 +84,28 @@ OnvifScopes__get_property (GObject    *object,
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
             break;
     }
+}
+
+static void
+OnvifScopes__reset (OnvifScopes *self){
+    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (self);
+    if(priv->scopes){
+        int i;
+        for(i=0;i<priv->count;i++){
+            free(priv->scopes[i]->scope);
+            free(priv->scopes[i]);
+        }
+        priv->count = 0;
+        free(priv->scopes);
+        priv->scopes = NULL;
+    }
+}
+
+static void
+OnvifScopes__dispose (GObject *self)
+{
+    OnvifScopes__reset(ONVIF_DEVICE_SCOPES(self));
+    G_OBJECT_CLASS (OnvifScopes__parent_class)->dispose (self);
 }
 
 static void

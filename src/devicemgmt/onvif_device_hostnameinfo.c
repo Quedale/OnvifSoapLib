@@ -90,6 +90,7 @@ OnvifDeviceHostnameInfo__dispose (GObject *self)
         free(priv->name);
         priv->name = NULL;
     }
+    G_OBJECT_CLASS (OnvifDeviceHostnameInfo__parent_class)->dispose (self);
 }
 
 static void

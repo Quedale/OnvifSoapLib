@@ -140,6 +140,7 @@ OnvifDeviceInformation__dispose (GObject *self)
         free(priv->serialNumber);
         priv->serialNumber = NULL;
     }
+    G_OBJECT_CLASS (OnvifDeviceInformation__parent_class)->dispose (self);
 }
 
 static void

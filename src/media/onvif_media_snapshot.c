@@ -77,6 +77,7 @@ OnvifSnapshot__dispose (GObject *self)
         priv->buffer = NULL;
     }
     priv->size = 0;
+    G_OBJECT_CLASS (OnvifSnapshot__parent_class)->dispose (self);
 }
 
 static void

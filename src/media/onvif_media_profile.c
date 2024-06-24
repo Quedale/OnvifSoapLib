@@ -88,6 +88,7 @@ OnvifMediaProfiles__dispose (GObject *self)
     }
     free(priv->profiles);
     priv->count = 0;
+    G_OBJECT_CLASS (OnvifMediaProfiles__parent_class)->dispose (self);
 }
 
 static void

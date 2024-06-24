@@ -39,40 +39,13 @@ G_DEFINE_TYPE_WITH_PRIVATE(OnvifDeviceInterfaces, OnvifDeviceInterfaces_, SOAP_T
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifDeviceInterfaces__dispose (GObject *self)
-{
-    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
-    if(priv->interfaces){
-        for(int i=0;i<priv->count;i++){
-            free(priv->interfaces[i]->token);
-            if(priv->interfaces[i]->name)
-                free(priv->interfaces[i]->name);
-            if(priv->interfaces[i]->mac)
-                free(priv->interfaces[i]->mac);
-            if(priv->interfaces[i]->ipv4_manual){
-                for(int a=0;a<priv->interfaces[i]->ipv4_manual_count;a++){
-                    free(priv->interfaces[i]->ipv4_manual[a]);
-                }
-                free(priv->interfaces[i]->ipv4_manual);
-            }
-            if(priv->interfaces[i]->ipv4_link_local)
-                free(priv->interfaces[i]->ipv4_link_local);
-            if(priv->interfaces[i]->ipv4_from_dhcp)
-                free(priv->interfaces[i]->ipv4_from_dhcp);
-            
-            free(priv->interfaces[i]);
-        }
-        free(priv->interfaces);
-        priv->interfaces = NULL;
-        priv->count = 0;
-    }
-}
+OnvifDeviceInterfaces__reset (OnvifDeviceInterfaces *self);
 
 static void
 OnvifDeviceInterfaces__set_soap(OnvifDeviceInterfaces * self, struct _tds__GetNetworkInterfacesResponse * resp){
     OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
 
-    OnvifDeviceInterfaces__dispose(G_OBJECT(self));
+    OnvifDeviceInterfaces__reset(self);
 
     if(!resp){
         return;
@@ -191,6 +164,43 @@ OnvifDeviceInterfaces__get_property (GObject    *object,
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
             break;
     }
+}
+
+static void
+OnvifDeviceInterfaces__reset (OnvifDeviceInterfaces *self)
+{
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (self);
+    if(priv->interfaces){
+        for(int i=0;i<priv->count;i++){
+            free(priv->interfaces[i]->token);
+            if(priv->interfaces[i]->name)
+                free(priv->interfaces[i]->name);
+            if(priv->interfaces[i]->mac)
+                free(priv->interfaces[i]->mac);
+            if(priv->interfaces[i]->ipv4_manual){
+                for(int a=0;a<priv->interfaces[i]->ipv4_manual_count;a++){
+                    free(priv->interfaces[i]->ipv4_manual[a]);
+                }
+                free(priv->interfaces[i]->ipv4_manual);
+            }
+            if(priv->interfaces[i]->ipv4_link_local)
+                free(priv->interfaces[i]->ipv4_link_local);
+            if(priv->interfaces[i]->ipv4_from_dhcp)
+                free(priv->interfaces[i]->ipv4_from_dhcp);
+            
+            free(priv->interfaces[i]);
+        }
+        free(priv->interfaces);
+        priv->interfaces = NULL;
+        priv->count = 0;
+    }
+}
+
+static void
+OnvifDeviceInterfaces__dispose (GObject *self)
+{
+    OnvifDeviceInterfaces__reset(ONVIF_DEVICE_INTERFACES(self));
+    G_OBJECT_CLASS (OnvifDeviceInterfaces__parent_class)->dispose (self);
 }
 
 static void
