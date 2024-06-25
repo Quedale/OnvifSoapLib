@@ -1,5 +1,6 @@
 #include "onvif_media_profile_local.h"
 #include "clogger.h"
+#include "../SoapObject.h"
 
 typedef struct _OnvifProfile {
     int copy;
@@ -8,22 +9,18 @@ typedef struct _OnvifProfile {
     char * token;
 } OnvifProfile;
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct {
     OnvifProfile ** profiles;
     int count;
 } OnvifMediaProfilesPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifMediaProfiles, OnvifMediaProfiles_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifMediaProfiles__set_soap(OnvifMediaProfiles * self, struct _trt__GetProfilesResponse * resp){
+OnvifMediaProfiles__construct(SoapObject * obj, gpointer ptr){
+    OnvifMediaProfiles * self = ONVIF_MEDIA_PROFILES(obj);
+    struct _trt__GetProfilesResponse * resp = ptr;
+    
     OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (self);
     if(priv->profiles){
         for (int i = 0; i < priv->count; i++){
@@ -46,38 +43,6 @@ OnvifMediaProfiles__set_soap(OnvifMediaProfiles * self, struct _trt__GetProfiles
     }
 }
 
-static void
-OnvifMediaProfiles__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifMediaProfiles * self = ONVIF_MEDIA_PROFILES (object);
-    // OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifMediaProfiles__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifMediaProfiles__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    // OnvifMediaProfiles *thread = ONVIF_TYPE_MEDIA_URI (object);
-    // OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (thread);
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
 
 static void
 OnvifMediaProfiles__dispose (GObject *self)
@@ -95,18 +60,10 @@ static void
 OnvifMediaProfiles__class_init (OnvifMediaProfilesClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
-    object_class->dispose = OnvifMediaProfiles__dispose;
-    object_class->set_property = OnvifMediaProfiles__set_property;
-    object_class->get_property = OnvifMediaProfiles__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
 
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    soapobj_class->construct = OnvifMediaProfiles__construct;
+    object_class->dispose = OnvifMediaProfiles__dispose;
 }
 
 static void

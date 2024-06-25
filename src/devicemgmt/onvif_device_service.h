@@ -9,12 +9,12 @@
 #include "onvif_device_info.h"
 #include "onvif_device_interface.h"
 #include "onvif_device_scopes.h"
-#include "onvif_datetime.h"
+#include "onvif_device_datetime.h"
 
 G_BEGIN_DECLS
 
-#define ONVIF_TYPE_DEVICEMGMT_SERVICE OnvifDeviceService__get_type()
-G_DECLARE_FINAL_TYPE (OnvifDeviceService, OnvifDeviceService_, ONVIF, DEVICEMGMT_SERVICE, OnvifBaseService)
+#define ONVIF_TYPE_DEVICE_SERVICE OnvifDeviceService__get_type()
+G_DECLARE_FINAL_TYPE (OnvifDeviceService, OnvifDeviceService_, ONVIF, DEVICE_SERVICE, OnvifBaseService)
 
 struct _OnvifDeviceService
 {
@@ -33,7 +33,7 @@ SHARD_EXPORT OnvifDeviceHostnameInfo * OnvifDeviceService__getHostname(OnvifDevi
 SHARD_EXPORT OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self);
 SHARD_EXPORT OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self);
-SHARD_EXPORT OnvifDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);
+SHARD_EXPORT OnvifDeviceDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);
 
 G_END_DECLS
 

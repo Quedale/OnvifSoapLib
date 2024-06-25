@@ -1,12 +1,6 @@
 #include "onvif_device_interface_local.h"
 #include "clogger.h"
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct _OnvifDeviceInterface {
     char * token; ///< Required attribute.
     int enabled; ///< Required element.
@@ -36,14 +30,15 @@ typedef struct {
 } OnvifDeviceInterfacesPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifDeviceInterfaces, OnvifDeviceInterfaces_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
 OnvifDeviceInterfaces__reset (OnvifDeviceInterfaces *self);
 
 static void
-OnvifDeviceInterfaces__set_soap(OnvifDeviceInterfaces * self, struct _tds__GetNetworkInterfacesResponse * resp){
-    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (ONVIF_DEVICE_INTERFACES(self));
+OnvifDeviceInterfaces__construct(SoapObject * obj, gpointer ptr){
+    OnvifDeviceInterfaces *self = ONVIF_DEVICE_INTERFACES(obj);
+    struct _tds__GetNetworkInterfacesResponse * resp = ptr;
+    OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (self);
 
     OnvifDeviceInterfaces__reset(self);
 
@@ -136,37 +131,6 @@ OnvifDeviceInterfaces__set_soap(OnvifDeviceInterfaces * self, struct _tds__GetNe
 }
 
 static void
-OnvifDeviceInterfaces__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifDeviceInterfaces * self = ONVIF_DEVICE_INTERFACES (object);
-    // OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifDeviceInterfaces__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifDeviceInterfaces__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
 OnvifDeviceInterfaces__reset (OnvifDeviceInterfaces *self)
 {
     OnvifDeviceInterfacesPrivate *priv = OnvifDeviceInterfaces__get_instance_private (self);
@@ -208,17 +172,8 @@ OnvifDeviceInterfaces__class_init (OnvifDeviceInterfacesClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifDeviceInterfaces__dispose;
-    object_class->set_property = OnvifDeviceInterfaces__set_property;
-    object_class->get_property = OnvifDeviceInterfaces__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
-
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    soapobj_class->construct = OnvifDeviceInterfaces__construct;
 }
 
 static void

@@ -1,23 +1,17 @@
 #include "onvif_device_hostnameinfo_local.h"
 #include "clogger.h"
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct {
     char * name;
     gboolean fromDHCP;
 } OnvifDeviceHostnameInfoPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifDeviceHostnameInfo, OnvifDeviceHostnameInfo_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifDeviceHostnameInfo__set_soap(OnvifDeviceHostnameInfo * self, struct _tds__GetHostnameResponse * response){
-    OnvifDeviceHostnameInfoPrivate *priv = OnvifDeviceHostnameInfo__get_instance_private (ONVIF_DEVICE_HOSTNAME_INFO(self));
+OnvifDeviceHostnameInfo__construct(SoapObject * obj, gpointer ptr){
+    struct _tds__GetHostnameResponse * response = ptr;
+    OnvifDeviceHostnameInfoPrivate *priv = OnvifDeviceHostnameInfo__get_instance_private (ONVIF_DEVICE_HOSTNAME_INFO(obj));
 
     if(!response || !response->HostnameInformation){
         if(priv->name){
@@ -52,37 +46,6 @@ OnvifDeviceHostnameInfo__set_soap(OnvifDeviceHostnameInfo * self, struct _tds__G
 }
 
 static void
-OnvifDeviceHostnameInfo__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifDeviceHostnameInfo * self = ONVIF_DEVICE_HOSTNAME_INFO (object);
-    // OnvifDeviceHostnameInfoPrivate *priv = OnvifDeviceHostnameInfo__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifDeviceHostnameInfo__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifDeviceHostnameInfo__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
 OnvifDeviceHostnameInfo__dispose (GObject *self)
 {
     OnvifDeviceHostnameInfoPrivate *priv = OnvifDeviceHostnameInfo__get_instance_private (ONVIF_DEVICE_HOSTNAME_INFO(self));
@@ -98,17 +61,8 @@ OnvifDeviceHostnameInfo__class_init (OnvifDeviceHostnameInfoClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifDeviceHostnameInfo__dispose;
-    object_class->set_property = OnvifDeviceHostnameInfo__set_property;
-    object_class->get_property = OnvifDeviceHostnameInfo__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
-
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    soapobj_class->construct = OnvifDeviceHostnameInfo__construct;
 }
 
 static void

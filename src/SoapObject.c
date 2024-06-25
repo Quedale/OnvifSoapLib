@@ -1,10 +1,17 @@
 #include "SoapObject.h"
 
+enum
+{
+  PROP_SOAP = 1,
+  N_PROPERTIES
+};
+
 typedef struct {
   SoapFault fault;
 } SoapObjectPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (SoapObject, SoapObject_, G_TYPE_OBJECT)
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 GType
 SoapFault__get_type (void)
@@ -25,10 +32,61 @@ SoapFault__get_type (void)
         return g_define_type_id__volatile;
 }
 
+static void
+SoapObject__set_object(SoapObject * obj, gpointer ptr){
+    if(SOAP_OBJECT_GET_CLASS(obj)->construct){
+        SOAP_OBJECT_GET_CLASS(obj)->construct(obj,ptr);
+    }
+}
+
+static void
+SoapObject__set_property (GObject      *object,
+                          guint         prop_id,
+                          const GValue *value,
+                          GParamSpec   *pspec)
+{
+    SoapObject * self = SOAP_OBJECT (object);
+    switch (prop_id){
+        case PROP_SOAP:
+            SoapObject__set_object(self,g_value_get_pointer (value));
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+static void
+SoapObject__get_property (GObject    *object,
+                          guint       prop_id,
+                          GValue     *value,
+                          GParamSpec *pspec)
+{
+    switch (prop_id){
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
 
 static void
 SoapObject__class_init (SoapObjectClass *klass)
 {
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->set_property = SoapObject__set_property;
+    object_class->get_property = SoapObject__get_property;
+    klass->construct = NULL;
+
+    obj_properties[PROP_SOAP] =
+        g_param_spec_pointer ("soap",
+                            "SoapMessage",
+                            "Pointer to original soap message.",
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+
+    g_object_class_install_properties (object_class,
+                                        N_PROPERTIES,
+                                        obj_properties);
 }
 
 static void

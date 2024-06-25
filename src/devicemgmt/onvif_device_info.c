@@ -2,12 +2,6 @@
 #include <string.h>
 #include "onvif_device_info_local.h"
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct {
     char * manufacturer;
     char * model;
@@ -17,11 +11,11 @@ typedef struct {
 } OnvifDeviceInformationPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifDeviceInformation, OnvifDeviceInformation_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifDeviceInformation__set_soap(OnvifDeviceInformation * self, struct _tds__GetDeviceInformationResponse * response){
-    OnvifDeviceInformationPrivate *priv = OnvifDeviceInformation__get_instance_private (ONVIF_DEVICE_INFORMATION(self));
+OnvifDeviceInformation__construct(SoapObject * obj, gpointer ptr){
+    struct _tds__GetDeviceInformationResponse * response = ptr;
+    OnvifDeviceInformationPrivate *priv = OnvifDeviceInformation__get_instance_private (ONVIF_DEVICE_INFORMATION(obj));
 
     if(priv->firmwareVersion){
         free(priv->firmwareVersion);
@@ -86,37 +80,6 @@ OnvifDeviceInformation__set_soap(OnvifDeviceInformation * self, struct _tds__Get
 }
 
 static void
-OnvifDeviceInformation__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifDeviceInformation * self = ONVIF_DEVICE_INFORMATION (object);
-    // OnvifDeviceInformationPrivate *priv = OnvifDeviceInformation__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifDeviceInformation__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifDeviceInformation__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
 OnvifDeviceInformation__dispose (GObject *self)
 {
     OnvifDeviceInformationPrivate *priv = OnvifDeviceInformation__get_instance_private (ONVIF_DEVICE_INFORMATION(self));
@@ -148,17 +111,8 @@ OnvifDeviceInformation__class_init (OnvifDeviceInformationClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifDeviceInformation__dispose;
-    object_class->set_property = OnvifDeviceInformation__set_property;
-    object_class->get_property = OnvifDeviceInformation__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
-
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    soapobj_class->construct = OnvifDeviceInformation__construct;
 }
 
 static void

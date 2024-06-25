@@ -1,12 +1,6 @@
 #include "onvif_media_uri_local.h"
 #include "clogger.h"
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct {
     char * uri;
     int invalidAfterConnect;
@@ -15,10 +9,11 @@ typedef struct {
 } OnvifMediaUriPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifMediaUri, OnvifMediaUri_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifMediaUri__set_soap(OnvifMediaUri * self, struct tt__MediaUri * media_uri){
+OnvifMediaUri__construct(SoapObject * obj, gpointer ptr){
+    OnvifMediaUri * self = ONVIF_MEDIA_URI(obj);
+    struct tt__MediaUri * media_uri = ptr;
     OnvifMediaUriPrivate *priv = OnvifMediaUri__get_instance_private (self);
     if(!media_uri){
         if(priv->uri) free(priv->uri);
@@ -59,39 +54,6 @@ OnvifMediaUri__set_soap(OnvifMediaUri * self, struct tt__MediaUri * media_uri){
 }
 
 static void
-OnvifMediaUri__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifMediaUri * self = ONVIF_MEDIA_URI (object);
-    // OnvifMediaUriPrivate *priv = OnvifMediaUri__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifMediaUri__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifMediaUri__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    // OnvifMediaUri *thread = ONVIF_TYPE_MEDIA_URI (object);
-    // OnvifMediaUriPrivate *priv = OnvifMediaUri__get_instance_private (thread);
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
 OnvifMediaUri__dispose (GObject *self)
 {
     OnvifMediaUriPrivate *priv = OnvifMediaUri__get_instance_private (ONVIF_MEDIA_URI(self));
@@ -111,18 +73,10 @@ static void
 OnvifMediaUri__class_init (OnvifMediaUriClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    
     object_class->dispose = OnvifMediaUri__dispose;
-    object_class->set_property = OnvifMediaUri__set_property;
-    object_class->get_property = OnvifMediaUri__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
-
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    soapobj_class->construct = OnvifMediaUri__construct;
 }
 
 static void

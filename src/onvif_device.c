@@ -89,12 +89,12 @@ SoapFault OnvifDevice__authenticate(OnvifDevice* self){
     }
 
     if(!self->datetime){
-        OnvifDateTime * onviftime = OnvifDeviceService__getSystemDateAndTime(self->device_service);
+        OnvifDeviceDateTime * onviftime = OnvifDeviceService__getSystemDateAndTime(self->device_service);
         time_t datetime;
         ret_fault = *SoapObject__get_fault(SOAP_OBJECT(onviftime));
         switch(ret_fault){
             case SOAP_FAULT_NONE:
-                datetime = *OnvifDateTime__get_datetime(onviftime);
+                datetime = *OnvifDeviceDateTime__get_datetime(onviftime);
                 if(datetime > 0){
                     P_MUTEX_LOCK(self->prop_lock);
                     self->time_offset = difftime(datetime,time(NULL));

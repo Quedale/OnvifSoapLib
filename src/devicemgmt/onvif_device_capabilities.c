@@ -1,12 +1,6 @@
 #include "onvif_device_capabilities_local.h"
 #include "clogger.h"
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct _OnvifMedia {
     char *xaddr;
     //TODO StreamingCapabilities
@@ -44,7 +38,6 @@ typedef struct {
 } OnvifCapabilitiesPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifCapabilities, OnvifCapabilities_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void OnvifCapabilities__reset (OnvifCapabilities *self);
 OnvifMedia * OnvifMedia__create(struct tt__MediaCapabilities * caps);
@@ -55,8 +48,10 @@ OnvifSystemCapabilities * OnvifSystemCapabilities__create(struct tt__SystemCapab
 void OnvifSystemCapabilities__destroy(OnvifSystemCapabilities * self);
 
 static void
-OnvifCapabilities__set_soap(OnvifCapabilities * self, struct _tds__GetCapabilitiesResponse * response){
-    OnvifCapabilitiesPrivate *priv = OnvifCapabilities__get_instance_private (ONVIF_DEVICE_CAPABILITIES(self));
+OnvifCapabilities__construct(SoapObject * obj, gpointer ptr){
+    OnvifCapabilities * self = ONVIF_DEVICE_CAPABILITIES(obj);
+    struct _tds__GetCapabilitiesResponse * response = ptr;
+    OnvifCapabilitiesPrivate *priv = OnvifCapabilities__get_instance_private (self);
 
     OnvifCapabilities__reset(self);
 
@@ -66,39 +61,6 @@ OnvifCapabilities__set_soap(OnvifCapabilities * self, struct _tds__GetCapabiliti
 
      priv->media = OnvifMedia__create(response->Capabilities->Media);
      priv->device = OnvifDeviceCapabilities__create(response->Capabilities->Device);
-}
-
-static void
-OnvifCapabilities__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifCapabilities * self = ONVIF_DEVICE_CAPABILITIES (object);
-    // OnvifCapabilitiesPrivate *priv = OnvifCapabilities__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifCapabilities__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifCapabilities__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    // OnvifCapabilities *thread = ONVIF_DEVICE_CAPABILITIES (object);
-    // OnvifCapabilitiesPrivate *priv = OnvifCapabilities__get_instance_private (thread);
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
 }
 
 static void
@@ -123,17 +85,8 @@ OnvifCapabilities__class_init (OnvifCapabilitiesClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifCapabilities__dispose;
-    object_class->set_property = OnvifCapabilities__set_property;
-    object_class->get_property = OnvifCapabilities__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
-
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    soapobj_class->construct = OnvifCapabilities__construct;
 }
 
 static void

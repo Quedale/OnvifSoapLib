@@ -2,12 +2,6 @@
 #include "clogger.h"
 #include "cstring_utils.h"
 
-enum
-{
-  PROP_SOAP = 1,
-  N_PROPERTIES
-};
-
 typedef struct _OnvifScope {
     char * scope;
     int editable;
@@ -19,14 +13,15 @@ typedef struct {
 } OnvifScopesPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifScopes, OnvifScopes_, SOAP_TYPE_OBJECT)
-static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
 OnvifScopes__reset (OnvifScopes *self);
 
 static void
-OnvifScopes__set_soap(OnvifScopes * self, struct _tds__GetScopesResponse * resp){
-    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (ONVIF_DEVICE_SCOPES(self));
+OnvifScopes__construct(SoapObject * obj, gpointer ptr){
+    OnvifScopes * self = ONVIF_DEVICE_SCOPES(obj);
+    struct _tds__GetScopesResponse * resp = ptr;
+    OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (self);
 
     OnvifScopes__reset(self);
 
@@ -52,37 +47,6 @@ OnvifScopes__set_soap(OnvifScopes * self, struct _tds__GetScopesResponse * resp)
         priv->scopes[priv->count-1] = onvifscope;
 
         // tt__ScopeDefinition__Fixed : tt__ScopeDefinition__Fixed || tt__ScopeDefinition__Configurable
-    }
-}
-
-static void
-OnvifScopes__set_property (GObject      *object,
-                          guint         prop_id,
-                          const GValue *value,
-                          GParamSpec   *pspec)
-{
-    OnvifScopes * self = ONVIF_DEVICE_SCOPES (object);
-    // OnvifScopesPrivate *priv = OnvifScopes__get_instance_private (self);
-    switch (prop_id){
-        case PROP_SOAP:
-            OnvifScopes__set_soap(self,g_value_get_pointer (value));
-            break;
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
-    }
-}
-
-static void
-OnvifScopes__get_property (GObject    *object,
-                          guint       prop_id,
-                          GValue     *value,
-                          GParamSpec *pspec)
-{
-    switch (prop_id){
-        default:
-            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-            break;
     }
 }
 
@@ -113,17 +77,8 @@ OnvifScopes__class_init (OnvifScopesClass * klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifScopes__dispose;
-    object_class->set_property = OnvifScopes__set_property;
-    object_class->get_property = OnvifScopes__get_property;
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
-
-    g_object_class_install_properties (object_class,
-                                        N_PROPERTIES,
-                                        obj_properties);
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    soapobj_class->construct = OnvifScopes__construct;
 }
 
 static void

@@ -58,7 +58,7 @@ void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_serv
 				if(!uri){
 					ONVIF_MEDIA_ERROR("[%s] No StreamURI provided...",dev);
 				} else {
-					ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",dev, uri);
+					ONVIF_MEDIA_INFO("[%s] StreamURI : %s",dev, uri);
 				}
 				break;
 			case SOAP_FAULT_ACTION_NOT_SUPPORTED:

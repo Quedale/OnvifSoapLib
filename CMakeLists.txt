@@ -172,8 +172,8 @@ set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h
             ${PROJECT_SOURCE_DIR}/src/shard_export.h
             ${PROJECT_SOURCE_DIR}/src/SoapObject.h)
 set(devicemgmt_headers 
-            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_datetime.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_capabilities.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_datetime.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_hostnameinfo.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_info.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_interface.h

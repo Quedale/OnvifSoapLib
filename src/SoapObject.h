@@ -13,7 +13,7 @@ G_BEGIN_DECLS
  * Type declaration.
  */
 #define SOAP_TYPE_OBJECT SoapObject__get_type()
-G_DECLARE_FINAL_TYPE (SoapObject, SoapObject_, SOAP, OBJECT, GObject)
+G_DECLARE_DERIVABLE_TYPE (SoapObject, SoapObject_, SOAP, OBJECT, GObject)
 
 
 typedef enum {
@@ -33,17 +33,11 @@ GType SoapFault__get_type (void) G_GNUC_CONST;
 #define SOAP_TYPE_FAULT (SoapFault__get_type())
 
 
-struct _SoapObject
-{
-  GObject parent_instance;
-
-  /* Other members, including private data. */
-};
-
-
 struct _SoapObjectClass
 {
   GObjectClass parent_class;
+
+  void (* construct) (SoapObject  * self, gpointer ptr);
 
 };
 
