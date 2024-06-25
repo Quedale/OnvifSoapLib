@@ -10,7 +10,7 @@ typedef struct _OnvifDevice OnvifDevice;
 
 #define ONVIF_DEVICE_LOG(fmt, dev, level, ...) \
   if(dev){ \
-    char * asdendpoint = OnvifDeviceService__get_endpoint(OnvifDevice__get_device_service(dev)); \
+    char * asdendpoint = OnvifBaseService__get_endpoint(ONVIF_BASE_SERVICE(OnvifDevice__get_device_service(dev))); \
     C_##level(fmt,asdendpoint,##__VA_ARGS__); \
     free(asdendpoint); \
   } else { \
@@ -27,7 +27,7 @@ typedef struct _OnvifDevice OnvifDevice;
 
 #define ONVIF_MEDIA_LOG(fmt, dev, level, ...) \
   if(dev){ \
-    char * asdendpoint = OnvifMediaService__get_endpoint(OnvifDevice__get_media_service(dev)); \
+    char * asdendpoint = OnvifBaseService__get_endpoint(ONVIF_BASE_SERVICE(OnvifDevice__get_media_service(dev))); \
     C_##level(fmt,asdendpoint,##__VA_ARGS__); \
     free(asdendpoint); \
   } else { \

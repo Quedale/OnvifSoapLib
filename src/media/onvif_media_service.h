@@ -1,25 +1,33 @@
 #ifndef ONVIF_MEDIA_SERVICE_H_ 
 #define ONVIF_MEDIA_SERVICE_H_
 
-typedef struct _OnvifMediaService OnvifMediaService;
-
 #include "shard_export.h"
-#include "onvif_base_service.h"
+#include "../onvif_base_service.h"
 #include "onvif_credentials.h"
 #include "onvif_media_profile.h"
 #include "onvif_media_snapshot.h"
 #include "onvif_media_uri.h"
 #include "onvif_media_service_capabilities.h"
-#include "onvif_device.h"
 
-//Generic Service functions
-SHARD_EXPORT OnvifMediaService * OnvifMediaService__create(OnvifDevice * device, const char * endpoint);
-SHARD_EXPORT void OnvifMediaService__init(OnvifMediaService * self, OnvifDevice * device, const char * endpoint);
-SHARD_EXPORT void OnvifMediaService__destroy(OnvifMediaService * self);
-SHARD_EXPORT OnvifBaseService * OnvifMediaService__get_parent(OnvifMediaService * self);
+G_BEGIN_DECLS
+
+#define ONVIF_TYPE_MEDIA_SERVICE OnvifMediaService__get_type()
+G_DECLARE_FINAL_TYPE (OnvifMediaService, OnvifMediaService_, ONVIF, MEDIA_SERVICE, OnvifBaseService)
+
+struct _OnvifMediaService
+{
+    OnvifBaseService parent_instance;
+};
+
+
+struct _OnvifMediaServiceClass
+{
+    OnvifBaseServiceClass parent_class;
+};
+
+SHARD_EXPORT OnvifMediaService * OnvifMediaService__new(OnvifDevice * device, const char * endpoint);
 
 //No wait functions
-SHARD_EXPORT char * OnvifMediaService__get_endpoint(OnvifMediaService * self);
 SHARD_EXPORT SoapFault OnvifMediaService__get_profile_token(OnvifMediaService *self, int index, char * ret);
 
 //Lazy cache function

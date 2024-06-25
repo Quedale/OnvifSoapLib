@@ -1,4 +1,3 @@
-#include "onvif_base_service.h"
 #include "onvif_base_service_local.h"
 #include "generated/onvifsoap.nsmap"
 #include "onvif_credentials.h"
@@ -9,93 +8,195 @@
 #include "clogger.h"
 #include "plugin/logging.h"
 #include "httpda.h"
+#include "portable_thread.h"
 
-struct _OnvifBaseService {
+enum
+{
+  PROP_DEVICE = 1,
+  PROP_URI = 2,
+  N_PROPERTIES
+};
+
+typedef struct {
     OnvifDevice * device;
     char * endpoint;
     P_MUTEX_TYPE service_lock;
     P_MUTEX_TYPE prop_lock;
     struct http_da_info *  da_info;
-};
+} OnvifBaseServicePrivate;
 
-OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint){
-    OnvifBaseService * self = malloc(sizeof(OnvifBaseService));
-    OnvifBaseService__init(self,device, endpoint);
-    return self;
-}
+G_DEFINE_TYPE_WITH_PRIVATE (OnvifBaseService, OnvifBaseService_, G_TYPE_OBJECT)
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
-void OnvifBaseService__init(OnvifBaseService * self,OnvifDevice * device, const  char * endpoint){
-    self->device = device;
-
-    self->endpoint = malloc(strlen(endpoint)+1);
-    strcpy(self->endpoint,endpoint);
-
-    self->da_info = NULL;
-    
-    P_MUTEX_SETUP(self->service_lock);
-
-    P_MUTEX_SETUP(self->prop_lock);
-}
-
-void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
-    P_MUTEX_LOCK(self->prop_lock);
-    self->endpoint = realloc(self->endpoint, strlen(endpoint)+1);
-    strcpy(self->endpoint, endpoint);
-    P_MUTEX_UNLOCK(self->prop_lock);
-}
-
-void OnvifBaseService__destroy(OnvifBaseService * self){
-    if (self) {
-        if(self->endpoint){
-            free(self->endpoint);
-        }
-        if(self->da_info){
-            //It might be more efficient to clean up da_info manually
-            struct soap fakesoap;
-            soap_init1(&fakesoap, SOAP_XML_CANONICAL | SOAP_C_UTFSTRING);
-            soap_register_plugin(&fakesoap, http_da);
-            http_da_release(&fakesoap, self->da_info);
-            free(self->da_info);
-            soap_destroy(&fakesoap);
-            soap_end(&fakesoap);
-            soap_done(&fakesoap);
-        }
-
-        P_MUTEX_CLEANUP(self->prop_lock);
-        P_MUTEX_CLEANUP(self->service_lock);
-        free(self);
+static void
+OnvifBaseService__set_property (GObject      *object,
+                          guint         prop_id,
+                          const GValue *value,
+                          GParamSpec   *pspec)
+{
+    OnvifBaseService * self = ONVIF_BASE_SERVICE (object);
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    switch (prop_id){
+        case PROP_DEVICE:
+            priv->device = g_value_get_pointer (value);
+            break;
+        case PROP_URI:
+            OnvifBaseService__set_endpoint(self,(char*)g_value_get_string (value));
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
     }
 }
 
+static void
+OnvifBaseService__get_property (GObject    *object,
+                          guint       prop_id,
+                          GValue     *value,
+                          GParamSpec *pspec)
+{
+    // OnvifBaseService *thread = ONVIF_BASE_SERVICE (object);
+    // OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (thread);
+    switch (prop_id){
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+
+static void
+OnvifBaseService__dispose (GObject *object)
+{
+    OnvifBaseService *self = ONVIF_BASE_SERVICE (object);
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    if(priv->endpoint){
+        free(priv->endpoint);
+        priv->endpoint = NULL;
+    }
+
+    if(priv->da_info){
+        //It might be more efficient to clean up da_info manually
+        struct soap fakesoap;
+        soap_init1(&fakesoap, SOAP_XML_CANONICAL | SOAP_C_UTFSTRING);
+        soap_register_plugin(&fakesoap, http_da);
+        http_da_release(&fakesoap, priv->da_info);
+        free(priv->da_info);
+        soap_destroy(&fakesoap);
+        soap_end(&fakesoap);
+        soap_done(&fakesoap);
+        priv->da_info = NULL;
+    }
+
+    P_MUTEX_CLEANUP(priv->service_lock);
+    P_MUTEX_CLEANUP(priv->prop_lock);
+
+    G_OBJECT_CLASS (OnvifBaseService__parent_class)->dispose (object);
+}
+
+
+static void
+OnvifBaseService__class_init (OnvifBaseServiceClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->dispose = OnvifBaseService__dispose;
+    object_class->set_property = OnvifBaseService__set_property;
+    object_class->get_property = OnvifBaseService__get_property;
+
+    //TODO Replace with gtype
+    // obj_properties[PROP_DEVICE] =
+    //     g_param_spec_object ("device",
+    //                         "OnvifDevice",
+    //                         "Pointer to OnvifDevice parent.",
+    //                         ONVIFMGR_TYPE_APP  /* default value */,
+    //                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+
+    obj_properties[PROP_DEVICE] =
+        g_param_spec_pointer ("device",
+                            "OnvifDevice",
+                            "Pointer to OnvifDevice parent.",
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+
+    obj_properties[PROP_URI] =
+        g_param_spec_string ("uri",
+                            "Service URI",
+                            "Pointer to URI char*.",
+                            NULL,
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+
+    g_object_class_install_properties (object_class,
+                                        N_PROPERTIES,
+                                        obj_properties);
+}
+
+static void
+OnvifBaseService__init (OnvifBaseService *self)
+{
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    priv->device = NULL;
+    priv->endpoint = NULL;
+    priv->da_info = NULL;
+    
+    P_MUTEX_SETUP(priv->service_lock);
+
+    P_MUTEX_SETUP(priv->prop_lock);
+}
+
+OnvifBaseService * OnvifBaseService__new (OnvifDevice * device, const char * endpoint){
+    return g_object_new (ONVIF_TYPE_BASE_SERVICE, "device",device,"uri",endpoint, NULL);
+}
+
+void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    P_MUTEX_LOCK(priv->prop_lock);
+    if(!priv->endpoint){
+        priv->endpoint = malloc(strlen(endpoint)+1);
+    } else {
+        priv->endpoint = realloc(priv->endpoint, strlen(endpoint)+1);
+    }
+    strcpy(priv->endpoint, endpoint);
+    P_MUTEX_UNLOCK(priv->prop_lock);
+}
+
 void OnvifBaseService__lock(OnvifBaseService * self){
-    P_MUTEX_LOCK(self->service_lock);
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    P_MUTEX_LOCK(priv->service_lock);
 }
 
 void OnvifBaseService__unlock(OnvifBaseService * self){
-    P_MUTEX_UNLOCK(self->service_lock);
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    P_MUTEX_UNLOCK(priv->service_lock);
 }
 
 char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_BASE_SERVICE (self), NULL);
+
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+
     char * ret = NULL;
-    P_MUTEX_LOCK(self->prop_lock);
-    ret = malloc(strlen(self->endpoint)+1);
-    strcpy(ret,self->endpoint);
-    P_MUTEX_UNLOCK(self->prop_lock);
+    P_MUTEX_LOCK(priv->prop_lock);
+    ret = malloc(strlen(priv->endpoint)+1);
+    strcpy(ret,priv->endpoint);
+    P_MUTEX_UNLOCK(priv->prop_lock);
     return ret;
 }
 
 OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self){
-    return self->device;
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_BASE_SERVICE (self), NULL);
+
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    return priv->device;
 }
 
 time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
-    double offset = OnvifDevice__getTimeOffset(self->device);
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
+    double offset = OnvifDevice__getTimeOffset(priv->device);
 
     time_t now = time( NULL);
     if(offset == 0){
-        char * endpoint = OnvifBaseService__get_endpoint(self);
-        C_TRACE("[%s] No time adjustment required. Camera in sync with client.",endpoint);
-        free(endpoint);
+        C_TRACE("[%s] No time adjustment required. Camera in sync with client.",priv->endpoint);
         return now;
     }
 
@@ -110,16 +211,15 @@ time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
     char buff2[20];
     strftime(buff2, 20, "%Y-%m-%d %H:%M:%S", gmtime(&ntime));
 
-    char * endpoint = OnvifBaseService__get_endpoint(self);
-    C_TRACE("[%s] Time adjustment [%s] to [%s] offset %.0lf", endpoint, buff1, buff2, offset);
-    free(endpoint);
+    C_TRACE("[%s] Time adjustment [%s] to [%s] offset %.0lf", priv->endpoint, buff1, buff2, offset);
     return ntime;
 }
 
 int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     int ret = 1;
-    char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(self->device));
-    char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(self->device));
+    char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(priv->device));
+    char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(priv->device));
     soap_wsse_delete_Security(soap);
     if(user && pass){
         if (soap_wsse_add_Timestamp(soap, "Time", 10)
@@ -141,15 +241,16 @@ int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, ch
         return 0;
     }
     
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     C_DEBUG("[%s] WWW-Authorization challenge '%s'",url,soap->authrealm);
 
-    char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(self->device));
-    char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(self->device));
-    if(!self->da_info){
-        self->da_info = malloc(sizeof(struct http_da_info));
-        memset (self->da_info, 0, sizeof(struct http_da_info));
+    char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(priv->device));
+    char * pass = OnvifCredentials__get_password(OnvifDevice__get_credentials(priv->device));
+    if(!priv->da_info){
+        priv->da_info = malloc(sizeof(struct http_da_info));
+        memset (priv->da_info, 0, sizeof(struct http_da_info));
     }
-    http_da_save(soap, self->da_info, soap->authrealm, user, pass);
+    http_da_save(soap, priv->da_info, soap->authrealm, user, pass);
     free(user);
     free(pass);
     //Reapply wsse data after challenge started
@@ -163,6 +264,7 @@ int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, ch
 }
 
 SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
+    OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     struct soap * soap = soap_new1(SOAP_XML_CANONICAL | SOAP_C_UTFSTRING); //SOAP_XML_STRICT may cause crash
     soap->connect_timeout = 2; // 2 sec
     soap->recv_timeout = soap->send_timeout = 10;//10 sec
@@ -180,8 +282,8 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     );
     soap->fsslverify = OnvifBaseService__ssl_verify_callback;
 
-    if(self->da_info)
-        http_da_restore(soap, self->da_info);
+    if(priv->da_info)
+        http_da_restore(soap, priv->da_info);
         
     int wsseret = OnvifBaseService__set_wsse_data(self,soap);
 

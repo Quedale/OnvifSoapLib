@@ -4,6 +4,7 @@
 #include "clogger.h"
 #include "url_parser.h"
 #include <stdlib.h>
+#include "portable_thread.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 /* We are on Windows */
@@ -47,7 +48,7 @@ SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
     switch(*caps_fault){
         case SOAP_FAULT_NONE:
             media = OnvifCapabilities__get_media(capabilities);
-            self->media_service = OnvifMediaService__create(self, OnvifMedia__get_address(media));
+            self->media_service = OnvifMediaService__new(self, OnvifMedia__get_address(media));
             break;
         case SOAP_FAULT_ACTION_NOT_SUPPORTED:
         case SOAP_FAULT_CONNECTION_ERROR:
@@ -145,7 +146,7 @@ SoapFault OnvifDevice__authenticate(OnvifDevice* self){
             uri = OnvifMediaUri__get_uri(media_uri);
             if(!uri){
                 ONVIF_MEDIA_ERROR("[%s] No StreamURI provided...",self);
-                OnvifMediaService__destroy(self->media_service);
+                g_object_unref(self->media_service);
                 self->media_service = NULL;
             } else {
                 ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",self, uri);
@@ -161,7 +162,7 @@ SoapFault OnvifDevice__authenticate(OnvifDevice* self){
         case SOAP_FAULT_UNEXPECTED:
         default:
             ONVIF_MEDIA_ERROR("[%s] Failed to retrieve StreamURI...",self);
-            OnvifMediaService__destroy(self->media_service);
+            g_object_unref(self->media_service);
             self->media_service = NULL;
             break;
     }
@@ -218,7 +219,7 @@ void OnvifDevice__init(OnvifDevice* self, char * device_url) {
     self->authenticated = 0;
     self->time_offset = 0;
     self->credentials = OnvifCredentials__create();
-    self->device_service = OnvifDeviceService__create(self, device_url);
+    self->device_service = OnvifDeviceService__new(self, device_url);
     self->media_service = NULL;
     self->purl = ParsedURL__create(device_url);
     self->datetime = NULL;
@@ -242,8 +243,11 @@ void OnvifDevice__destroy(OnvifDevice* device) {
         ONVIF_DEVICE_DEBUG("[%s] OnvifDevice__destroy",device);
 
         OnvifCredentials__destroy(device->credentials);
-        OnvifDeviceService__destroy(device->device_service);
-        OnvifMediaService__destroy(device->media_service);
+        if(device->device_service)
+            g_object_unref(device->device_service);
+        if(device->media_service)
+            g_object_unref(device->media_service);
+
         P_MUTEX_CLEANUP(device->media_lock);
         P_MUTEX_CLEANUP(device->prop_lock);
         P_MUTEX_CLEANUP(device->auth_lock);

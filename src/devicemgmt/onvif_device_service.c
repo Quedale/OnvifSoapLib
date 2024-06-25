@@ -1,4 +1,3 @@
-#include "onvif_device_service.h"
 #include "onvif_device_capabilities_local.h"
 #include "onvif_device_hostnameinfo_local.h"
 #include "onvif_device_info_local.h"
@@ -12,32 +11,30 @@
 #include <stddef.h>
 #include <time.h>
 
-typedef struct _OnvifDeviceService {
-    OnvifBaseService * parent;
-} OnvifDeviceService;
+G_DEFINE_TYPE(OnvifDeviceService, OnvifDeviceService_, ONVIF_TYPE_BASE_SERVICE)
 
-OnvifDeviceService * OnvifDeviceService__create(OnvifDevice * device, const char * endpoint){
-    OnvifDeviceService * self = malloc(sizeof(OnvifDeviceService));
-    OnvifDeviceService__init(self, device, endpoint);
-    return self;
+#include "onvif_device_service.h"
+
+static void
+OnvifDeviceService__class_init (OnvifDeviceServiceClass * klass)
+{
+    //Nothing todo here
 }
 
-void OnvifDeviceService__init(OnvifDeviceService * self, OnvifDevice * device, const char * endpoint){
-    self->parent = OnvifBaseService__create(device, endpoint);
+static void
+OnvifDeviceService__init (OnvifDeviceService * self)
+{
+    //Nothing todo here
 }
 
-void OnvifDeviceService__destroy(OnvifDeviceService * self){
-    if(self){
-        OnvifBaseService__destroy(self->parent);
-        free(self);
-    }
-}
-
-OnvifBaseService * OnvifDeviceService__get_parent(OnvifDeviceService * self){
-    return self->parent;
+OnvifDeviceService* OnvifDeviceService__new(OnvifDevice * device, const char * endpoint){
+    return g_object_new (ONVIF_TYPE_DEVICEMGMT_SERVICE, "device", device, "uri", endpoint, NULL);
 }
 
 OnvifDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICEMGMT_SERVICE (self), NULL);
+
     struct _tds__GetSystemDateAndTime request;
     struct _tds__GetSystemDateAndTimeResponse response;
 
@@ -52,6 +49,9 @@ OnvifDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * se
 }
 
 OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self) {
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICEMGMT_SERVICE (self), NULL);
+
     struct _tds__GetCapabilities request;
     struct _tds__GetCapabilitiesResponse response;
     OnvifCapabilities *capabilities = NULL;
@@ -70,6 +70,9 @@ OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self
 
 
 OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICEMGMT_SERVICE (self), NULL);
+
     struct _tds__GetDeviceInformation request;
     struct _tds__GetDeviceInformationResponse response;
     memset (&request, 0, sizeof (request));
@@ -83,6 +86,9 @@ OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceSer
 }
 
 OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self) {
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICEMGMT_SERVICE (self), NULL);
+
     struct _tds__GetNetworkInterfaces req;
     struct _tds__GetNetworkInterfacesResponse resp;
     memset (&req, 0, sizeof (req));
@@ -96,6 +102,9 @@ OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceServ
 }
 
 OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self) {
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICEMGMT_SERVICE (self), NULL);
+
     struct _tds__GetScopes req;
     struct _tds__GetScopesResponse resp;
     memset (&req, 0, sizeof (req));
@@ -109,6 +118,9 @@ OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self) {
 }
 
 OnvifDeviceHostnameInfo * OnvifDeviceService__getHostname(OnvifDeviceService * self) {
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICEMGMT_SERVICE (self), NULL);
+
     struct _tds__GetHostname gethostname;
     struct _tds__GetHostnameResponse response;
     memset (&gethostname, 0, sizeof (gethostname));
@@ -119,8 +131,4 @@ OnvifDeviceHostnameInfo * OnvifDeviceService__getHostname(OnvifDeviceService * s
     ONVIF_INVOKE_SOAP_CALL(self, tds__GetHostname, OnvifDeviceHostnameInfo__new, hostname, soap, NULL, &gethostname,  &response);
 
     return hostname;
-}
-
-char * OnvifDeviceService__get_endpoint(OnvifDeviceService * self){
-    return OnvifBaseService__get_endpoint(self->parent);
 }

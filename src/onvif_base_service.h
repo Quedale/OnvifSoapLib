@@ -1,19 +1,36 @@
 #ifndef ONVIF_BASE_SERVICE_H_ 
 #define ONVIF_BASE_SERVICE_H_
 
-typedef struct _OnvifBaseService OnvifBaseService;
+#include <glib-object.h>
+#include "shard_export.h"
+
+
+G_BEGIN_DECLS
+
+#define ONVIF_TYPE_BASE_SERVICE OnvifBaseService__get_type()
+G_DECLARE_FINAL_TYPE (OnvifBaseService, OnvifBaseService_, ONVIF, BASE_SERVICE, GObject)
+
 typedef struct soap SoapDef;
 
-#include "portable_thread.h"
-#include "shard_export.h"
-#include "onvif_credentials.h"
+struct _OnvifBaseService
+{
+  GObject parent_instance;
+
+  /* Other members, including private data. */
+};
+
+
+struct _OnvifBaseServiceClass
+{
+  GObjectClass parent_class;
+
+};
+
 #include "onvif_device.h"
 
-OnvifBaseService * OnvifBaseService__create(OnvifDevice * device, const char * endpoint);
-void OnvifBaseService__init(OnvifBaseService * self, OnvifDevice * device, const char * endpoint);
-void OnvifBaseService__destroy(OnvifBaseService * self);
 SHARD_EXPORT char * OnvifBaseService__get_endpoint(OnvifBaseService * self);
 SHARD_EXPORT OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self);
 
+G_END_DECLS
 
 #endif
