@@ -21,7 +21,7 @@ int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store);
 
 #define BUILD_SOAP_FUNC(a)  soap_call___##a 
 #define BUILD_SOAP_TYPE(a)  _##a 
-#define ONVIF_INVOKE_SOAP_CALL_MSTART(self, callback, soap, vocreator, vo) \
+#define ONVIF_INVOKE_SOAP_CALL_MSTART(self, callback, vocreator, vo) \
     OnvifBaseService__lock(ONVIF_BASE_SERVICE(self)); \
     char * privendpt = OnvifBaseService__get_endpoint(ONVIF_BASE_SERVICE(self)); \
     char str_func[] = #callback; \
@@ -36,11 +36,11 @@ int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store);
         goto prv_exit; \
     }
 
-#define ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, soap, action, req, resp) \
+#define ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, req, resp) \
     int ret; \
     int redirect_count = 0; \
 retry: \
-    ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
+    ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, NULL, req, resp); \
     /* Untested, need a camera setup with HTTPS on top of soap */ \
     if(redirect_count < 10 && soap->error >= 301 && soap->error <= 308){ \
         redirect_count++; \
@@ -65,15 +65,15 @@ retry: \
     } \
     char * new_endpoint = NULL; \
     if(soap->error == 401 && OnvifBaseService__http_challenge(ONVIF_BASE_SERVICE(self),soap,privendpt)) \
-        ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, action, req, resp); \
+        ret = (*BUILD_SOAP_FUNC(callback))(soap, privendpt, NULL, req, resp); \
     if (ret == SOAP_UDP_ERROR || ret == SOAP_TCP_ERROR){ /*Port fallback*/ \
         char * master_port = OnvifDevice__get_port(OnvifBaseService__get_device(ONVIF_BASE_SERVICE(self))); \
         new_endpoint = URL__set_port(privendpt, master_port); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
             C_WARN("[%s] Attempting to correct URL port to [%s]", privendpt, new_endpoint); \
-            ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+            ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, NULL, req, resp); \
             if(soap->error == 401 && OnvifBaseService__http_challenge(ONVIF_BASE_SERVICE(self),soap,new_endpoint)) \
-                ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+                ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, NULL, req, resp); \
         } \
         free(master_port); \
     } \
@@ -83,9 +83,9 @@ retry: \
         new_endpoint = URL__set_host(privendpt, master_host); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
             C_WARN("[%s] Attempting to correct URL host : to [%s]", privendpt, new_endpoint); \
-            ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+            ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, NULL, req, resp); \
             if(soap->error == 401 && OnvifBaseService__http_challenge(ONVIF_BASE_SERVICE(self),soap,new_endpoint)) \
-                ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+                ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, NULL, req, resp); \
         } \
         free(master_host); \
     } \
@@ -97,9 +97,9 @@ retry: \
         new_endpoint = URL__set_port(tmp_endpoint, master_port); \
         if(strcmp(new_endpoint,privendpt) != 0){ /* TODO compare port before constructing new URL */ \
             C_WARN("[%s] Attempting to correct root URL to [%s]", privendpt, new_endpoint); \
-            ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+            ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, NULL, req, resp); \
             if(soap->error == 401 && OnvifBaseService__http_challenge(ONVIF_BASE_SERVICE(self),soap,new_endpoint)) \
-                ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, action, req, resp); \
+                ret = (*BUILD_SOAP_FUNC(callback))(soap, new_endpoint, NULL, req, resp); \
         } \
         free(tmp_endpoint); \
         free(master_host); \
@@ -148,8 +148,15 @@ prv_exit: \
     OnvifBaseService__soap_destroy(ONVIF_BASE_SERVICE(self), soap); \
     OnvifBaseService__unlock(ONVIF_BASE_SERVICE(self));
 
- #define ONVIF_INVOKE_SOAP_CALL(self, callback, vocreator, vo, soap, action, req, resp) \
-    ONVIF_INVOKE_SOAP_CALL_MSTART(self,callback,soap, vocreator, vo) \
-    ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, soap, action, req, resp)
+ #define ONVIF_INVOKE_SOAP_CALL(self, callback, vocreator, vo, req, resp) \
+    ONVIF_INVOKE_SOAP_CALL_MSTART(self,callback, vocreator, vo) \
+    ONVIF_INVOKE_SOAP_CALL_MEND(self, callback, vocreator, vo, req, resp)
+
+#define ONVIF_PREPARE_SOAP_CALL(ret_type, req_type, resp_type) \
+    struct req_type request; \
+    struct resp_type response; \
+    memset (&request, 0, sizeof (request)); \
+    memset (&response, 0, sizeof (response)); \
+    ret_type * ret_val = NULL;
 
 #endif

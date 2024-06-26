@@ -25,15 +25,8 @@ OnvifDeviceIOAudioOutputConfigurationOptions * OnvifDeviceIOService__getAudioOut
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICEIO_SERVICE (self), NULL);
 
-    struct _tmd__GetAudioOutputConfigurationOptions request;
-    struct _tmd__GetAudioOutputConfigurationOptionsResponse response;
-
-    OnvifDeviceIOAudioOutputConfigurationOptions * ret_val;
-    memset (&ret_val, 0, sizeof (ret_val));
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
-
-    ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioOutputConfigurationOptions, OnvifDeviceIOAudioOutputConfigurationOptions__new, ret_val, soap, NULL, &request,  &response);
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceIOAudioOutputConfigurationOptions, _tmd__GetAudioOutputConfigurationOptions, _tmd__GetAudioOutputConfigurationOptionsResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioOutputConfigurationOptions, OnvifDeviceIOAudioOutputConfigurationOptions__new, ret_val, &request,  &response);
 
     return ret_val;
 }
@@ -42,15 +35,8 @@ OnvifTokens * OnvifDeviceIOService__getAudioOutputs(OnvifDeviceIOService * self)
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICEIO_SERVICE (self), NULL);
 
-    struct tmd__Get request;
-    struct tmd__GetResponse response;
-
-    OnvifTokens * ret_val;
-    memset (&ret_val, 0, sizeof (ret_val));
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
-
-    ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioOutputs, OnvifTokens__new, ret_val, soap, NULL, &request,  &response);
+    ONVIF_PREPARE_SOAP_CALL(OnvifTokens, tmd__Get, tmd__GetResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioOutputs, OnvifTokens__new, ret_val, &request,  &response);
 
     return ret_val;
 }
@@ -59,16 +45,9 @@ OnvifTokens * OnvifDeviceIOService__getAudioSources(OnvifDeviceIOService * self)
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICEIO_SERVICE (self), NULL);
 
-    struct tmd__Get request;
-    struct tmd__GetResponse response;
-
-    OnvifTokens * ret_val;
-    memset (&ret_val, 0, sizeof (ret_val));
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
+    ONVIF_PREPARE_SOAP_CALL(OnvifTokens, tmd__Get, tmd__GetResponse);
     // request.AudioOutputToken = 1;
-
-    ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioSources, OnvifTokens__new, ret_val, soap, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioSources, OnvifTokens__new, ret_val, &request,  &response);
 
     return ret_val;
 }

@@ -35,15 +35,8 @@ OnvifDeviceDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceServic
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetSystemDateAndTime request;
-    struct _tds__GetSystemDateAndTimeResponse response;
-
-    OnvifDeviceDateTime * ret_val;
-    memset (&ret_val, 0, sizeof (ret_val));
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
-
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetSystemDateAndTime, OnvifDeviceDateTime__new, ret_val, soap, NULL, &request,  &response);
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceDateTime, _tds__GetSystemDateAndTime, _tds__GetSystemDateAndTimeResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetSystemDateAndTime, OnvifDeviceDateTime__new, ret_val, &request,  &response);
 
     return ret_val;
 }
@@ -52,98 +45,63 @@ OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetCapabilities request;
-    struct _tds__GetCapabilitiesResponse response;
-    OnvifCapabilities *capabilities = NULL;
-
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
+    ONVIF_PREPARE_SOAP_CALL(OnvifCapabilities, _tds__GetCapabilities, _tds__GetCapabilitiesResponse);
 
     enum tt__CapabilityCategory v[] = {tt__CapabilityCategory__All};
     request.__sizeCategory = 1;
     request.Category = v;
 
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetCapabilities, OnvifCapabilities__new, capabilities, soap, NULL, &request,  &response);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetCapabilities, OnvifCapabilities__new, ret_val, &request,  &response);
 
-    return capabilities;
+    return ret_val;
 }
 
 OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self) {
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetServices request;
-    struct _tds__GetServicesResponse response;
-    OnvifDeviceServices * retval = NULL;
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceServices, _tds__GetServices, _tds__GetServicesResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetServices, OnvifDeviceServices__new, ret_val, &request,  &response);
 
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
-
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetServices, OnvifDeviceServices__new, retval, soap, NULL, &request,  &response);
-
-    return retval;
+    return ret_val;
 }
 
 OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetDeviceInformation request;
-    struct _tds__GetDeviceInformationResponse response;
-    memset (&request, 0, sizeof (request));
-    memset (&response, 0, sizeof (response));
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceInformation, _tds__GetDeviceInformation, _tds__GetDeviceInformationResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetDeviceInformation, OnvifDeviceInformation__new, ret_val, &request,  &response);
 
-    OnvifDeviceInformation *dev_info = NULL;
-
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetDeviceInformation, OnvifDeviceInformation__new, dev_info, soap, NULL, &request,  &response);
-
-    return dev_info;
+    return ret_val;
 }
 
 OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self) {
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetNetworkInterfaces req;
-    struct _tds__GetNetworkInterfacesResponse resp;
-    memset (&req, 0, sizeof (req));
-    memset (&resp, 0, sizeof (resp));
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceInterfaces, _tds__GetNetworkInterfaces, _tds__GetNetworkInterfacesResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetNetworkInterfaces, OnvifDeviceInterfaces__new, ret_val, &request,  &response);
 
-    OnvifDeviceInterfaces * interfaces = NULL;
-
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetNetworkInterfaces, OnvifDeviceInterfaces__new, interfaces, soap, NULL, &req,  &resp);
-
-    return interfaces;
+    return ret_val;
 }
 
 OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self) {
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetScopes req;
-    struct _tds__GetScopesResponse resp;
-    memset (&req, 0, sizeof (req));
-    memset (&resp, 0, sizeof (resp));
+    ONVIF_PREPARE_SOAP_CALL(OnvifScopes, _tds__GetScopes, _tds__GetScopesResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetScopes, OnvifScopes__new, ret_val, &request, &response);
 
-    OnvifScopes * scopes = NULL;
-    
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetScopes, OnvifScopes__new, scopes, soap, NULL, &req,  &resp);
-
-    return scopes;
+    return ret_val;
 }
 
 OnvifDeviceHostnameInfo * OnvifDeviceService__getHostname(OnvifDeviceService * self) {
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
-    struct _tds__GetHostname gethostname;
-    struct _tds__GetHostnameResponse response;
-    memset (&gethostname, 0, sizeof (gethostname));
-    memset (&response, 0, sizeof (response));
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceHostnameInfo, _tds__GetHostname, _tds__GetHostnameResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetHostname, OnvifDeviceHostnameInfo__new, ret_val, &request,  &response);
 
-    OnvifDeviceHostnameInfo * hostname = NULL;
-
-    ONVIF_INVOKE_SOAP_CALL(self, tds__GetHostname, OnvifDeviceHostnameInfo__new, hostname, soap, NULL, &gethostname,  &response);
-
-    return hostname;
+    return ret_val;
 }
