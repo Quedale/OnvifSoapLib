@@ -3,13 +3,13 @@
 
 #include "shard_export.h"
 #include "../onvif_base_service.h"
-#include "onvif_credentials.h"
 #include "onvif_device_capabilities.h"
 #include "onvif_device_hostnameinfo.h"
 #include "onvif_device_info.h"
 #include "onvif_device_interface.h"
 #include "onvif_device_scopes.h"
 #include "onvif_device_datetime.h"
+#include "onvif_device_services.h"
 
 G_BEGIN_DECLS
 
@@ -31,6 +31,7 @@ SHARD_EXPORT OnvifDeviceService * OnvifDeviceService__new(OnvifDevice * device, 
 SHARD_EXPORT OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceHostnameInfo * OnvifDeviceService__getHostname(OnvifDeviceService * self); 
 SHARD_EXPORT OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self);
+SHARD_EXPORT OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self);
 SHARD_EXPORT OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);

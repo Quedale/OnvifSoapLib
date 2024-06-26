@@ -1,13 +1,11 @@
+#include "../onvif_base_service_local.h"
 #include "onvif_media_profile_local.h"
 #include "onvif_media_snapshot_local.h"
 #include "onvif_media_uri_local.h"
-#include "onvif_base_service_local.h"
-#include "httpda.h"
-#include "plugin/logging.h"
-#include "clogger.h"
-#include "url_parser.h"
 #include "onvif_media_service_capabilities_local.h"
 #include "portable_thread.h"
+#include "clogger.h"
+#include "onvif_media_service.h"
 
 typedef struct {
     OnvifMediaProfiles * profiles;
@@ -15,8 +13,6 @@ typedef struct {
 } OnvifMediaServicePrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifMediaService, OnvifMediaService_, ONVIF_TYPE_BASE_SERVICE)
-
-#include "onvif_media_service.h"
 
 static void
 OnvifMediaService__dispose (GObject *self)

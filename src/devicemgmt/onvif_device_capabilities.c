@@ -27,6 +27,15 @@ typedef struct _OnvifDeviceCapabilities {
     //Security
 } OnvifDeviceCapabilities;
 
+typedef struct _OnvifDeviceIOCapabilities {
+    char * xaddr;
+    int videoSources;
+    int videoOutputs;
+    int audioSources;
+    int audioOutputs;
+    int relayOutputs;
+} OnvifDeviceIOCapabilities;
+
 typedef struct {
     //Analytics
     OnvifDeviceCapabilities * device;
@@ -34,7 +43,10 @@ typedef struct {
     //Imaging
     OnvifMedia *media;
     //PTZ
+
     //Extension
+    OnvifDeviceIOCapabilities * deviceio;
+    //TODO More Extension
 } OnvifCapabilitiesPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifCapabilities, OnvifCapabilities_, SOAP_TYPE_OBJECT)
@@ -46,6 +58,8 @@ OnvifDeviceCapabilities * OnvifDeviceCapabilities__create(struct tt__DeviceCapab
 void OnvifDeviceCapabilities__destroy(OnvifDeviceCapabilities * self);
 OnvifSystemCapabilities * OnvifSystemCapabilities__create(struct tt__SystemCapabilities * caps);
 void OnvifSystemCapabilities__destroy(OnvifSystemCapabilities * self);
+OnvifDeviceIOCapabilities * OnvifDeviceIOCapabilities__create(struct tt__DeviceIOCapabilities * caps);
+void OnvifDeviceIOCapabilities__destroy(OnvifDeviceIOCapabilities * self);
 
 static void
 OnvifCapabilities__construct(SoapObject * obj, gpointer ptr){
@@ -61,6 +75,12 @@ OnvifCapabilities__construct(SoapObject * obj, gpointer ptr){
 
      priv->media = OnvifMedia__create(response->Capabilities->Media);
      priv->device = OnvifDeviceCapabilities__create(response->Capabilities->Device);
+     if(response->Capabilities->Extension){
+        if(response->Capabilities->Extension->DeviceIO){
+            priv->deviceio = OnvifDeviceIOCapabilities__create(response->Capabilities->Extension->DeviceIO);
+        }
+        //TODO Map more extensions
+     }
 }
 
 static void
@@ -108,6 +128,14 @@ OnvifMedia * OnvifCapabilities__get_media(OnvifCapabilities * self){
 
     OnvifCapabilitiesPrivate *priv = OnvifCapabilities__get_instance_private (ONVIF_DEVICE_CAPABILITIES(self));
     return priv->media;
+}
+
+OnvifDeviceIOCapabilities * OnvifCapabilities__get_deviceio(OnvifCapabilities * self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE_CAPABILITIES (self), NULL);
+
+    OnvifCapabilitiesPrivate *priv = OnvifCapabilities__get_instance_private (ONVIF_DEVICE_CAPABILITIES(self));
+    return priv->deviceio;
 }
 
 OnvifDeviceCapabilities * OnvifCapabilities__get_device(OnvifCapabilities * self){
@@ -162,6 +190,55 @@ void OnvifDeviceCapabilities__destroy(OnvifDeviceCapabilities * self){
         self->system = NULL;
         free(self);
     }
+}
+
+/*
+    Start of OnvifDeviceIOCapabilities definitions
+*/
+OnvifDeviceIOCapabilities * OnvifDeviceIOCapabilities__create(struct tt__DeviceIOCapabilities * caps){
+    OnvifDeviceIOCapabilities * self = malloc(sizeof(OnvifDeviceIOCapabilities));
+    self->xaddr = malloc(strlen(caps->XAddr)+1);
+    strcpy(self->xaddr,caps->XAddr);
+    self->videoSources = caps->VideoSources;
+    self->videoOutputs = caps->VideoOutputs;
+    self->audioSources = caps->AudioSources;
+    self->audioOutputs = caps->AudioOutputs;
+    self->relayOutputs = caps->RelayOutputs;
+
+    return self;
+}
+
+void OnvifDeviceIOCapabilities__destroy(OnvifDeviceIOCapabilities * self){
+    if(self){
+        if(self->xaddr){
+            free(self->xaddr);
+        }
+        free(self);
+    }
+}
+
+char * OnvifDeviceIOCapabilities__get_address(OnvifDeviceIOCapabilities * self){
+    return self->xaddr;
+}
+
+int OnvifDeviceIOCapabilities__get_videoSources(OnvifDeviceIOCapabilities * self){
+    return self->videoSources;
+}
+
+int OnvifDeviceIOCapabilities__get_videoOutputs(OnvifDeviceIOCapabilities * self){
+    return self->videoOutputs;
+}
+
+int OnvifDeviceIOCapabilities__get_audioSources(OnvifDeviceIOCapabilities * self){
+    return self->audioSources;
+}
+
+int OnvifDeviceIOCapabilities__get_audioOutputs(OnvifDeviceIOCapabilities * self){
+    return self->audioOutputs;
+}
+
+int OnvifDeviceIOCapabilities__get_relayOutputs(OnvifDeviceIOCapabilities * self){
+    return self->relayOutputs;
 }
 
 /*

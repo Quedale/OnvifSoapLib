@@ -62,6 +62,7 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 endif()
 
 aux_source_directory(src src_dir)
+aux_source_directory(src/deviceio src_deviceio)
 aux_source_directory(src/devicemgmt src_devicemgmt)
 aux_source_directory(src/media src_media)
 aux_source_directory(src/discovery src_dir_disco)
@@ -75,6 +76,7 @@ aux_source_directory(src/generated generated_dir)
 add_library(onvifsoap ${ONVIFSOAP_BUILD_TYPE} ${src_dir}
                                 ${src_dir_disco}
                                 ${generated_dir}
+                                ${src_deviceio}
                                 ${src_devicemgmt}
                                 ${src_media}
                           ${GSOAP_SRC_DIR}/gsoap/dom.c 
@@ -171,6 +173,10 @@ set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h
             ${PROJECT_SOURCE_DIR}/src/onvif_device.h
             ${PROJECT_SOURCE_DIR}/src/shard_export.h
             ${PROJECT_SOURCE_DIR}/src/SoapObject.h)
+set(deviceio_headers 
+            ${PROJECT_SOURCE_DIR}/src/deviceio/onvif_deviceio_audio_output_configuration_options.h
+            ${PROJECT_SOURCE_DIR}/src/deviceio/onvif_tokens.h
+            ${PROJECT_SOURCE_DIR}/src/deviceio/onvif_deviceio_service.h)
 set(devicemgmt_headers 
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_capabilities.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_datetime.h
@@ -178,7 +184,8 @@ set(devicemgmt_headers
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_info.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_interface.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_scopes.h
-            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h)
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_services.h)
 set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profile.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h
@@ -199,6 +206,7 @@ if(NOT WIN32)
 endif()
 
 install(TARGETS onvifsoap EXPORT onvifsoap DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-install(FILES ${headers} ${devicemgmt_headers} ${media_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(FILES ${deviceio_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/deviceio")
 install(FILES ${devicemgmt_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/devicemgmt")
 install(FILES ${media_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/media")

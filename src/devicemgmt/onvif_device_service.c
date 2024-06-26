@@ -1,10 +1,12 @@
+#include "../onvif_base_service_local.h"
 #include "onvif_device_capabilities_local.h"
 #include "onvif_device_datetime_local.h"
 #include "onvif_device_hostnameinfo_local.h"
 #include "onvif_device_info_local.h"
 #include "onvif_device_interface_local.h"
 #include "onvif_device_scopes_local.h"
-#include "onvif_base_service_local.h"
+#include "onvif_device_services_local.h"
+#include "onvif_device_service.h"
 #include "clogger.h"
 #include <string.h>
 #include <stdlib.h>
@@ -12,8 +14,6 @@
 #include <time.h>
 
 G_DEFINE_TYPE(OnvifDeviceService, OnvifDeviceService_, ONVIF_TYPE_BASE_SERVICE)
-
-#include "onvif_device_service.h"
 
 static void
 OnvifDeviceService__class_init (OnvifDeviceServiceClass * klass)
@@ -68,6 +68,21 @@ OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self
     return capabilities;
 }
 
+OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self) {
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
+
+    struct _tds__GetServices request;
+    struct _tds__GetServicesResponse response;
+    OnvifDeviceServices * retval = NULL;
+
+    memset (&request, 0, sizeof (request));
+    memset (&response, 0, sizeof (response));
+
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetServices, OnvifDeviceServices__new, retval, soap, NULL, &request,  &response);
+
+    return retval;
+}
 
 OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self){
     g_return_val_if_fail (self != NULL, NULL);

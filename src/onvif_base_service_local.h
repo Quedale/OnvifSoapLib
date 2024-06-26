@@ -5,6 +5,7 @@
 #include "url_parser.h"
 #include "clogger.h"
 #include "httpda.h"
+#include "plugin/logging.h"
 
 #define FAULT_UNAUTHORIZED "\"http://www.onvif.org/ver10/error\":NotAuthorized"
 #define FAULT_ACTIONNOTSUPPORTED "\"http://www.onvif.org/ver10/error\":ActionNotSupported"

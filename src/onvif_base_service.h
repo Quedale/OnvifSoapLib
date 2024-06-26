@@ -3,7 +3,7 @@
 
 #include <glib-object.h>
 #include "shard_export.h"
-
+#include "onvif_credentials.h"
 
 G_BEGIN_DECLS
 

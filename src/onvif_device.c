@@ -1,5 +1,4 @@
 #include "onvif_device.h"
-#include "onvif_credentials.h"
 #include "ip_match.h"
 #include "clogger.h"
 #include "url_parser.h"
@@ -41,7 +40,6 @@ SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
     }
 
     ONVIF_DEVICE_TRACE("[%s] OnvifDevice__createMediaService",self);
-
     OnvifMedia * media;
     OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
     SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));

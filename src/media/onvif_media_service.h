@@ -3,7 +3,6 @@
 
 #include "shard_export.h"
 #include "../onvif_base_service.h"
-#include "onvif_credentials.h"
 #include "onvif_media_profile.h"
 #include "onvif_media_snapshot.h"
 #include "onvif_media_uri.h"

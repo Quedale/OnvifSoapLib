@@ -1,13 +1,10 @@
 #include "onvif_base_service_local.h"
 #include "generated/onvifsoap.nsmap"
-#include "onvif_credentials.h"
 #include "wsseapi.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include "clogger.h"
-#include "plugin/logging.h"
-#include "httpda.h"
 #include "portable_thread.h"
 
 enum
