@@ -740,15 +740,23 @@ if [ $SKIP_WSDL -eq 0 ]; then
     echo "Generating WSDL gsoap files..."
     rm -rf $SUBPROJECT_DIR/../src/generated
     mkdir $SUBPROJECT_DIR/../src/generated
-    wsdl2h -O4 -P -x -t$SUBPROJECT_DIR/../wsdl/typemap.dat -o $SUBPROJECT_DIR/../src/generated/onvif.h -c \
-      http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
-      http://www.onvif.org/onvif/ver10/events/wsdl/event.wsdl \
-      http://www.onvif.org/onvif/ver10/deviceio.wsdl \
-      http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
-      http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl \
-      http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
-      http://www.onvif.org/onvif/ver10/network/wsdl/remotediscovery.wsdl \
-      http://www.onvif.org/ver10/advancedsecurity/wsdl/advancedsecurity.wsdl
+    wsdl2h -Ow4 -t$SUBPROJECT_DIR/../wsdl/typemap.dat -o $SUBPROJECT_DIR/../src/generated/onvif.h -c \
+      ./wsdl/onvif/wsdl/devicemgmt.wsdl \
+      ./wsdl/onvif/wsdl/event.wsdl \
+      ./wsdl/onvif/wsdl/deviceio.wsdl \
+      ./wsdl/onvif/wsdl/imaging.wsdl \
+      ./wsdl/onvif/wsdl/media.wsdl \
+      ./wsdl/onvif/wsdl/ptz.wsdl \
+      ./wsdl/onvif/wsdl/remotediscovery.wsdl \
+      ./wsdl/onvif/wsdl/advancedsecurity.wsdl
+      # http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
+      # http://www.onvif.org/onvif/ver10/events/wsdl/event.wsdl \
+      # http://www.onvif.org/onvif/ver10/deviceio.wsdl \
+      # http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
+      # http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl \
+      # http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
+      # http://www.onvif.org/onvif/ver10/network/wsdl/remotediscovery.wsdl \
+      # http://www.onvif.org/ver10/advancedsecurity/wsdl/advancedsecurity.wsdl
     ret=$?
     if [ $ret != 0 ]; then
       printf "${RED}*****************************\n${NC}"
