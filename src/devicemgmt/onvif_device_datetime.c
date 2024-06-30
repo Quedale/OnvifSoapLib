@@ -36,6 +36,12 @@ OnvifDeviceDateTime__construct(SoapObject * obj, gpointer ptr){
         //TODO Figure out how to convert remote local time (posix tz parsing)
         aDateTime = response->SystemDateAndTime->LocalDateTime;
     }
+
+    if(!aDateTime){
+        C_ERROR("Invalid GetSystemDateTime response.");
+        SoapObject__set_fault(obj,SOAP_FAULT_UNEXPECTED);
+        return;
+    }
     tmrdev.tm_mday = aDateTime->Date->Day;
     tmrdev.tm_mon = aDateTime->Date->Month - 1;
     tmrdev.tm_year = aDateTime->Date->Year - 1900;
@@ -68,7 +74,7 @@ OnvifDeviceDateTime__init (OnvifDeviceDateTime * self)
 }
 
 OnvifDeviceDateTime* OnvifDeviceDateTime__new(struct _tds__GetSystemDateAndTimeResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICE_DATETIME, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICE_DATETIME, "data", resp, NULL);
 }
 
 time_t * OnvifDeviceDateTime__get_datetime(OnvifDeviceDateTime * self){

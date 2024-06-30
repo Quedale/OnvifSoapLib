@@ -9,6 +9,6 @@
 # include "generated/soapH.h"	/* or manually replace with soapcpp2-generated *H.h file */
 #endif
 
-OnvifDeviceInformation * OnvifDeviceInformation__new(struct _tds__GetDeviceInformationResponse *);
+OnvifDeviceInformation * OnvifDeviceInformation__new(struct _tds__GetDeviceInformationResponse * response);
 
 #endif

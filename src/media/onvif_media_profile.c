@@ -75,7 +75,7 @@ OnvifMediaProfiles__init (OnvifMediaProfiles * self)
 }
 
 OnvifMediaProfiles* OnvifMediaProfiles__new(struct _trt__GetProfilesResponse * resp){
-    return g_object_new (ONVIF_TYPE_MEDIA_PROFILES, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_MEDIA_PROFILES, "data", resp, NULL);
 }
 
 

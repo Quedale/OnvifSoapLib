@@ -90,7 +90,7 @@ OnvifScopes__init (OnvifScopes * self)
 }
 
 OnvifScopes* OnvifScopes__new(struct _tds__GetScopesResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICE_SCOPES, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICE_SCOPES, "data", resp, NULL);
 }
 
 /// @brief 

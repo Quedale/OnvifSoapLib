@@ -96,7 +96,7 @@ OnvifDeviceIOAudioOutputConfigurationOptions__init (OnvifDeviceIOAudioOutputConf
 }
 
 OnvifDeviceIOAudioOutputConfigurationOptions* OnvifDeviceIOAudioOutputConfigurationOptions__new(struct _tmd__GetAudioOutputConfigurationOptionsResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS, "data", resp, NULL);
 }
 
 //TODO Implement getters

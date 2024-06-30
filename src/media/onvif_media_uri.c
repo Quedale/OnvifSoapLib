@@ -99,14 +99,14 @@ char * OnvifMediaUri__get_uri(OnvifMediaUri* self){
 }
 
 OnvifMediaUri* OnvifMediaUri__new(struct tt__MediaUri * resp){
-    return g_object_new (ONVIF_TYPE_MEDIA_URI, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_MEDIA_URI, "data", resp, NULL);
 }
 
 OnvifMediaUri * OnvifSnapshotUri__new(struct _trt__GetSnapshotUriResponse * resp){
     if(!resp){
-        return g_object_new (ONVIF_TYPE_MEDIA_URI, "soap", NULL, NULL);
+        return g_object_new (ONVIF_TYPE_MEDIA_URI, "data", NULL, NULL);
     } else {
-        return g_object_new (ONVIF_TYPE_MEDIA_URI, "soap", resp->MediaUri, NULL);
+        return g_object_new (ONVIF_TYPE_MEDIA_URI, "data", resp->MediaUri, NULL);
     }
 }
 
@@ -114,6 +114,6 @@ OnvifMediaUri * OnvifStreamUri__new(struct _trt__GetStreamUriResponse * resp){
     if(!resp){
         return g_object_new (ONVIF_TYPE_MEDIA_URI, NULL);
     } else {
-        return g_object_new (ONVIF_TYPE_MEDIA_URI, "soap", resp->MediaUri, NULL);
+        return g_object_new (ONVIF_TYPE_MEDIA_URI, "data", resp->MediaUri, NULL);
     }
 }

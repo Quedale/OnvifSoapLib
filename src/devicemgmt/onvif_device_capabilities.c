@@ -119,7 +119,7 @@ OnvifCapabilities__init (OnvifCapabilities * self)
 }
 
 OnvifCapabilities* OnvifCapabilities__new(struct _tds__GetCapabilitiesResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICE_CAPABILITIES, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICE_CAPABILITIES, "data", resp, NULL);
 }
 
 OnvifMedia * OnvifCapabilities__get_media(OnvifCapabilities * self){

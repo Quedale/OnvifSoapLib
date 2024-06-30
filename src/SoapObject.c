@@ -2,7 +2,7 @@
 
 enum
 {
-  PROP_SOAP = 1,
+  PROP_DATA = 1,
   N_PROPERTIES
 };
 
@@ -47,7 +47,7 @@ SoapObject__set_property (GObject      *object,
 {
     SoapObject * self = SOAP_OBJECT (object);
     switch (prop_id){
-        case PROP_SOAP:
+        case PROP_DATA:
             SoapObject__set_object(self,g_value_get_pointer (value));
             break;
         default:
@@ -78,10 +78,10 @@ SoapObject__class_init (SoapObjectClass *klass)
     object_class->get_property = SoapObject__get_property;
     klass->construct = NULL;
 
-    obj_properties[PROP_SOAP] =
-        g_param_spec_pointer ("soap",
-                            "SoapMessage",
-                            "Pointer to original soap message.",
+    obj_properties[PROP_DATA] =
+        g_param_spec_pointer ("data",
+                            "Soap Response data",
+                            "Pointer to original soap response.",
                             G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
 
     g_object_class_install_properties (object_class,

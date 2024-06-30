@@ -70,7 +70,7 @@ OnvifTokens__init (OnvifTokens * self)
 }
 
 OnvifTokens* OnvifTokens__new(struct tmd__GetResponse * resp){
-    return g_object_new (ONVIF_TYPE_TOKENS, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_TOKENS, "data", resp, NULL);
 }
 
 //TODO Implement getters

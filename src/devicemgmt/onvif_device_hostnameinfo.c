@@ -74,7 +74,7 @@ OnvifDeviceHostnameInfo__init (OnvifDeviceHostnameInfo * self)
 }
 
 OnvifDeviceHostnameInfo* OnvifDeviceHostnameInfo__new(struct _tds__GetHostnameResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICE_HOSTNAME_INFO, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICE_HOSTNAME_INFO, "data", resp, NULL);
 }
 
 char * OnvifDeviceHostnameInfo__get_name(OnvifDeviceHostnameInfo * self){

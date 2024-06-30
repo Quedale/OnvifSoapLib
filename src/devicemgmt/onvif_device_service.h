@@ -31,7 +31,7 @@ SHARD_EXPORT OnvifDeviceService * OnvifDeviceService__new(OnvifDevice * device, 
 SHARD_EXPORT OnvifScopes * OnvifDeviceService__getScopes(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceHostnameInfo * OnvifDeviceService__getHostname(OnvifDeviceService * self); 
 SHARD_EXPORT OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self);
-SHARD_EXPORT OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self);
+SHARD_EXPORT OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self, int IncludeCapability);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self);
 SHARD_EXPORT OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);

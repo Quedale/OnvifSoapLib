@@ -75,5 +75,5 @@ int OnvifMediaServiceCapabilities__get_snapshot_uri(OnvifMediaServiceCapabilitie
 }
 
 OnvifMediaServiceCapabilities* OnvifMediaServiceCapabilities__new(struct _trt__GetServiceCapabilitiesResponse * resp){
-    return g_object_new (ONVIF_TYPE_MEDIA_SERVICECAPABILITIES, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_MEDIA_SERVICECAPABILITIES, "data", resp, NULL);
 }

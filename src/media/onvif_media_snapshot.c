@@ -57,7 +57,7 @@ OnvifSnapshot__init (OnvifSnapshot * self)
 
 OnvifSnapshot * OnvifSnapshot__new(size_t size, char * buffer){
     OnvifSnapshotPrivate priv = { buffer, size };
-    return g_object_new (ONVIF_TYPE_SNAPSHOT, "soap", &priv, NULL);
+    return g_object_new (ONVIF_TYPE_SNAPSHOT, "data", &priv, NULL);
 }
 
 int OnvifSnapshot__get_size(OnvifSnapshot * self){

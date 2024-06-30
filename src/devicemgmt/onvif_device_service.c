@@ -56,11 +56,14 @@ OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceService * self
     return ret_val;
 }
 
-OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self) {
+OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self, int IncludeCapability) {
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
 
     ONVIF_PREPARE_SOAP_CALL(OnvifDeviceServices, _tds__GetServices, _tds__GetServicesResponse);
+
+    request.IncludeCapability = IncludeCapability;
+    
     ONVIF_INVOKE_SOAP_CALL(self, tds__GetServices, OnvifDeviceServices__new, ret_val, &request,  &response);
 
     return ret_val;

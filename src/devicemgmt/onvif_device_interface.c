@@ -185,7 +185,7 @@ OnvifDeviceInterfaces__init (OnvifDeviceInterfaces * self)
 }
 
 OnvifDeviceInterfaces* OnvifDeviceInterfaces__new(struct _tds__GetNetworkInterfacesResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICE_INTERFACES, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICE_INTERFACES, "data", resp, NULL);
 }
 
 int OnvifDeviceInterfaces__get_count(OnvifDeviceInterfaces * self){

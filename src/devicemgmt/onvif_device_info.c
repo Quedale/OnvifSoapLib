@@ -127,7 +127,7 @@ OnvifDeviceInformation__init (OnvifDeviceInformation * self)
 }
 
 OnvifDeviceInformation* OnvifDeviceInformation__new(struct _tds__GetDeviceInformationResponse * resp){
-    return g_object_new (ONVIF_TYPE_DEVICE_INFORMATION, "soap", resp, NULL);
+    return g_object_new (ONVIF_TYPE_DEVICE_INFORMATION, "data", resp, NULL);
 }
 
 char * OnvifDeviceInformation__get_manufacturer(OnvifDeviceInformation *self){
