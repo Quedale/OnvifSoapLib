@@ -37,7 +37,12 @@ OnvifScopes__construct(SoapObject * obj, gpointer ptr){
         struct tt__Scope scope = resp->Scopes[i];
         // tt__ScopeDefinition scopedef = scope.ScopeDef;
         xsd__anyURI scopeitem = scope.ScopeItem;
-
+        if(!scopeitem){
+            SoapObject__set_fault(obj,SOAP_FAULT_UNEXPECTED);
+            OnvifScopes__reset(self);
+            exit(1);
+            return;
+        }
         OnvifScope * onvifscope = malloc(sizeof(OnvifScope));
         onvifscope->scope = (char*) malloc(strlen(scopeitem)+1);
         strcpy(onvifscope->scope,scopeitem);

@@ -23,6 +23,10 @@ struct _OnvifDeviceServicesClass
 };
 
 SHARD_EXPORT OnvifService * OnvifDeviceServices__get_deviceio(OnvifDeviceServices * self);
+SHARD_EXPORT OnvifService * OnvifDeviceServices__get_media(OnvifDeviceServices * self);
+SHARD_EXPORT OnvifService * OnvifDeviceServices__get_media2(OnvifDeviceServices * self);
+SHARD_EXPORT OnvifService * OnvifDeviceServices__get_events(OnvifDeviceServices * self);
+SHARD_EXPORT OnvifService * OnvifDeviceServices__get_imaging(OnvifDeviceServices * self);
 
 SHARD_EXPORT char * OnvifService__get_address(OnvifService * self);
 

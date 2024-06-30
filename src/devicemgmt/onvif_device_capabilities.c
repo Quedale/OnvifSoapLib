@@ -73,14 +73,17 @@ OnvifCapabilities__construct(SoapObject * obj, gpointer ptr){
         return;
     }
 
-     priv->media = OnvifMedia__create(response->Capabilities->Media);
-     priv->device = OnvifDeviceCapabilities__create(response->Capabilities->Device);
-     if(response->Capabilities->Extension){
+    if(response->Capabilities->Media)
+        priv->media = OnvifMedia__create(response->Capabilities->Media);
+    if(response->Capabilities->Device)
+        priv->device = OnvifDeviceCapabilities__create(response->Capabilities->Device);
+        
+    if(response->Capabilities->Extension){
         if(response->Capabilities->Extension->DeviceIO){
             priv->deviceio = OnvifDeviceIOCapabilities__create(response->Capabilities->Extension->DeviceIO);
         }
         //TODO Map more extensions
-     }
+    }
 }
 
 static void
@@ -149,6 +152,10 @@ OnvifDeviceCapabilities * OnvifCapabilities__get_device(OnvifCapabilities * self
     Start of OnvifMedia definitions
 */
 OnvifMedia * OnvifMedia__create(struct tt__MediaCapabilities * caps){
+    if(!caps->XAddr){
+        C_WARN("Onvif MediaCapabilities has no URI");
+        return NULL;
+    }
     OnvifMedia* self =  (OnvifMedia *) malloc(sizeof(OnvifMedia));
     self->xaddr = malloc(strlen(caps->XAddr)+1);
     strcpy(self->xaddr,caps->XAddr);
@@ -173,11 +180,21 @@ char * OnvifMedia__get_address(OnvifMedia * self){
     Start of OnvifDeviceCapabilities definitions
 */
 OnvifDeviceCapabilities * OnvifDeviceCapabilities__create(struct tt__DeviceCapabilities * caps){
+    if(!caps->XAddr){
+        C_WARN("Onvif DeviceCapabilities has no URI");
+        return NULL;
+    }
+
     OnvifDeviceCapabilities* self =  (OnvifDeviceCapabilities *) malloc(sizeof(OnvifDeviceCapabilities));
     self->xaddr = malloc(strlen(caps->XAddr)+1);
     strcpy(self->xaddr,caps->XAddr);
 
-    self->system = OnvifSystemCapabilities__create(caps->System);
+    if(caps->System){
+        self->system = OnvifSystemCapabilities__create(caps->System);
+    } else {
+        self->system = NULL;
+        C_WARN("No SystemCapabilities defined.");
+    }
 
     return self;
 }
@@ -331,7 +348,6 @@ OnvifSystemCapabilities * OnvifSystemCapabilities__create(struct tt__SystemCapab
 
 void OnvifSystemCapabilities__destroy(OnvifSystemCapabilities * self){
     if(self){
-
         free(self);
     }
 }

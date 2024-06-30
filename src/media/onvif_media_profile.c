@@ -106,19 +106,27 @@ OnvifProfile * OnvifMediaProfiles__get_profile(OnvifMediaProfiles * self,int ind
 
 
 void OnvifProfile__init(OnvifProfile * self,struct tt__Profile * profile, int index){
-    if(profile->Name){
-        self->name = malloc(strlen(profile->Name)+1);
-        strcpy(self->name,profile->Name);
-    } else {
-        self->name = NULL;
-    }
-
+    
+    self->name = NULL;
+    self->token = NULL;
+    
     if(profile->token){
         self->token = malloc(strlen(profile->token)+1);
         strcpy(self->token,profile->token);
     } else {
-        self->token = NULL;
+        SoapObject__set_fault(SOAP_OBJECT(self),SOAP_FAULT_UNEXPECTED);
+        return;
     }
+
+    if(profile->Name){
+        self->name = malloc(strlen(profile->Name)+1);
+        strcpy(self->name,profile->Name);
+    } else {
+        C_WARN("profile token '%s' name is null - Setting token as name",self->token);
+        self->name = malloc(strlen(profile->token)+1);
+        strcpy(self->name,profile->token);
+    }
+
     self->index = index;
 }
 
@@ -134,8 +142,11 @@ OnvifProfile * OnvifProfile__copy(OnvifProfile * self){
         return NULL;
     }
     OnvifProfile * nprofile = malloc(sizeof(OnvifProfile));
-    nprofile->name = malloc(strlen(self->name)+1);
-    strcpy(nprofile->name,self->name);
+    if(self->name){
+        nprofile->name = malloc(strlen(self->name)+1);
+        strcpy(nprofile->name,self->name);
+    }
+
     nprofile->token = malloc(strlen(self->token)+1);
     strcpy(nprofile->token,self->token);
     nprofile->index = self->index;

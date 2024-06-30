@@ -21,28 +21,36 @@ OnvifDeviceHostnameInfo__construct(SoapObject * obj, gpointer ptr){
         return;
     }
 
-    if(response->HostnameInformation){
+    if(response->HostnameInformation->Name){
         if(!priv->name){
             priv->name = malloc(strlen(response->HostnameInformation->Name)+1);
         } else {
             priv->name = realloc(priv->name,strlen(response->HostnameInformation->Name)+1);
         }
         strcpy(priv->name,response->HostnameInformation->Name);
-
-        switch(response->HostnameInformation->FromDHCP){
-            case xsd__boolean__true_:
-                priv->fromDHCP = 1;
-                break;
-            case xsd__boolean__false_:
-                priv->fromDHCP = 0;
-                break;
-            default:
-                priv->fromDHCP = 0;
-                C_WARN("default HostnameInformation->FromDHCP %d",response->HostnameInformation->FromDHCP);
-        }
-
         //TODO Map Extension once we have a need for it
+    } else {
+        SoapObject__set_fault(obj,SOAP_FAULT_UNEXPECTED);
+        return;
     }
+    
+    switch(response->HostnameInformation->FromDHCP){
+        case xsd__boolean__true_:
+            priv->fromDHCP = 1;
+            break;
+        case xsd__boolean__false_:
+            priv->fromDHCP = 0;
+            break;
+        default:
+            if(priv->name){
+                free(priv->name);
+                priv->name = NULL;
+            }
+            SoapObject__set_fault(obj,SOAP_FAULT_UNEXPECTED);
+            C_WARN("Invalid HostnameInformation->FromDHCP %d",response->HostnameInformation->FromDHCP);
+            
+    }
+
 }
 
 static void

@@ -258,16 +258,23 @@ int main(int argc, char *argv[])
 	}
 	g_object_unref(profiles);
 
-
 	OnvifCapabilities* caps = OnvifDeviceService__getCapabilities(device_service);
 	fault = SoapObject__get_fault(SOAP_OBJECT(caps));
     switch(*fault){
         case SOAP_FAULT_NONE:
             OnvifDeviceCapabilities * device_caps = OnvifCapabilities__get_device(caps);
-            OnvifSystemCapabilities * sys_caps = OnvifDeviceCapabilities__get_system(device_caps);
-			int major = OnvifSystemCapabilities__get_majorVersion(sys_caps);
-			int minor = OnvifSystemCapabilities__get_minorVersion(sys_caps);
-            C_DEBUG("ONVIF Version : %d.%02d",major,minor);
+			if(device_caps){
+				OnvifSystemCapabilities * sys_caps = OnvifDeviceCapabilities__get_system(device_caps);
+				if(sys_caps){
+					int major = OnvifSystemCapabilities__get_majorVersion(sys_caps);
+					int minor = OnvifSystemCapabilities__get_minorVersion(sys_caps);
+					C_DEBUG("ONVIF Version : %d.%02d",major,minor);
+				} else {
+					C_WARN("No SystemCapabilities defined");
+				}
+			} else {
+				C_WARN("No DeviceCapabilities defined");
+			}
             break;
         case SOAP_FAULT_CONNECTION_ERROR:
         case SOAP_FAULT_NOT_VALID:
