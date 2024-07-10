@@ -369,6 +369,10 @@ retry:
     soap_done(soap);
     soap_free(soap);
 
+    if(!snap){
+        snap = OnvifSnapshot__new(0,NULL);
+        SoapObject__set_fault(SOAP_OBJECT(snap),SOAP_FAULT_UNEXPECTED);
+    }
     return snap;
 }
 
