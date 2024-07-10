@@ -193,6 +193,41 @@ int main(int argc, char *argv[])
 	}
 	g_object_unref(hostname);
 	
+
+	OnvifDeviceInterfaces * interfaces = OnvifDeviceService__getNetworkInterfaces(device_service);
+	fault = SoapObject__get_fault(SOAP_OBJECT(interfaces));
+	switch(*fault){
+		case SOAP_FAULT_NONE:
+				C_INFO("count : %d",OnvifDeviceInterfaces__get_count(interfaces));
+				for(int a=0;a<OnvifDeviceInterfaces__get_count(interfaces);a++){
+					OnvifDeviceInterface * inet = OnvifDeviceInterfaces__get_interface(interfaces,a);
+					OnvifIPv4Configuration * v4 = OnvifDeviceInterface__get_ipv4(inet);
+					C_INFO("name : %s",OnvifDeviceInterface__get_name(inet));
+					C_INFO("mtu : %d",OnvifDeviceInterface__get_mtu(inet));
+					if(v4){
+						C_INFO("-------------------------------------------");
+						C_INFO("enabled : %d",OnvifIPv4Configuration__is_enabled(v4));
+						C_INFO("manual count : %d",OnvifIPv4Configuration__get_manual_count(v4));
+						for(int i=0;i<OnvifIPv4Configuration__get_manual_count(v4);i++){
+							OnvifPrefixedIPv4Address * addr = OnvifIPv4Configuration__get_manual(v4, i);
+							C_INFO("ipv4 : %s/%d",OnvifPrefixedIPv4Address__get_address(addr), OnvifPrefixedIPv4Address__get_prefix(addr));
+						}
+					} else {
+						C_INFO("No IPv4 Configured");
+					}
+				}
+			break;
+		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+		case SOAP_FAULT_CONNECTION_ERROR:
+		case SOAP_FAULT_NOT_VALID:
+		case SOAP_FAULT_UNAUTHORIZED:
+		case SOAP_FAULT_UNEXPECTED:
+		default:
+			C_ERROR("Failed to retrieve inet %d",*fault);
+			break;
+	}
+	g_object_unref(interfaces);
+
 	OnvifScopes * scopes = OnvifDeviceService__getScopes(device_service);
 	fault = SoapObject__get_fault(SOAP_OBJECT(scopes));
 	switch(*fault){

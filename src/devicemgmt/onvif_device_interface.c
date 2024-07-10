@@ -1,25 +1,31 @@
 #include "onvif_device_interface_local.h"
 #include "clogger.h"
 
+typedef struct _OnvifPrefixedIPv4Address {
+    char * address;
+    int prefix;
+} OnvifPrefixedIPv4Address;
+
+typedef struct _OnvifIPv4Configuration {
+    int enabled;
+    int dhcp; // DHCP
+    int manual_count;
+    OnvifPrefixedIPv4Address ** manual;
+    OnvifPrefixedIPv4Address * local;
+    OnvifPrefixedIPv4Address * fromdhcp;
+} OnvifIPv4Configuration;
+
 typedef struct _OnvifDeviceInterface {
     char * token; ///< Required attribute.
     int enabled; ///< Required element.
 
     //Info ///< Optional element.
-    int has_info;
     char * name;
     char * mac;
     int mtu;
 
-    //IPv4 ///< Optional element.
-    //__sizeManual
-    int ipv4_enabled;
-    int ipv4_dhcp; // DHCP
-    int ipv4_manual_count;
-    char ** ipv4_manual; // Manual
-    char * ipv4_link_local; // LinkLocal
-    char * ipv4_from_dhcp; // FromDHCP
-
+    OnvifIPv4Configuration * ipv4;
+    // OnvifIPv6Configuration * ipv6;
     //TODO Support IPv6
 
 } OnvifDeviceInterface;
@@ -118,6 +124,126 @@ OnvifDeviceInterface * OnvifDeviceInterfaces__get_interface(OnvifDeviceInterface
     return priv->interfaces[index];
 }
 
+OnvifPrefixedIPv4Address * OnvifPrefixedIPv4Address__create(struct tt__PrefixedIPv4Address * addr){
+    if(!addr){
+        return NULL;
+    }
+
+    OnvifPrefixedIPv4Address * ret = malloc(sizeof(OnvifPrefixedIPv4Address));
+    if(addr->Address){
+        ret->address = malloc(strlen(addr->Address) + 1);
+        strcpy(ret->address,addr->Address);
+    } else {
+        ret->address = malloc(strlen("No IPv4 Manual Address defined") + 1);
+        strcpy(ret->address,"No IPv4 Manual Address defined");
+        C_ERROR("No IPv4 Manual Address defined in soap response");
+    }
+
+    ret->prefix = addr->PrefixLength;
+    return ret;
+}
+
+char * OnvifPrefixedIPv4Address__get_address(OnvifPrefixedIPv4Address * self){
+    return self->address;
+}
+
+int OnvifPrefixedIPv4Address__get_prefix(OnvifPrefixedIPv4Address * self){
+    return self->prefix;
+}
+
+void OnvifPrefixedIPv4Address__destroy(OnvifPrefixedIPv4Address * self){
+    if(self->address)
+        free(self->address);
+    self->prefix = 0;
+}
+
+OnvifIPv4Configuration * OnvifIPv4Configuration__create(struct tt__IPv4NetworkInterface *IPv4){
+    OnvifIPv4Configuration * ret = NULL;
+    if(IPv4){
+        ret = malloc(sizeof(OnvifIPv4Configuration));
+        ret->enabled = IPv4->Enabled;
+        ret->manual = NULL;
+        ret->local = NULL;
+        ret->fromdhcp = NULL;
+
+        if(IPv4->Config){
+            ret->dhcp = IPv4->Config->DHCP;
+            ret->manual_count = IPv4->Config->__sizeManual;
+            //Manually configured IPs
+            if(ret->manual_count > 0){
+                ret->manual = malloc(sizeof(OnvifPrefixedIPv4Address) * ret->manual_count);
+                struct tt__PrefixedIPv4Address * manuals = IPv4->Config->Manual;
+                for(int a=0;a<ret->manual_count;a++){
+                    ret->manual[ret->manual_count-1] = OnvifPrefixedIPv4Address__create(&manuals[a]);
+
+                }
+            }
+
+            //Link local address.
+            if(IPv4->Config->LinkLocal)
+                ret->local = OnvifPrefixedIPv4Address__create(IPv4->Config->LinkLocal);
+
+            //DHCP IP
+            if(IPv4->Config->FromDHCP)
+                ret->fromdhcp = OnvifPrefixedIPv4Address__create(IPv4->Config->FromDHCP);
+
+        } else {
+            ret->manual_count = 0;
+            ret->dhcp = 0;
+        }
+    } else {
+        C_WARN("No IPv4 defined");
+    }
+
+    return ret;
+}
+
+int OnvifIPv4Configuration__is_enabled(OnvifIPv4Configuration * self){
+    return self->enabled;
+}
+
+int OnvifIPv4Configuration__is_dhcp(OnvifIPv4Configuration * self){
+    return self->dhcp;
+}
+
+int OnvifIPv4Configuration__get_manual_count(OnvifIPv4Configuration * self){
+    return self->manual_count;
+}
+
+OnvifPrefixedIPv4Address * OnvifIPv4Configuration__get_manual(OnvifIPv4Configuration * self, int index){
+    if(index < 0 || index >= self->manual_count){
+        C_ERROR("IPv4Configuration manual address out-of-bounds.");
+        return NULL;
+    }
+
+    return self->manual[index];
+}
+
+OnvifPrefixedIPv4Address * OnvifIPv4Configuration__get_local(OnvifIPv4Configuration * self){
+    return self->local;
+}
+
+OnvifPrefixedIPv4Address * OnvifIPv4Configuration__get_fromdhcp(OnvifIPv4Configuration * self){
+    return self->fromdhcp;
+}
+
+void OnvifIPv4Configuration__destroy(OnvifIPv4Configuration * self){
+    self->enabled = 0;
+    self->dhcp = 0;
+
+    if(self->manual){
+        for(int i=0;i<self->manual_count;i++){
+            OnvifPrefixedIPv4Address__destroy(self->manual[i]);
+        }
+    }
+    self->manual_count = 0;
+
+    if(self->local)
+        OnvifPrefixedIPv4Address__destroy(self->local);
+    if(self->fromdhcp)
+        OnvifPrefixedIPv4Address__destroy(self->fromdhcp);   
+}
+
 OnvifDeviceInterface * OnvifDeviceInterface__create(struct tt__NetworkInterface * interface){
     OnvifDeviceInterface * onvifinterface = malloc(sizeof(OnvifDeviceInterface));
     onvifinterface->enabled = interface->Enabled;
@@ -125,7 +251,6 @@ OnvifDeviceInterface * OnvifDeviceInterface__create(struct tt__NetworkInterface 
     strcpy(onvifinterface->token,interface->token);
     
     if(interface->Info){
-        onvifinterface->has_info = 1;
         if(interface->Info->Name){
             onvifinterface->name = malloc(strlen(interface->Info->Name)+1);
             strcpy(onvifinterface->name,interface->Info->Name);
@@ -149,80 +274,30 @@ OnvifDeviceInterface * OnvifDeviceInterface__create(struct tt__NetworkInterface 
     } else {
         onvifinterface->name = NULL;
         onvifinterface->mac = NULL;
-        onvifinterface->has_info = 0;
+        C_WARN("NetworkInterface has no Info defined.");
     }
     
-    //struct tt__IPv4NetworkInterface*     IPv4
-    if(interface->IPv4){
-        onvifinterface->ipv4_enabled = interface->IPv4->Enabled;
-        onvifinterface->ipv4_manual = NULL;
-        onvifinterface->ipv4_link_local = NULL;
-        onvifinterface->ipv4_from_dhcp = NULL;
+    onvifinterface->ipv4 = OnvifIPv4Configuration__create(interface->IPv4);
 
-        if(interface->IPv4->Config){
-            onvifinterface->ipv4_dhcp = interface->IPv4->Config->DHCP;
-            onvifinterface->ipv4_manual_count = interface->IPv4->Config->__sizeManual;
-            //Manually configured IPs
-            if(interface->IPv4->Config->__sizeManual > 0){
-                struct tt__PrefixedIPv4Address * manuals = interface->IPv4->Config->Manual;
-                for(int a=0;a<onvifinterface->ipv4_manual_count;a++){
-                    struct tt__PrefixedIPv4Address manual = manuals[a];
-                    onvifinterface->ipv4_manual = realloc(onvifinterface->ipv4_manual,sizeof(char *) * onvifinterface->ipv4_manual_count);
-                    if(manual.Address){
-                        onvifinterface->ipv4_manual[onvifinterface->ipv4_manual_count-1] = malloc(strlen(manual.Address) + 1);
-                        strcpy(onvifinterface->ipv4_manual[onvifinterface->ipv4_manual_count-1],manual.Address);
-                    } else {
-                        onvifinterface->ipv4_manual[onvifinterface->ipv4_manual_count-1] = malloc(strlen("No IPv4 Manual Address defined") + 1);
-                        strcpy(onvifinterface->ipv4_manual[onvifinterface->ipv4_manual_count-1],"No IPv4 Manual Address defined");
-                        C_ERROR("No IPv4 Manual Address defined in soap response");
-                    }
 
-                }
-            }
 
-            //Link local address.
-            if(interface->IPv4->Config->LinkLocal){
-                onvifinterface->ipv4_link_local = malloc(strlen(interface->IPv4->Config->LinkLocal->Address)+1);
-                strcpy(onvifinterface->ipv4_link_local,interface->IPv4->Config->LinkLocal->Address);
-            }
-
-            //DHCP IP
-            if(interface->IPv4->Config->FromDHCP){
-                onvifinterface->ipv4_from_dhcp = malloc(strlen(interface->IPv4->Config->FromDHCP->Address)+1);
-                strcpy(onvifinterface->ipv4_from_dhcp,interface->IPv4->Config->FromDHCP->Address);
-            }
-        } else {
-            onvifinterface->ipv4_manual_count = 0;
-            onvifinterface->ipv4_dhcp = 0;
-        }
-    } else {
-        C_WARN("No IPv4 defined");
-        onvifinterface->ipv4_enabled = 0;
-        onvifinterface->ipv4_manual = NULL;
-        onvifinterface->ipv4_link_local = NULL;
-        onvifinterface->ipv4_from_dhcp = NULL;
-        onvifinterface->ipv4_manual_count = 0;
-        onvifinterface->ipv4_dhcp = 0;
-    }
     return onvifinterface;
 }
 
 void OnvifDeviceInterface__destroy(OnvifDeviceInterface * interface){
-    free(interface->token);
+    if(interface->token)
+        free(interface->token);
+    interface->enabled = 0;
     if(interface->name)
         free(interface->name);
     if(interface->mac)
         free(interface->mac);
-    if(interface->ipv4_manual){
-        for(int a=0;a<interface->ipv4_manual_count;a++){
-            free(interface->ipv4_manual[a]);
-        }
-        free(interface->ipv4_manual);
-    }
-    if(interface->ipv4_link_local)
-        free(interface->ipv4_link_local);
-    if(interface->ipv4_from_dhcp)
-        free(interface->ipv4_from_dhcp);
+    interface->mtu = 0;
+
+    if(interface->ipv4)
+        OnvifIPv4Configuration__destroy(interface->ipv4);
+
+    //TODO Destroy ipv4
     
     free(interface);
 }
@@ -233,10 +308,6 @@ char * OnvifDeviceInterface__get_token(OnvifDeviceInterface * self){
 
 int OnvifDeviceInterface__get_enabled(OnvifDeviceInterface * self){
     return self->enabled;
-}
-
-int OnvifDeviceInterface__has_info(OnvifDeviceInterface * self){
-    return self->has_info;
 }
 
 char * OnvifDeviceInterface__get_name(OnvifDeviceInterface * self){
@@ -251,26 +322,7 @@ int OnvifDeviceInterface__get_mtu(OnvifDeviceInterface * self){
     return self->mtu;
 }
 
-int OnvifDeviceInterface__is_ipv4_enabled(OnvifDeviceInterface * self){
-    return self->ipv4_enabled;
+OnvifIPv4Configuration * OnvifDeviceInterface__get_ipv4(OnvifDeviceInterface * self){
+    return self->ipv4;
 }
 
-int OnvifDeviceInterface__get_ipv4_dhcp(OnvifDeviceInterface * self){
-    return self->ipv4_dhcp;
-}
-
-int OnvifDeviceInterface__get_ipv4_manual_count(OnvifDeviceInterface * self){
-    return self->ipv4_manual_count;
-}
-
-char ** OnvifDeviceInterface__get_ipv4_manual(OnvifDeviceInterface * self){
-    return self->ipv4_manual;
-}
-
-char * OnvifDeviceInterface__get_ipv4_link_local(OnvifDeviceInterface * self){
-    return self->ipv4_link_local;
-}
-
-char * OnvifDeviceInterface__get_ipv4_from_dhcp(OnvifDeviceInterface * self){
-    return self->ipv4_from_dhcp;
-}
