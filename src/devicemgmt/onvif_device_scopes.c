@@ -29,9 +29,6 @@ OnvifScopes__construct(SoapObject * obj, gpointer ptr){
         return;
     }
 
-    priv->scopes = malloc(0);
-    priv->count = 0;
-
     int i;
     for(i=0;i<resp->__sizeScopes;i++){
         struct tt__Scope scope = resp->Scopes[i];
@@ -48,7 +45,11 @@ OnvifScopes__construct(SoapObject * obj, gpointer ptr){
         strcpy(onvifscope->scope,scopeitem);
 
         priv->count++;
-        priv->scopes = realloc (priv->scopes, sizeof (OnvifScope*) * priv->count);
+        if(priv->scopes){
+            priv->scopes = realloc (priv->scopes, sizeof (OnvifScope*) * priv->count);
+        } else {
+            priv->scopes = malloc(sizeof (OnvifScope*) * priv->count);
+        }
         priv->scopes[priv->count-1] = onvifscope;
 
         // tt__ScopeDefinition__Fixed : tt__ScopeDefinition__Fixed || tt__ScopeDefinition__Configurable
@@ -65,8 +66,10 @@ OnvifScopes__reset (OnvifScopes *self){
             free(priv->scopes[i]);
         }
         priv->count = 0;
-        free(priv->scopes);
-        priv->scopes = NULL;
+        if(priv->scopes){
+            free(priv->scopes);
+            priv->scopes = NULL;
+        }
     }
 }
 

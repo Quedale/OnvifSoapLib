@@ -17,21 +17,24 @@ typedef struct {
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifMediaProfiles, OnvifMediaProfiles_, SOAP_TYPE_OBJECT)
 
 static void
-OnvifMediaProfiles__construct(SoapObject * obj, gpointer ptr){
-    OnvifMediaProfiles * self = ONVIF_MEDIA_PROFILES(obj);
-    struct _trt__GetProfilesResponse * resp = ptr;
-    
+OnvifMediaProfiles__reset (OnvifMediaProfiles *self){
     OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (self);
     if(priv->profiles){
         for (int i = 0; i < priv->count; i++){
             OnvifProfile__real_destroy(priv->profiles[i]);
         }
         priv->count = 0;
-        priv->profiles = realloc(priv->profiles,0);
-    } else {
-        priv->count = 0;
-        priv->profiles = malloc(0);
+        free(priv->profiles);
+        priv->profiles = NULL;
     }
+}
+
+static void
+OnvifMediaProfiles__construct(SoapObject * obj, gpointer ptr){
+    OnvifMediaProfiles * self = ONVIF_MEDIA_PROFILES(obj);
+    struct _trt__GetProfilesResponse * resp = ptr;
+    
+    OnvifMediaProfiles__reset(self);
 
     if(!resp){
         return;
@@ -47,12 +50,7 @@ OnvifMediaProfiles__construct(SoapObject * obj, gpointer ptr){
 static void
 OnvifMediaProfiles__dispose (GObject *self)
 {
-    OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (ONVIF_MEDIA_PROFILES(self));
-    for (int i = 0; i < priv->count; i++){
-        OnvifProfile__real_destroy(priv->profiles[i]);
-    }
-    free(priv->profiles);
-    priv->count = 0;
+    OnvifMediaProfiles__reset(ONVIF_MEDIA_PROFILES(self));
     G_OBJECT_CLASS (OnvifMediaProfiles__parent_class)->dispose (self);
 }
 
