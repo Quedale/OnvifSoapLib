@@ -43,6 +43,7 @@ pkg_check_modules(CUTILS REQUIRED cutils)
 pkg_check_modules(NTLM REQUIRED libntlm)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
+#pkg_check_modules(ZSTD REQUIRED libzstd) #ZSTD_LDFLAGS is already set by OpenSSL.cmake?
 include_directories(${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${GOBJECT_INCLUDE_DIRS})
 link_directories(${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
 
@@ -120,18 +121,21 @@ else()
                               ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c PROPERTIES COMPILE_FLAGS -w)
 endif()
 
-if(ZLIB_FOUND)
-  target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
-  target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_GZIP")
-else()
-  message(WARNING "ZLIB not found...")
-endif()
-
 if(OPENSSL_FOUND)
   target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
   target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_OPENSSL")
 else()
   message(FATAL_ERROR "OpenSSL not found...")
+endif()
+
+message(NOTICE "ZSTD_LDFLAGS ${ZSTD_LDFLAGS}")
+target_link_libraries(onvifsoap PRIVATE ${ZSTD_LDFLAGS})
+
+if(ZLIB_FOUND)
+  target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
+  target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_GZIP")
+else()
+  message(WARNING "ZLIB not found...")
 endif()
 
 if(Threads_FOUND)
