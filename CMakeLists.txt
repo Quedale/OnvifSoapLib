@@ -43,7 +43,7 @@ pkg_check_modules(CUTILS REQUIRED cutils)
 pkg_check_modules(NTLM REQUIRED libntlm)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
-#pkg_check_modules(ZSTD REQUIRED libzstd) #ZSTD_LDFLAGS is already set by OpenSSL.cmake?
+pkg_check_modules(ZSTD REQUIRED libzstd)
 include_directories(${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${GOBJECT_INCLUDE_DIRS})
 link_directories(${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
 
