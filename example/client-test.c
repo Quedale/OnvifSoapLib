@@ -138,6 +138,71 @@ void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_serv
 		g_object_unref(snapshot);
 	}
 }
+
+void print_scopes(OnvifDeviceService * device_service){
+	char * name, * hardware, * location;
+
+	OnvifScopes * scopes = OnvifDeviceService__getScopes(device_service);
+	SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(scopes));
+	switch(*fault){
+		case SOAP_FAULT_NONE:
+			name = OnvifScopes__extract_scope(scopes,"name");
+			hardware = OnvifScopes__extract_scope(scopes,"hardware");
+			location = OnvifScopes__extract_scope(scopes,"location");
+			C_DEBUG("OnvifScope name : %s",name);
+			C_DEBUG("OnvifScope hardware : %s",hardware);
+			C_DEBUG("OnvifScope location : %s",location);
+			free(name);
+			free(hardware);
+			free(location);
+			break;
+		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+		case SOAP_FAULT_CONNECTION_ERROR:
+		case SOAP_FAULT_NOT_VALID:
+		case SOAP_FAULT_UNAUTHORIZED:
+		case SOAP_FAULT_UNEXPECTED:
+		default:
+			C_ERROR("Failed to retrieve Device Scopes.");
+			break;
+	}
+	g_object_unref(scopes);
+}
+
+void print_device_capabilites(OnvifDeviceService * device_service){
+	OnvifDeviceCapabilities * device_caps;
+	OnvifSystemCapabilities * sys_caps;
+	int major, minor;
+
+	OnvifCapabilities* caps = OnvifDeviceService__getCapabilities(device_service);
+	SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(caps));
+    switch(*fault){
+        case SOAP_FAULT_NONE:
+            device_caps = OnvifCapabilities__get_device(caps);
+			if(device_caps){
+				sys_caps = OnvifDeviceCapabilities__get_system(device_caps);
+				if(sys_caps){
+					major = OnvifSystemCapabilities__get_majorVersion(sys_caps);
+					minor = OnvifSystemCapabilities__get_minorVersion(sys_caps);
+					C_DEBUG("ONVIF Version : %d.%02d",major,minor);
+				} else {
+					C_WARN("No SystemCapabilities defined");
+				}
+			} else {
+				C_WARN("No DeviceCapabilities defined");
+			}
+            break;
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            C_ERROR("Failed to retrieve Device Capabilities");
+            break;
+    }
+	g_object_unref(caps);
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -227,31 +292,8 @@ int main(int argc, char *argv[])
 			break;
 	}
 	g_object_unref(interfaces);
-
-	OnvifScopes * scopes = OnvifDeviceService__getScopes(device_service);
-	fault = SoapObject__get_fault(SOAP_OBJECT(scopes));
-	switch(*fault){
-		case SOAP_FAULT_NONE:
-			char * name = OnvifScopes__extract_scope(scopes,"name");
-			char * hardware = OnvifScopes__extract_scope(scopes,"hardware");
-			char * location = OnvifScopes__extract_scope(scopes,"location");
-			C_DEBUG("OnvifScope name : %s",name);
-			C_DEBUG("OnvifScope hardware : %s",hardware);
-			C_DEBUG("OnvifScope location : %s",location);
-			free(name);
-			free(hardware);
-			free(location);
-			break;
-		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
-		case SOAP_FAULT_CONNECTION_ERROR:
-		case SOAP_FAULT_NOT_VALID:
-		case SOAP_FAULT_UNAUTHORIZED:
-		case SOAP_FAULT_UNEXPECTED:
-		default:
-			C_ERROR("Failed to retrieve Device Scopes.");
-			break;
-	}
-	g_object_unref(scopes);
+	
+	print_scopes(device_service);
 
 	OnvifMediaService * media_service = OnvifDevice__get_media_service(dev);
 	
@@ -293,34 +335,7 @@ int main(int argc, char *argv[])
 	}
 	g_object_unref(profiles);
 
-	OnvifCapabilities* caps = OnvifDeviceService__getCapabilities(device_service);
-	fault = SoapObject__get_fault(SOAP_OBJECT(caps));
-    switch(*fault){
-        case SOAP_FAULT_NONE:
-            OnvifDeviceCapabilities * device_caps = OnvifCapabilities__get_device(caps);
-			if(device_caps){
-				OnvifSystemCapabilities * sys_caps = OnvifDeviceCapabilities__get_system(device_caps);
-				if(sys_caps){
-					int major = OnvifSystemCapabilities__get_majorVersion(sys_caps);
-					int minor = OnvifSystemCapabilities__get_minorVersion(sys_caps);
-					C_DEBUG("ONVIF Version : %d.%02d",major,minor);
-				} else {
-					C_WARN("No SystemCapabilities defined");
-				}
-			} else {
-				C_WARN("No DeviceCapabilities defined");
-			}
-            break;
-        case SOAP_FAULT_CONNECTION_ERROR:
-        case SOAP_FAULT_NOT_VALID:
-        case SOAP_FAULT_UNAUTHORIZED:
-        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
-        case SOAP_FAULT_UNEXPECTED:
-        default:
-            C_ERROR("Failed to retrieve Device Capabilities");
-            break;
-    }
-	g_object_unref(caps);
+	print_device_capabilites(device_service);
 	
 	OnvifDevice__destroy(dev);
 	return 0;

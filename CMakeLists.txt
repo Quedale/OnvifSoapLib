@@ -122,7 +122,7 @@ else()
 endif()
 
 if(OPENSSL_FOUND)
-  target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+  target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ${CMAKE_DL_LIBS})
   target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_OPENSSL")
 else()
   message(FATAL_ERROR "OpenSSL not found...")
