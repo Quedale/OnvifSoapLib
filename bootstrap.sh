@@ -1,5 +1,7 @@
 #!/bin/bash
 SKIP=0
+NO_DOWNLOAD=0
+
 #Save current working directory to run configure in
 WORK_DIR=$(pwd)
 
@@ -27,6 +29,9 @@ do
     fi
     if [ $arg == "--skip-wsdl" ]; then
         SKIP_WSDL=1
+    fi
+    if [ "$arg" == "--no-download" ]; then
+        NO_DOWNLOAD=1
     fi
     i=$((i + 1));
 done
@@ -66,6 +71,12 @@ function displaytime {
 downloadAndExtract (){
   local path file # reset first
   local "${@}"
+
+  if [ -z "${forcedownload}" ] && [ $NO_DOWNLOAD -eq 1 ]; then
+    # printError msg="Download disabled. Missing dependency $file"
+    FAILED=1
+    return;
+  fi
 
   if [ $SKIP -eq 1 ]
   then
@@ -121,6 +132,12 @@ downloadAndExtract (){
 pullOrClone (){
   local path tag depth recurse ignorecache # reset first
   local "${@}"
+
+  if [ -z "${forcedownload}" ] && [ $NO_DOWNLOAD -eq 1 ]; then
+    # printError msg="Download disabled. Missing dependency $file"
+    FAILED=1
+    return;
+  fi
 
   if [ $SKIP -eq 1 ]
   then
@@ -646,9 +663,9 @@ cd $SUBPROJECT_DIR
 ################################################################
 #Check if new changes needs to be pulled
 git -C CUtils remote update 2> /dev/null
-LOCAL=$(git -C CUtils rev-parse @)
-REMOTE=$(git -C CUtils rev-parse @{u})
-BASE=$(git -C CUtils merge-base @ @{u})
+LOCAL=$(git -C CUtils rev-parse @ 2> /dev/null)
+REMOTE=$(git -C CUtils rev-parse @{u} 2> /dev/null)
+BASE=$(git -C CUtils merge-base @ @{u} 2> /dev/null)
 force_rebuild=0
 if [ $LOCAL = $REMOTE ]; then
     echo "CUtils is already up-to-date. Do nothing..."
@@ -724,7 +741,7 @@ fi
 
 NTLM_PKG=$SUBPROJECT_DIR/libntlm/build/dist/lib/pkgconfig
 PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$NTLM_PKG \
-pkg-config --exists --print-errors "libntlm >= 1.6"
+pkg-config --exists --print-errors "libntlm >= 1.5"
 ret=$?
 if [ $ret != 0 ]; then
   pullOrClone path=https://gitlab.com/gsasl/libntlm.git tag=v1.7
