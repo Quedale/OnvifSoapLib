@@ -19,6 +19,27 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
 void OnvifBaseService__soap_destroy(OnvifBaseService * self, struct soap *soap);
 int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store);
 
+#define STR_CONCAT(a,b) a##b
+#define TOSTRMAC(A) #A
+
+#define xsd__boolean_to_bool(a, b, c) \
+    if(!a){ \
+        C_WARN(TOSTRMAC(STR_CONCAT(c," is NULL"))); \
+        b = FALSE; \
+    } else { \
+        switch(*a){ \
+            case xsd__boolean__false_: \
+                b = FALSE; \
+                break; \
+            case xsd__boolean__true_: \
+                b = TRUE; \
+                break; \
+            default: \
+                b = FALSE; \
+                C_WARN(TOSTRMAC(STR_CONCAT(c," default to FALSE"))); \
+        } \
+    }
+
 #define BUILD_SOAP_FUNC(a)  soap_call___##a 
 #define BUILD_SOAP_TYPE(a)  _##a 
 #define ONVIF_INVOKE_SOAP_CALL_MSTART(self, callback, vocreator, vo) \

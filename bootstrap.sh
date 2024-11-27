@@ -750,6 +750,11 @@ if [ $ret != 0 ]; then
   if [ $FAILED -eq 1 ]; then exit 1; fi
 fi
 
+# This option still required internet to reach oasis schemes.
+# no internet requirement to support flatpak builder
+# downloadAndExtract file="24.06.tar.gz" path="https://github.com/onvif/specs/archive/refs/tags/24.06.tar.gz"
+# if [ $FAILED -eq 1 ]; then exit 1; fi
+
 #Get out of subproject folder
 cd ..
 
@@ -763,14 +768,28 @@ if [ $SKIP_WSDL -eq 0 ]; then
       ./wsdl/onvif/wsdl/deviceio.wsdl \
       ./wsdl/onvif/wsdl/imaging.wsdl \
       ./wsdl/onvif/wsdl/media.wsdl \
+      ./wsdl/onvif/wsdl/media2.wsdl \
       ./wsdl/onvif/wsdl/ptz.wsdl \
       ./wsdl/onvif/wsdl/remotediscovery.wsdl \
       ./wsdl/onvif/wsdl/advancedsecurity.wsdl
+      # Use bellow if using github ONVIF specs
+      # ./subprojects/specs-24.06/wsdl/ver10/device/wsdl/devicemgmt.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver10/events/wsdl/event.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver10/deviceio.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver20/imaging/wsdl/imaging.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver10/media/wsdl/media.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver20/media/wsdl/media.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver20/ptz/wsdl/ptz.wsdl \
+      # ./subprojects/specs-24.06/wsdl/ver10/advancedsecurity/wsdl/advancedsecurity.wsdl \
+      
+      # Use below for ONVIF schema from onvif.org
+      # http://schemas.xmlsoap.org/ws/2005/04/discovery/ws-discovery.wsdl #ONVIF remotediscovery.wsdl is outdated https://github.com/onvif/specs/issues/319
       # http://www.onvif.org/onvif/ver10/device/wsdl/devicemgmt.wsdl \
       # http://www.onvif.org/onvif/ver10/events/wsdl/event.wsdl \
       # http://www.onvif.org/onvif/ver10/deviceio.wsdl \
       # http://www.onvif.org/onvif/ver20/imaging/wsdl/imaging.wsdl \
       # http://www.onvif.org/onvif/ver10/media/wsdl/media.wsdl \
+      # http://www.onvif.org/onvif/ver20/media/wsdl/media.wsdl \
       # http://www.onvif.org/onvif/ver20/ptz/wsdl/ptz.wsdl \
       # http://www.onvif.org/onvif/ver10/network/wsdl/remotediscovery.wsdl \
       # http://www.onvif.org/ver10/advancedsecurity/wsdl/advancedsecurity.wsdl

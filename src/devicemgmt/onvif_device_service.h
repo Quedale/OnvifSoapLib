@@ -1,7 +1,7 @@
 #ifndef ONVIF_DEVIO_SERVICE_H_ 
 #define ONVIF_DEVIO_SERVICE_H_
 
-#include "shard_export.h"
+#include "../shard_export.h"
 #include "../onvif_base_service.h"
 #include "onvif_device_capabilities.h"
 #include "onvif_device_hostnameinfo.h"
@@ -16,14 +16,12 @@ G_BEGIN_DECLS
 #define ONVIF_TYPE_DEVICE_SERVICE OnvifDeviceService__get_type()
 G_DECLARE_FINAL_TYPE (OnvifDeviceService, OnvifDeviceService_, ONVIF, DEVICE_SERVICE, OnvifBaseService)
 
-struct _OnvifDeviceService
-{
+struct _OnvifDeviceService {
     OnvifBaseService parent_instance;
 };
 
 
-struct _OnvifDeviceServiceClass
-{
+struct _OnvifDeviceServiceClass {
     OnvifBaseServiceClass parent_class;
 };
 

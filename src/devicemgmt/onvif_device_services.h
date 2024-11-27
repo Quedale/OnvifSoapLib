@@ -1,8 +1,8 @@
 #ifndef ONVIF_DEVICE_SERVICES_H_ 
 #define ONVIF_DEVICE_SERVICES_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../shard_export.h"
+#include "../SoapObject.h"
 
 G_BEGIN_DECLS
 
@@ -11,14 +11,12 @@ G_DECLARE_FINAL_TYPE (OnvifDeviceServices, OnvifDeviceServices_, ONVIF, DEVICE_S
 
 typedef struct _OnvifService OnvifService;
 
-struct _OnvifDeviceServices
-{
+struct _OnvifDeviceServices {
     SoapObject parent_instance;
 };
 
 
-struct _OnvifDeviceServicesClass
-{
+struct _OnvifDeviceServicesClass {
     SoapObjectClass parent_class;
 };
 

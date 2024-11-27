@@ -1,211 +1,162 @@
-#include "onvif_media_profile_local.h"
-#include "clogger.h"
-#include "../SoapObject.h"
 
-typedef struct _OnvifProfile {
-    int copy;
+#include "onvif_media_profile.h"
+
+enum {
+    PROP_TOKEN = 1,
+    PROP_NAME = 2,
+    PROP_INDEX = 3,
+    N_PROPERTIES
+};
+
+typedef struct {
     int index;
     char * name;
     char * token;
-} OnvifProfile;
+} OnvifMediaProfilePrivate;
 
-typedef struct {
-    OnvifProfile ** profiles;
-    int count;
-} OnvifMediaProfilesPrivate;
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (OnvifMediaProfile, OnvifMediaProfile_, G_TYPE_OBJECT)
 
-G_DEFINE_TYPE_WITH_PRIVATE(OnvifMediaProfiles, OnvifMediaProfiles_, SOAP_TYPE_OBJECT)
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void
-OnvifMediaProfiles__reset (OnvifMediaProfiles *self){
-    OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (self);
-    if(priv->profiles){
-        for (int i = 0; i < priv->count; i++){
-            OnvifProfile__real_destroy(priv->profiles[i]);
-        }
-        priv->count = 0;
-        free(priv->profiles);
-        priv->profiles = NULL;
+OnvifMediaProfile__set_property (GObject      *object,
+                          guint         prop_id,
+                          const GValue *value,
+                          GParamSpec   *pspec){
+    OnvifMediaProfile * self = ONVIF_MEDIA_PROFILE (object);
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    char * strval;
+
+    switch (prop_id){
+        case PROP_TOKEN:
+            if(priv->token){
+                free(priv->token);
+                priv->token = NULL;
+            }
+            strval = (char*) g_value_get_string (value);
+            if(strval){
+                priv->token = malloc(strlen(strval)+1);
+                strcpy(priv->token,strval);
+            }
+            break;
+        case PROP_NAME:
+            if(priv->name){
+                free(priv->name);
+                priv->name = NULL;
+            }
+            strval = (char*)g_value_get_string (value);
+            if(strval){
+                priv->name = malloc(strlen(strval)+1);
+                strcpy(priv->name,strval);
+            }
+            break;
+        case PROP_INDEX:
+            priv->index = g_value_get_int (value);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
     }
 }
 
 static void
-OnvifMediaProfiles__construct(SoapObject * obj, gpointer ptr){
-    OnvifMediaProfiles * self = ONVIF_MEDIA_PROFILES(obj);
-    struct _trt__GetProfilesResponse * resp = ptr;
-    
-    OnvifMediaProfiles__reset(self);
-
-    if(!resp){
-        return;
-    }
-
-    for(int i = 0; i < resp->__sizeProfiles; i++){
-        OnvifProfile * profile = OnvifProfile__create(&(resp->Profiles[i]),i);
-        OnvifMediaProfiles__insert(self,profile);
+OnvifMediaProfile__get_property (GObject    *object,
+                          guint       prop_id,
+                          GValue     *value,
+                          GParamSpec *pspec){
+    OnvifMediaProfile *self = ONVIF_MEDIA_PROFILE (object);
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    switch (prop_id){
+        case PROP_TOKEN:
+            g_value_set_string (value, priv->token);
+            break;
+        case PROP_NAME:
+            g_value_set_string (value, priv->name);
+            break;
+        case PROP_INDEX:
+            g_value_set_int (value, priv->index);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
     }
 }
 
-
 static void
-OnvifMediaProfiles__dispose (GObject *self)
-{
-    OnvifMediaProfiles__reset(ONVIF_MEDIA_PROFILES(self));
-    G_OBJECT_CLASS (OnvifMediaProfiles__parent_class)->dispose (self);
+OnvifMediaProfile__dispose (GObject *self){
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (ONVIF_MEDIA_PROFILE(self));
+    if(priv->name){
+        free(priv->name);
+        priv->name = NULL;
+    }
+    if(priv->token){
+        free(priv->token);
+        priv->token = NULL;
+    }
+    G_OBJECT_CLASS (OnvifMediaProfile__parent_class)->dispose (self);
 }
 
 static void
-OnvifMediaProfiles__class_init (OnvifMediaProfilesClass * klass)
-{
+OnvifMediaProfile__class_init (OnvifMediaProfileClass * klass){
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
-    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    object_class->dispose = OnvifMediaProfile__dispose;
+    object_class->set_property = OnvifMediaProfile__set_property;
+    object_class->get_property = OnvifMediaProfile__get_property;
 
-    soapobj_class->construct = OnvifMediaProfiles__construct;
-    object_class->dispose = OnvifMediaProfiles__dispose;
+    obj_properties[PROP_TOKEN] =
+        g_param_spec_string ("token",
+                            "ProfileToken",
+                            "Onvif Media Profile token",
+                            NULL,
+                            G_PARAM_CONSTRUCT | G_PARAM_READWRITE);
+
+    obj_properties[PROP_NAME] =
+        g_param_spec_string ("name",
+                            "ProfileName",
+                            "Onvif Media Profile name",
+                            NULL,
+                            G_PARAM_CONSTRUCT | G_PARAM_READWRITE);
+
+    obj_properties[PROP_INDEX] =
+        g_param_spec_int ("index",
+                            "ProfileIndex",
+                            "Onvif Media Profile index",
+                            -1, G_MAXINT, -1,
+                            G_PARAM_CONSTRUCT | G_PARAM_READWRITE);
+
+    g_object_class_install_properties (object_class,
+                                        N_PROPERTIES,
+                                        obj_properties);
 }
 
 static void
-OnvifMediaProfiles__init (OnvifMediaProfiles * self)
-{
-    OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (ONVIF_MEDIA_PROFILES(self));
-    priv->count = 0;
-    priv->profiles = NULL;
+OnvifMediaProfile__init (OnvifMediaProfile * self){
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    priv->name = NULL;
+    priv->token = NULL;
+    priv->index = -1;
 }
 
-OnvifMediaProfiles* OnvifMediaProfiles__new(struct _trt__GetProfilesResponse * resp){
-    return g_object_new (ONVIF_TYPE_MEDIA_PROFILES, "data", resp, NULL);
+const char * 
+OnvifMediaProfile__get_name(OnvifMediaProfile* self){
+    g_return_val_if_fail(self != NULL, NULL);
+    g_return_val_if_fail(ONVIF_IS_MEDIA_PROFILE(self), NULL);
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    return priv->name;
 }
 
-
-int OnvifMediaProfiles__get_size(OnvifMediaProfiles * self){
-    g_return_val_if_fail (self != NULL, 0);
-    g_return_val_if_fail (ONVIF_IS_MEDIA_PROFILES (self), 0);
-    
-    OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (ONVIF_MEDIA_PROFILES(self));
-    return priv->count;
+const char * 
+OnvifMediaProfile__get_token(OnvifMediaProfile* self){
+    g_return_val_if_fail(self != NULL, NULL);
+    g_return_val_if_fail(ONVIF_IS_MEDIA_PROFILE(self), NULL);
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    return priv->token;
 }
 
-void OnvifMediaProfiles__insert(OnvifMediaProfiles * self,OnvifProfile * profile){
-    OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (ONVIF_MEDIA_PROFILES(self));
-    priv->profiles = realloc (priv->profiles,sizeof (void *) * (priv->count+1));
-    priv->profiles[priv->count]=profile;
-    priv->count++;
-}
-
-OnvifProfile * OnvifMediaProfiles__get_profile(OnvifMediaProfiles * self,int index){
-    g_return_val_if_fail (self != NULL, NULL);
-    g_return_val_if_fail (ONVIF_IS_MEDIA_PROFILES (self), NULL);
-    
-    OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (ONVIF_MEDIA_PROFILES(self));
-    g_return_val_if_fail (index < priv->count, NULL);
-
-    return priv->profiles[index];
-}
-
-
-void OnvifProfile__init(OnvifProfile * self,struct tt__Profile * profile, int index){
-    
-    self->name = NULL;
-    self->token = NULL;
-    
-    if(profile->token){
-        self->token = malloc(strlen(profile->token)+1);
-        strcpy(self->token,profile->token);
-    } else {
-        SoapObject__set_fault(SOAP_OBJECT(self),SOAP_FAULT_UNEXPECTED);
-        return;
-    }
-
-    if(profile->Name){
-        self->name = malloc(strlen(profile->Name)+1);
-        strcpy(self->name,profile->Name);
-    } else {
-        C_WARN("profile token '%s' name is null - Setting token as name",self->token);
-        self->name = malloc(strlen(profile->token)+1);
-        strcpy(self->name,profile->token);
-    }
-
-    self->index = index;
-}
-
-OnvifProfile * OnvifProfile__create(struct tt__Profile * profile, int index){
-    OnvifProfile * self = malloc(sizeof(OnvifProfile));
-    OnvifProfile__init(self,profile,index);
-    self->copy = 0;
-    return self;
-}
-
-OnvifProfile * OnvifProfile__copy(OnvifProfile * self){
-    if(!self){
-        return NULL;
-    }
-    OnvifProfile * nprofile = malloc(sizeof(OnvifProfile));
-    if(self->name){
-        nprofile->name = malloc(strlen(self->name)+1);
-        strcpy(nprofile->name,self->name);
-    }
-
-    nprofile->token = malloc(strlen(self->token)+1);
-    strcpy(nprofile->token,self->token);
-    nprofile->index = self->index;
-    nprofile->copy = 1;
-    return nprofile;
-}
-
-void OnvifProfile__real_destroy(OnvifProfile* self){
-    if(!self)return;
-    if(self->name)
-        free(self->name);
-    if(self->token)
-        free(self->token);
-    free(self);
-}
-
-void OnvifProfile__destroy(OnvifProfile* self){
-    g_return_if_fail (self != NULL);
-    g_return_if_fail (self->copy == 1);
-    OnvifProfile__real_destroy(self);
-}
-
-char * OnvifProfile__get_name(OnvifProfile* self){
-    if(!self)return NULL;
-    return self->name;
-}
-
-char * OnvifProfile__get_token(OnvifProfile* self){
-    if(!self)return NULL;
-    return self->token;
-}
-
-int OnvifProfile__get_index(OnvifProfile* self){
-    if(!self){C_WARN("Failed to get profile index. NULL pointer. Defaulting to 0."); return 0;}
-    return self->index;
-}
-
-
-int OnvifProfile__string_equals(char * str1, char * str2){
-    if(str1 == NULL && str2 == NULL){
-        return 1;
-    }
-    if( str1 == NULL || str2 == NULL){
-        return 0;
-    }
-    return strcmp(str1,str2) == 0;
-}
-
-int OnvifProfile__equals(OnvifProfile * prof1, OnvifProfile * prof2){
-    if(prof1 == prof2){
-        return 1;
-    }
-    if( prof1 == NULL || prof2 == NULL){
-        return 0;
-    }
-
-    if(!OnvifProfile__string_equals(prof1->name, prof2->name)){
-        return 0;
-    }
-    if(!OnvifProfile__string_equals(prof1->token, prof2->token)){
-        return 0;
-    }
-    return prof1->index == prof2->index;
+int 
+OnvifMediaProfile__get_index(OnvifMediaProfile* self){
+    g_return_val_if_fail(self != NULL, -1);
+    g_return_val_if_fail(ONVIF_IS_MEDIA_PROFILE(self), -1);
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    return priv->index;
 }

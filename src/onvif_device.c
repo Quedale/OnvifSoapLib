@@ -10,7 +10,12 @@
 # define strtok_r strtok_s
 #endif
 
-typedef struct _OnvifDevice {
+enum {
+  PROP_URI = 1,
+  N_PROPERTIES
+};
+
+typedef struct {
     ParsedURL * purl;
     time_t * datetime;
     double time_offset;
@@ -21,32 +26,39 @@ typedef struct _OnvifDevice {
     
     OnvifDeviceService * device_service;
     P_MUTEX_TYPE media_lock;
-    OnvifMediaService * media_service;
+    OnvifMedia1Service * media1_service;
+    OnvifMedia2Service * media2_service;
 
     OnvifCredentials * credentials;
-} OnvifDevice;
+} OnvifDevicePrivate ;
 
-SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
+G_DEFINE_TYPE_WITH_PRIVATE (OnvifDevice, OnvifDevice_, G_TYPE_OBJECT)
+static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
+
+static SoapFault 
+OnvifDevice__createMediaService(OnvifDevice* self){
     SoapFault ret_fault = SOAP_FAULT_NONE;
-    if(self->media_service){
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    if(priv->media1_service){
         return ret_fault;
     }
 
-    P_MUTEX_LOCK(self->media_lock);
+    P_MUTEX_LOCK(priv->media_lock);
 
     //Check again in case it was created during lock
-    if(self->media_service){
+    if(priv->media1_service){
         goto exit;
     }
 
     ONVIF_DEVICE_TRACE("[%s] OnvifDevice__createMediaService",self);
     OnvifMedia * media;
-    OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(self->device_service);
+    OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(priv->device_service);
     SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
     switch(*caps_fault){
         case SOAP_FAULT_NONE:
             media = OnvifCapabilities__get_media(capabilities);
-            self->media_service = OnvifMediaService__new(self, OnvifMedia__get_address(media));
+            priv->media1_service = OnvifMedia1Service__new(self, OnvifMedia__get_address(media));
+            priv->media2_service = OnvifMedia2Service__new(self, OnvifMedia__get_address(media));
             break;
         case SOAP_FAULT_ACTION_NOT_SUPPORTED:
         case SOAP_FAULT_CONNECTION_ERROR:
@@ -62,48 +74,60 @@ SoapFault OnvifDevice__createMediaService(OnvifDevice* self){
     g_object_unref(capabilities);
 
 exit:
-    P_MUTEX_UNLOCK(self->media_lock);
+    P_MUTEX_UNLOCK(priv->media_lock);
     return ret_fault;
 }
 
-time_t * OnvifDevice__getSystemDateTime(OnvifDevice * self){
-    P_MUTEX_LOCK(self->prop_lock);
-    return self->datetime;
-    P_MUTEX_UNLOCK(self->prop_lock);
+time_t * 
+OnvifDevice__getSystemDateTime(OnvifDevice * self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    P_MUTEX_LOCK(priv->prop_lock);
+    return priv->datetime;
+    P_MUTEX_UNLOCK(priv->prop_lock);
 }
 
-double OnvifDevice__getTimeOffset(OnvifDevice * self){
-    return self->time_offset;
+double 
+OnvifDevice__getTimeOffset(OnvifDevice * self){
+    g_return_val_if_fail (self != NULL, 0);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), 0);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return priv->time_offset;
 }
 
-SoapFault OnvifDevice__authenticate(OnvifDevice* self){
+SoapFault 
+OnvifDevice__authenticate(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, SOAP_FAULT_UNEXPECTED);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), SOAP_FAULT_UNEXPECTED);
     ONVIF_DEVICE_INFO("[%s] OnvifDevice__authenticate",self);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     SoapFault ret_fault;
 
-    P_MUTEX_LOCK(self->auth_lock);
-    if(self->authenticated){
+    P_MUTEX_LOCK(priv->auth_lock);
+    if(priv->authenticated){
         ret_fault = SOAP_FAULT_NONE;
         goto exit;
     }
 
-    if(!self->datetime){
-        OnvifDeviceDateTime * onviftime = OnvifDeviceService__getSystemDateAndTime(self->device_service);
+    if(!priv->datetime){
+        OnvifDeviceDateTime * onviftime = OnvifDeviceService__getSystemDateAndTime(priv->device_service);
         time_t datetime;
         ret_fault = *SoapObject__get_fault(SOAP_OBJECT(onviftime));
         switch(ret_fault){
             case SOAP_FAULT_NONE:
                 datetime = *OnvifDeviceDateTime__get_datetime(onviftime);
                 if(datetime > 0){
-                    P_MUTEX_LOCK(self->prop_lock);
-                    self->time_offset = difftime(datetime,time(NULL));
-                    self->datetime = malloc(sizeof(time_t));
-                    memcpy(self->datetime, &datetime, sizeof(datetime));
+                    P_MUTEX_LOCK(priv->prop_lock);
+                    priv->time_offset = difftime(datetime,time(NULL));
+                    priv->datetime = malloc(sizeof(time_t));
+                    memcpy(priv->datetime, &datetime, sizeof(datetime));
 
                     char str_now[20];
-                    strftime(str_now, 20, "%Y-%m-%d %H:%M:%S", localtime(self->datetime));
+                    strftime(str_now, 20, "%Y-%m-%d %H:%M:%S", localtime(priv->datetime));
                     ONVIF_DEVICE_INFO("[%s] Camera SystemDateAndTime : '%s'\n",self, str_now);
 
-                    P_MUTEX_UNLOCK(self->prop_lock);
+                    P_MUTEX_UNLOCK(priv->prop_lock);
                 } else {
                     ONVIF_DEVICE_ERROR("[%s] Camera SystemDateAndTime not set\n",self);
                 }
@@ -137,20 +161,20 @@ SoapFault OnvifDevice__authenticate(OnvifDevice* self){
     }
 
     char * uri = NULL;
-    OnvifMediaUri * media_uri = OnvifMediaService__getStreamUri(self->media_service,0);
+    OnvifMedia1Uri * media_uri = OnvifMedia1Service__getStreamUri(priv->media1_service,0);
     ret_fault = *SoapObject__get_fault(SOAP_OBJECT(media_uri));
     switch(ret_fault){
         case SOAP_FAULT_NONE:
-            uri = OnvifMediaUri__get_uri(media_uri);
+            uri = OnvifUri__get_uri(ONVIF_URI(media_uri));
             if(!uri){
                 ONVIF_MEDIA_ERROR("[%s] No StreamURI provided...",self);
-                g_object_unref(self->media_service);
-                self->media_service = NULL;
+                g_object_unref(priv->media1_service);
+                priv->media1_service = NULL;
             } else {
                 ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",self, uri);
-                P_MUTEX_LOCK(self->prop_lock);
-                self->authenticated = 1;
-                P_MUTEX_UNLOCK(self->prop_lock);
+                P_MUTEX_LOCK(priv->prop_lock);
+                priv->authenticated = 1;
+                P_MUTEX_UNLOCK(priv->prop_lock);
             }
             break;
         case SOAP_FAULT_ACTION_NOT_SUPPORTED:
@@ -160,40 +184,56 @@ SoapFault OnvifDevice__authenticate(OnvifDevice* self){
         case SOAP_FAULT_UNEXPECTED:
         default:
             ONVIF_MEDIA_ERROR("[%s] Failed to retrieve StreamURI...",self);
-            g_object_unref(self->media_service);
-            self->media_service = NULL;
+            g_object_unref(priv->media1_service);
+            priv->media1_service = NULL;
             break;
     }
     
     g_object_unref(media_uri);
 
 exit:
-    P_MUTEX_UNLOCK(self->auth_lock);
+    P_MUTEX_UNLOCK(priv->auth_lock);
     return ret_fault;
 }
 
-int OnvifDevice__is_authenticated(OnvifDevice* self){
+int 
+OnvifDevice__is_authenticated(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, FALSE);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), FALSE);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     int ret;
-    P_MUTEX_LOCK(self->auth_lock);
-    ret = self->authenticated;
-    P_MUTEX_UNLOCK(self->auth_lock);
+    P_MUTEX_LOCK(priv->auth_lock);
+    ret = priv->authenticated;
+    P_MUTEX_UNLOCK(priv->auth_lock);
     return ret;
 }
 
-void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass){
-    P_MUTEX_LOCK(self->prop_lock);
-    OnvifCredentials__set_username(self->credentials,user);
-    OnvifCredentials__set_password(self->credentials,pass);
-    P_MUTEX_UNLOCK(self->prop_lock);
+void 
+OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass){
+    g_return_if_fail (self != NULL);
+    g_return_if_fail (ONVIF_IS_DEVICE (self));
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    P_MUTEX_LOCK(priv->prop_lock);
+    OnvifCredentials__set_username(priv->credentials,user);
+    OnvifCredentials__set_password(priv->credentials,pass);
+    P_MUTEX_UNLOCK(priv->prop_lock);
 }
 
-OnvifCredentials * OnvifDevice__get_credentials(OnvifDevice * self){
-    return self->credentials;
+OnvifCredentials * 
+OnvifDevice__get_credentials(OnvifDevice * self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return priv->credentials;
 }
 
-int OnvifDevice__is_valid(OnvifDevice* self){
+int 
+OnvifDevice__is_valid(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, FALSE);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), FALSE);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     //According to Core specification, the device entry point it set. (5.1.1)
-    if(!ParsedURL__is_valid(self->purl) || !self->purl->service || strcmp(self->purl->service,"onvif/device_service")){
+    if(!ParsedURL__is_valid(priv->purl) || !priv->purl->service || strcmp(priv->purl->service,"onvif/device_service")){
         return 0;
     }
 
@@ -201,78 +241,197 @@ int OnvifDevice__is_valid(OnvifDevice* self){
     return 1;
 }
 
-OnvifDeviceService * OnvifDevice__get_device_service(OnvifDevice* self){
-    return self->device_service;
+OnvifDeviceService * 
+OnvifDevice__get_device_service(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return priv->device_service;
 }
 
-OnvifMediaService * OnvifDevice__get_media_service(OnvifDevice* self){
-    return self->media_service;
+OnvifMediaService * 
+OnvifDevice__get_media_service(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return ONVIF_MEDIA_SERVICE(priv->media1_service);
 }
 
-void OnvifDevice__init(OnvifDevice* self, char * device_url) {
-    P_MUTEX_SETUP(self->prop_lock);
-    P_MUTEX_SETUP(self->auth_lock);
-    P_MUTEX_SETUP(self->media_lock);
+OnvifMedia1Service * 
+OnvifDevice__get_media1_service(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return priv->media1_service;
+}
 
-    self->authenticated = 0;
-    self->time_offset = 0;
-    self->credentials = OnvifCredentials__create();
-    self->device_service = OnvifDeviceService__new(self, device_url);
-    self->media_service = NULL;
-    self->purl = ParsedURL__create(device_url);
-    self->datetime = NULL;
+OnvifMedia2Service * 
+OnvifDevice__get_media2_service(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return priv->media2_service;
+}
 
+static void
+OnvifDevice__dispose (GObject *object){
+    OnvifDevice *self = ONVIF_DEVICE (object);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+
+    ONVIF_DEVICE_DEBUG("[%s] OnvifDevice__dispose",self);
+
+    if(priv->credentials){
+        OnvifCredentials__destroy(priv->credentials);
+        priv->credentials = NULL;
+    }
+
+    if(priv->device_service){
+        g_object_unref(priv->device_service);
+        priv->device_service = NULL;
+    }
+
+    if(priv->media1_service){
+        g_object_unref(priv->media1_service);
+        priv->media1_service = NULL;
+    }
+
+    if(priv->media2_service){
+        g_object_unref(priv->media2_service);
+        priv->media2_service = NULL;
+    }
+    
+    P_MUTEX_CLEANUP(priv->media_lock);
+    P_MUTEX_CLEANUP(priv->prop_lock);
+    P_MUTEX_CLEANUP(priv->auth_lock);
+
+    if(priv->purl){
+        ParsedURL__destroy(priv->purl);
+        priv->purl = NULL;
+    }
+
+    if(priv->datetime){
+        free(priv->datetime);
+        priv->datetime = NULL;
+    }
+
+    G_OBJECT_CLASS (OnvifDevice__parent_class)->dispose (object);
+}
+
+static void
+OnvifDevice__set_property (GObject      *object,
+                          guint         prop_id,
+                          const GValue *value,
+                          GParamSpec   *pspec){
+    OnvifDevice * self = ONVIF_DEVICE (object);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    const char * strval;
+
+    switch (prop_id){
+        case PROP_URI:
+            strval = g_value_get_string (value);
+            priv->purl = ParsedURL__create((char*)strval);
+            priv->device_service = OnvifDeviceService__new(self, strval);
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+static void
+OnvifDevice__get_property (GObject    *object,
+                          guint       prop_id,
+                          GValue     *value,
+                          GParamSpec *pspec){
+    OnvifDevice * self = ONVIF_DEVICE (object);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    switch (prop_id){
+        case PROP_URI:
+            g_value_set_string (value, OnvifBaseService__get_endpoint(ONVIF_BASE_SERVICE(priv->device_service)));
+            break;
+        default:
+            G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+            break;
+    }
+}
+
+static void
+OnvifDevice__constructed (GObject * object){
+    OnvifDevice *self = ONVIF_DEVICE (object);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     C_INFO("Created Device:\n");
-    C_INFO("\tprotocol -- %s\n",self->purl->protocol);
-    C_INFO("\thost : %s\n",self->purl->hostorip);
-    C_INFO("\tport -- %s\n",self->purl->port);
-    C_INFO("\tendpoint : %s\n",self->purl->service);
+    C_INFO("\tprotocol -- %s\n",priv->purl->protocol);
+    C_INFO("\thost : %s\n",priv->purl->hostorip);
+    C_INFO("\tport -- %s\n",priv->purl->port);
+    C_INFO("\tendpoint : %s\n",priv->purl->service);
 }
 
-OnvifDevice * OnvifDevice__create(char * device_url) {
-    C_DEBUG("OnvifDevice__create\n");
-    OnvifDevice * result = malloc(sizeof(OnvifDevice));
-    OnvifDevice__init(result,device_url);
-    return result;
+static void
+OnvifDevice__class_init (OnvifDeviceClass *klass){
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->dispose = OnvifDevice__dispose;
+    object_class->set_property = OnvifDevice__set_property;
+    object_class->get_property = OnvifDevice__get_property;
+    object_class->constructed = OnvifDevice__constructed;
+    obj_properties[PROP_URI] =
+        g_param_spec_string ("uri",
+                            "Service URI",
+                            "Pointer to URI char*.",
+                            NULL,
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE);
+
+    g_object_class_install_properties (object_class,
+                                        N_PROPERTIES,
+                                        obj_properties);
 }
 
-void OnvifDevice__destroy(OnvifDevice* device) {
-    if (device) {
-        ONVIF_DEVICE_DEBUG("[%s] OnvifDevice__destroy",device);
+static void 
+OnvifDevice__init(OnvifDevice* self) {
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    P_MUTEX_SETUP(priv->prop_lock);
+    P_MUTEX_SETUP(priv->auth_lock);
+    P_MUTEX_SETUP(priv->media_lock);
 
-        OnvifCredentials__destroy(device->credentials);
-        if(device->device_service)
-            g_object_unref(device->device_service);
-        if(device->media_service)
-            g_object_unref(device->media_service);
-
-        P_MUTEX_CLEANUP(device->media_lock);
-        P_MUTEX_CLEANUP(device->prop_lock);
-        P_MUTEX_CLEANUP(device->auth_lock);
-        ParsedURL__destroy(device->purl);
-        free(device->datetime);
-        free(device);
-    }
+    priv->authenticated = 0;
+    priv->time_offset = 0;
+    priv->credentials = OnvifCredentials__create();
+    priv->device_service = NULL;
+    priv->media1_service = NULL;
+    priv->purl = NULL;
+    priv->datetime = NULL;
 }
 
-char * OnvifDevice__get_host(OnvifDevice* self){
+OnvifDevice * 
+OnvifDevice__new(char * device_url) {
+    return g_object_new (ONVIF_TYPE_DEVICE, "uri",device_url, NULL);
+}
+
+char * 
+OnvifDevice__get_host(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     char * ret = NULL;
-    P_MUTEX_LOCK(self->prop_lock);
-    if(self->purl->hostorip){
-        ret = malloc(strlen(self->purl->hostorip)+1);
-        strcpy(ret,self->purl->hostorip);
+    P_MUTEX_LOCK(priv->prop_lock);
+    if(priv->purl->hostorip){
+        ret = malloc(strlen(priv->purl->hostorip)+1);
+        strcpy(ret,priv->purl->hostorip);
     }
-    P_MUTEX_UNLOCK(self->prop_lock);
+    P_MUTEX_UNLOCK(priv->prop_lock);
     return ret;
 }
 
-char * OnvifDevice__get_port(OnvifDevice* self){
+char * 
+OnvifDevice__get_port(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     char * ret = NULL;
-    P_MUTEX_LOCK(self->prop_lock);
-    if(self->purl->port){
-        ret = malloc(strlen(self->purl->port)+1);
-        strcpy(ret,self->purl->port);
+    P_MUTEX_LOCK(priv->prop_lock);
+    if(priv->purl->port){
+        ret = malloc(strlen(priv->purl->port)+1);
+        strcpy(ret,priv->purl->port);
     }
-    P_MUTEX_UNLOCK(self->prop_lock);
+    P_MUTEX_UNLOCK(priv->prop_lock);
     return ret;
 }

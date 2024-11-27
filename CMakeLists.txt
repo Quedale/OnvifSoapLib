@@ -66,6 +66,8 @@ aux_source_directory(src src_dir)
 aux_source_directory(src/deviceio src_deviceio)
 aux_source_directory(src/devicemgmt src_devicemgmt)
 aux_source_directory(src/media src_media)
+aux_source_directory(src/media/media1 src_media1)
+aux_source_directory(src/media/media2 src_media2)
 aux_source_directory(src/discovery src_dir_disco)
 aux_source_directory(src/generated generated_dir)
 
@@ -80,6 +82,8 @@ add_library(onvifsoap ${ONVIFSOAP_BUILD_TYPE} ${src_dir}
                                 ${src_deviceio}
                                 ${src_devicemgmt}
                                 ${src_media}
+                                ${src_media1}
+                                ${src_media2}
                           ${GSOAP_SRC_DIR}/gsoap/dom.c 
                           ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
                           ${GSOAP_SRC_DIR}/gsoap/plugin/logging.c
@@ -192,10 +196,23 @@ set(devicemgmt_headers
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_services.h)
 set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profile.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profiles.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service_capabilities.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot.h
-            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_uri.h)
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_uri.h)
+set(media1_headers
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_profile.h
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_profiles.h
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_service.h
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_service_capabilities.h
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_uri.h)
+set(media2_headers
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_service.h
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_service_capabilities.h
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_profile.h
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_profiles.h
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_uri.h)
 
 #Setting pkgconfig file file variables
 set(prefix ${CMAKE_INSTALL_PREFIX})
@@ -214,3 +231,5 @@ install(FILES ${headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 install(FILES ${deviceio_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/deviceio")
 install(FILES ${devicemgmt_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/devicemgmt")
 install(FILES ${media_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/media")
+install(FILES ${media1_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/media/media1")
+install(FILES ${media2_headers} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/media/media2")

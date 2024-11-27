@@ -43,18 +43,18 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 //Initialize argp context
 static struct argp argp = { options, parse_opt, NULL, doc, 0, 0, 0 };
 
-void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_service, OnvifDevice * dev){
+void loop_media_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_service, OnvifDevice * dev){
 	for (int i = 0; i < OnvifMediaProfiles__get_size(profiles); i++){
-		OnvifProfile * profile = OnvifMediaProfiles__get_profile(profiles,i);
-		C_DEBUG("Profile name: %s\n", OnvifProfile__get_name(profile));
-		C_DEBUG("Profile token: %s\n", OnvifProfile__get_token(profile));
+		OnvifMediaProfile * profile = OnvifMediaProfiles__get_profile(profiles,i);
+		C_DEBUG("Media Profile name: %s\n", OnvifMediaProfile__get_name(profile));
+		C_DEBUG("Media Profile token: %s\n", OnvifMediaProfile__get_token(profile));
 
-		OnvifMediaUri * stream_uri = OnvifMediaService__getStreamUri(media_service, i);
+		OnvifUri * stream_uri = OnvifMediaService__getStreamUri(media_service, i);
 		SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(stream_uri));
-		char * uri;
+		const char * uri;
 		switch(*fault){
 			case SOAP_FAULT_NONE:
-				uri = OnvifMediaUri__get_uri(stream_uri);
+				uri = OnvifUri__get_uri(stream_uri);
 				if(!uri){
 					ONVIF_MEDIA_ERROR("[%s] No StreamURI provided...",dev);
 				} else {
@@ -77,14 +77,14 @@ void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_serv
 		if(!OnvifMediaServiceCapabilities__get_snapshot_uri(media_caps)){
 			C_INFO("SnapshotUri feature not supported. Trying anyway...");
 		}
-		OnvifMediaUri * snapshot_uri = OnvifMediaService__getSnapshotUri(media_service, i);
+		OnvifUri * snapshot_uri = OnvifMediaService__getSnapshotUri(media_service, i);
 		fault = SoapObject__get_fault(SOAP_OBJECT(snapshot_uri));
 		switch(*fault){
 			case SOAP_FAULT_NONE:
 				if(!OnvifMediaServiceCapabilities__get_snapshot_uri(media_caps)){
 					C_WARN("GetSnapshotUri suprisingly works!!");
 				}
-				char * snap_uri = OnvifMediaUri__get_uri(snapshot_uri);
+				char * snap_uri = OnvifUri__get_uri(snapshot_uri);
 				if(snap_uri){
 					C_DEBUG("SnapshotUri : %s\n",snap_uri);
 				} else {
@@ -109,15 +109,15 @@ void loop_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_serv
 		g_object_unref(media_caps);
 		g_object_unref(snapshot_uri);
 
-		OnvifSnapshot * snapshot = OnvifMediaService__getSnapshot(media_service, i);
+		OnvifMediaSnapshot * snapshot = OnvifMediaService__getSnapshot(media_service, i);
 		fault = SoapObject__get_fault(SOAP_OBJECT(snapshot));
 		switch(*fault){
 			case SOAP_FAULT_NONE:
-				if(OnvifSnapshot__get_size(snapshot) > 0){
+				if(OnvifMediaSnapshot__get_size(snapshot) > 0){
 					char name[24];
 					snprintf(name, sizeof(name), "%d.jpg",i);
 					FILE* image = fopen(name, "wb");
-					fwrite(OnvifSnapshot__get_buffer(snapshot), OnvifSnapshot__get_size(snapshot), 1, image);
+					fwrite(OnvifMediaSnapshot__get_buffer(snapshot), OnvifMediaSnapshot__get_size(snapshot), 1, image);
 					fclose(image);
 					C_DEBUG("Successfully retrieved snapshot. Saved at './%d.jpg'",i);
 				} else {
@@ -224,14 +224,14 @@ int main(int argc, char *argv[])
 		I suspect it may be sitting behind NAT.
 		The result is that the URL returned by the ONVIF calls all returned an invalid port, forcing a URL correction.
 	*/
-	OnvifDevice* dev = OnvifDevice__create(url); 
+	OnvifDevice* dev = OnvifDevice__new(url); 
 	OnvifDevice__set_credentials(dev,arguments.user, arguments.pass);
 	OnvifDevice__authenticate(dev);
 	
 	//TODO Support context-aware error handling instead of global pointer
 	if(!OnvifDevice__is_authenticated(dev)){
 		C_ERROR("Device encountered an authentication error.");
-		OnvifDevice__destroy(dev);
+		g_object_unref(dev);
 		return 1;
 	}
 	
@@ -318,11 +318,11 @@ int main(int argc, char *argv[])
 	}
 	g_object_unref(devinfo);
 
-	OnvifMediaProfiles * profiles = OnvifMediaService__get_profiles(media_service);
+	OnvifMediaProfiles * profiles = OnvifMediaService__get_profiles(ONVIF_MEDIA_SERVICE(media_service));
 	fault = SoapObject__get_fault(SOAP_OBJECT(profiles));
 	switch(*fault){
 		case SOAP_FAULT_NONE:
-			loop_profiles(profiles,media_service, dev);
+			loop_media_profiles(profiles,media_service, dev);
 			break;
 		case SOAP_FAULT_ACTION_NOT_SUPPORTED:
 		case SOAP_FAULT_CONNECTION_ERROR:
@@ -337,7 +337,7 @@ int main(int argc, char *argv[])
 
 	print_device_capabilites(device_service);
 	
-	OnvifDevice__destroy(dev);
+	g_object_unref(dev);
 	return 0;
 
 }

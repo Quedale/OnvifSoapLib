@@ -1,8 +1,8 @@
 #ifndef ONVIF_SCOPES_H_ 
 #define ONVIF_SCOPES_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../shard_export.h"
+#include "../SoapObject.h"
 
 G_BEGIN_DECLS
 
@@ -11,14 +11,12 @@ G_DECLARE_FINAL_TYPE (OnvifScopes, OnvifScopes_, ONVIF, DEVICE_SCOPES, SoapObjec
 
 typedef struct _OnvifScope  OnvifScope;
 
-struct _OnvifScopes
-{
+struct _OnvifScopes {
     SoapObject parent_instance;
 };
 
 
-struct _OnvifScopesClass
-{
+struct _OnvifScopesClass {
     SoapObjectClass parent_class;
 };
 

@@ -1,22 +1,20 @@
 #ifndef ONVIF_DEV_INFO_H_ 
 #define ONVIF_DEV_INFO_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../shard_export.h"
+#include "../SoapObject.h"
 
 G_BEGIN_DECLS
 
 #define ONVIF_TYPE_DEVICE_INFORMATION OnvifDeviceInformation__get_type()
 G_DECLARE_FINAL_TYPE (OnvifDeviceInformation, OnvifDeviceInformation_, ONVIF, DEVICE_INFORMATION, SoapObject)
 
-struct _OnvifDeviceInformation
-{
+struct _OnvifDeviceInformation {
     SoapObject parent_instance;
 };
 
 
-struct _OnvifDeviceInformationClass
-{
+struct _OnvifDeviceInformationClass {
     SoapObjectClass parent_class;
 };
 

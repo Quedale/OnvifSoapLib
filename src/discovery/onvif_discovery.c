@@ -213,8 +213,12 @@ void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *)){
 
   // C_TRACE("Sending NVD probe...");
   // priv_sendProbe(&serv, "\"http://www.onvif.org/ver10/network/wsdl\":NetworkVideoDisplay", msg->id);
+    //https://www.onvif.org/specs/DocMap-2.3.html
+    // "NetworkVideoDisplay",
+		// "NetworkVideoStorage",
+		// "NetworkVideoAnalytics",
+		// "NetworkVideoTransmitter",
 
-  
   //Listen for responses
   if (soap_wsdd_listen(&serv, timeout) != SOAP_OK){
     soap_print_fault(&serv, stderr);

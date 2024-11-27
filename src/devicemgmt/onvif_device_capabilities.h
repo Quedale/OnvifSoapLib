@@ -1,22 +1,20 @@
 #ifndef ONVIF_CAPS_H_ 
 #define ONVIF_CAPS_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../shard_export.h"
+#include "../SoapObject.h"
 
 G_BEGIN_DECLS
 
 #define ONVIF_TYPE_DEVICE_CAPABILITIES OnvifCapabilities__get_type()
 G_DECLARE_FINAL_TYPE (OnvifCapabilities, OnvifCapabilities_, ONVIF, DEVICE_CAPABILITIES, SoapObject)
 
-struct _OnvifCapabilities
-{
+struct _OnvifCapabilities {
     SoapObject parent_instance;
 };
 
 
-struct _OnvifCapabilitiesClass
-{
+struct _OnvifCapabilitiesClass {
     SoapObjectClass parent_class;
 };
 

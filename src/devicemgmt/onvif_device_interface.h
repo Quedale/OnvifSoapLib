@@ -1,8 +1,8 @@
 #ifndef ONVIF_DEV_INTERFACE_H_ 
 #define ONVIF_DEV_INTERFACE_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../shard_export.h"
+#include "../SoapObject.h"
 
 G_BEGIN_DECLS
 
@@ -13,14 +13,12 @@ typedef struct _OnvifIPv4Configuration OnvifIPv4Configuration;
 typedef struct _OnvifPrefixedIPv4Address OnvifPrefixedIPv4Address;
 typedef struct _OnvifDeviceInterface OnvifDeviceInterface;
 
-struct _OnvifDeviceInterfaces
-{
+struct _OnvifDeviceInterfaces {
     SoapObject parent_instance;
 };
 
 
-struct _OnvifDeviceInterfacesClass
-{
+struct _OnvifDeviceInterfacesClass {
     SoapObjectClass parent_class;
 };
 
