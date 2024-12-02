@@ -1,4 +1,4 @@
-#include "SoapObject.h"
+#include "SoapObject_local.h"
 
 enum
 {
@@ -10,7 +10,7 @@ typedef struct {
   SoapFault fault;
 } SoapObjectPrivate;
 
-G_DEFINE_TYPE_WITH_PRIVATE (SoapObject, SoapObject_, G_TYPE_OBJECT)
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (SoapObject, SoapObject_, G_TYPE_OBJECT)
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 GType
@@ -95,10 +95,6 @@ SoapObject__init (SoapObject *self)
     SoapObjectPrivate *priv = SoapObject__get_instance_private (self);
     priv->fault = SOAP_FAULT_NONE;
 
-}
-
-SoapObject * SoapObject__new (void){
-    return g_object_new (SOAP_TYPE_OBJECT, NULL);
 }
 
 void SoapObject__set_fault(SoapObject * self, SoapFault fault){

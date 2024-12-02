@@ -1,6 +1,7 @@
 #include "onvif_device_scopes_local.h"
 #include "clogger.h"
 #include "cstring_utils.h"
+#include "../SoapObject_local.h"
 
 typedef struct _OnvifScope {
     char * scope;
@@ -37,7 +38,6 @@ OnvifScopes__construct(SoapObject * obj, gpointer ptr){
         if(!scopeitem){
             SoapObject__set_fault(obj,SOAP_FAULT_UNEXPECTED);
             OnvifScopes__reset(self);
-            exit(1);
             return;
         }
         OnvifScope * onvifscope = malloc(sizeof(OnvifScope));

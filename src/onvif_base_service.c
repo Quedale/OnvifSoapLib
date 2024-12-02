@@ -7,8 +7,7 @@
 #include "clogger.h"
 #include "portable_thread.h"
 
-enum
-{
+enum {
   PROP_DEVICE = 1,
   PROP_URI = 2,
   N_PROPERTIES
@@ -29,8 +28,7 @@ static void
 OnvifBaseService__set_property (GObject      *object,
                           guint         prop_id,
                           const GValue *value,
-                          GParamSpec   *pspec)
-{
+                          GParamSpec   *pspec){
     OnvifBaseService * self = ONVIF_BASE_SERVICE (object);
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     switch (prop_id){
@@ -50,8 +48,7 @@ static void
 OnvifBaseService__get_property (GObject    *object,
                           guint       prop_id,
                           GValue     *value,
-                          GParamSpec *pspec)
-{
+                          GParamSpec *pspec){
     // OnvifBaseService *thread = ONVIF_BASE_SERVICE (object);
     // OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (thread);
     switch (prop_id){
@@ -63,8 +60,7 @@ OnvifBaseService__get_property (GObject    *object,
 
 
 static void
-OnvifBaseService__dispose (GObject *object)
-{
+OnvifBaseService__dispose (GObject *object){
     OnvifBaseService *self = ONVIF_BASE_SERVICE (object);
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     if(priv->endpoint){
@@ -93,8 +89,7 @@ OnvifBaseService__dispose (GObject *object)
 
 
 static void
-OnvifBaseService__class_init (OnvifBaseServiceClass *klass)
-{
+OnvifBaseService__class_init (OnvifBaseServiceClass *klass){
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifBaseService__dispose;
     object_class->set_property = OnvifBaseService__set_property;
@@ -127,8 +122,7 @@ OnvifBaseService__class_init (OnvifBaseServiceClass *klass)
 }
 
 static void
-OnvifBaseService__init (OnvifBaseService *self)
-{
+OnvifBaseService__init (OnvifBaseService *self){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     priv->device = NULL;
     priv->endpoint = NULL;
@@ -139,11 +133,13 @@ OnvifBaseService__init (OnvifBaseService *self)
     P_MUTEX_SETUP(priv->prop_lock);
 }
 
-OnvifBaseService * OnvifBaseService__new (OnvifDevice * device, const char * endpoint){
+OnvifBaseService * 
+OnvifBaseService__new (OnvifDevice * device, const char * endpoint){
     return g_object_new (ONVIF_TYPE_BASE_SERVICE, "device",device,"uri",endpoint, NULL);
 }
 
-void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
+void 
+OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     P_MUTEX_LOCK(priv->prop_lock);
     if(!priv->endpoint){
@@ -155,17 +151,20 @@ void OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
     P_MUTEX_UNLOCK(priv->prop_lock);
 }
 
-void OnvifBaseService__lock(OnvifBaseService * self){
+void 
+OnvifBaseService__lock(OnvifBaseService * self){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     P_MUTEX_LOCK(priv->service_lock);
 }
 
-void OnvifBaseService__unlock(OnvifBaseService * self){
+void 
+OnvifBaseService__unlock(OnvifBaseService * self){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     P_MUTEX_UNLOCK(priv->service_lock);
 }
 
-char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
+char * 
+OnvifBaseService__get_endpoint(OnvifBaseService * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_BASE_SERVICE (self), NULL);
 
@@ -179,7 +178,8 @@ char * OnvifBaseService__get_endpoint(OnvifBaseService * self){
     return ret;
 }
 
-OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self){
+OnvifDevice * 
+OnvifBaseService__get_device(OnvifBaseService * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_BASE_SERVICE (self), NULL);
 
@@ -187,7 +187,8 @@ OnvifDevice * OnvifBaseService__get_device(OnvifBaseService * self){
     return priv->device;
 }
 
-time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
+time_t 
+OnvifBaseService__get_offset_time(OnvifBaseService * self){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     double offset = OnvifDevice__getTimeOffset(priv->device);
 
@@ -212,7 +213,8 @@ time_t OnvifBaseService__get_offset_time(OnvifBaseService * self){
     return ntime;
 }
 
-int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
+int 
+OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     int ret = 1;
     char * user = OnvifCredentials__get_username(OnvifDevice__get_credentials(priv->device));
@@ -233,7 +235,8 @@ int OnvifBaseService__set_wsse_data(OnvifBaseService * self, SoapDef * soap){
     return ret;
 }
 
-int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, char * url){
+int 
+OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, char * url){
     if(!soap->authrealm){
         return 0;
     }
@@ -260,7 +263,8 @@ int OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, ch
     return 1;
 }
 
-SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
+SoapDef * 
+OnvifBaseService__soap_new(OnvifBaseService * self){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
     struct soap * soap = soap_new1(SOAP_XML_CANONICAL | SOAP_C_UTFSTRING); //SOAP_XML_STRICT may cause crash
     soap->connect_timeout = 2; // 2 sec
@@ -305,7 +309,8 @@ SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self){
     return (SoapDef *) soap;
 }
 
-void OnvifBaseService__soap_destroy(OnvifBaseService * self, SoapDef * soap){
+void 
+OnvifBaseService__soap_destroy(OnvifBaseService * self, SoapDef * soap){
     char *debug_flag = NULL;
 
     if (( debug_flag =getenv( "ONVIF_DEBUG" )) != NULL )
@@ -325,8 +330,8 @@ void OnvifBaseService__soap_destroy(OnvifBaseService * self, SoapDef * soap){
 }
 
 //TODO Placeholder until user-input is implemented
-int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store)
-{
+int 
+OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store){
     if (!ok){
         int err = X509_STORE_CTX_get_error(store);
         switch (err){
@@ -342,4 +347,24 @@ int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store)
         }
     }
     return ok;
+}
+
+void 
+OnvifBaseService__print_fault(struct soap *soap){
+  if (soap_check_state(soap)){
+    C_ERROR("Error: soap struct state not initialized\n");
+  } else if (soap->error) {
+    const char **c, *v = NULL, *s, *d;
+    c = soap_faultcode(soap);
+    if (!*c)
+    {
+      soap_set_fault(soap);
+      c = soap_faultcode(soap);
+    }
+    if (soap->version == 2)
+      v = soap_fault_subcode(soap);
+    s = soap_fault_string(soap);
+    d = soap_fault_detail(soap);
+    C_ERROR("%s%d fault %s [%s]\n\"%s\"\nDetail: %s\n", soap->version ? "SOAP 1." : "Error ", soap->version ? (int)soap->version : soap->error, *c, v ? v : "no subcode", s ? s : "[no reason]", d ? d : "[no detail]");
+  }
 }

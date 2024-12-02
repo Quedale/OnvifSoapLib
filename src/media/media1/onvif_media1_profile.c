@@ -1,4 +1,7 @@
 #include "onvif_media1_profile_local.h"
+#include "../onvif_media_audio_source_config_local.h"
+#include "../onvif_media_profile_local.h"
+#include "../../xsd_simple_type_converter.h"
 
 // enum {
 //     // PROP_TOKEN = 1,
@@ -17,6 +20,21 @@ typedef struct {
 G_DEFINE_TYPE_WITH_PRIVATE(OnvifMedia1Profile, OnvifMedia1Profile_, ONVIF_TYPE_MEDIA_PROFILE)
 
 // static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
+
+static void
+OnvifMedia1Profile__construct(SoapObject * obj, gpointer ptr){
+    OnvifMedia1Profile * self = ONVIF_MEDIA1_PROFILE(obj);
+    struct tt__Profile * resp = ptr;
+    // OnvifMedia1ProfilePrivate *priv = OnvifMedia1Profile__get_instance_private (self);
+
+    if(!resp){
+        return;
+    }
+
+    if(resp->AudioSourceConfiguration){
+        OnvifMediaProfile__set_audio_source(ONVIF_MEDIA_PROFILE(self),OnvifMediaAudioSourceConfig__new(resp->AudioSourceConfiguration));
+    }
+}
 
 static void
 OnvifMedia1Profile__set_property (GObject      *object,
@@ -94,7 +112,8 @@ OnvifMedia1Profile__class_init (OnvifMedia1ProfileClass * klass){
     object_class->dispose = OnvifMedia1Profile__dispose;
     object_class->set_property = OnvifMedia1Profile__set_property;
     object_class->get_property = OnvifMedia1Profile__get_property;
-
+    SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
+    soapobj_class->construct = OnvifMedia1Profile__construct;
     // obj_properties[PROP_TOKEN] =
     //     g_param_spec_string ("token",
     //                         "ProfileToken",
@@ -132,8 +151,10 @@ OnvifMedia1Profile__init (OnvifMedia1Profile * self){
 OnvifMedia1Profile * 
 OnvifMedia1Profile__new(struct tt__Profile * profile, int index){
     return g_object_new(ONVIF_TYPE_MEDIA1_PROFILE,
-                        "token",profile->token,
-                        "name",profile->Name,
+                        "token",(!profile) ? NULL : profile->token,
+                        "name",(!profile) ? NULL : profile->Name,
+                        "fixed",(!profile) ? FALSE : xsd__boolean_to_bool(profile->fixed,FALSE),
                         "index",index,
+                        "data",profile,
                         NULL);
 }

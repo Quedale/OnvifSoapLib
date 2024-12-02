@@ -1,5 +1,6 @@
 #include "onvif_device_datetime_local.h"
 #include "clogger.h"
+#include "../SoapObject_local.h"
 
 typedef struct {
     time_t datetime;

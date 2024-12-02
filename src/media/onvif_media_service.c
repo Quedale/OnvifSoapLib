@@ -124,6 +124,33 @@ OnvifMediaService__getServiceCapabilities(OnvifMediaService *self){
     return klass->get_service_capabilities (self);
 }
 
+OnvifMediaAudioSourceConfigs * 
+OnvifMediaService__getAudioSourceConfigurations(OnvifMediaService *self, int profile_index){
+    OnvifMediaServiceClass *klass;
+    g_return_val_if_fail (ONVIF_IS_MEDIA_SERVICE (self),FALSE);
+    klass = ONVIF_MEDIA_SERVICE_GET_CLASS (self);
+    g_return_val_if_fail (klass->get_audio_source_configs != NULL,FALSE);
+    return klass->get_audio_source_configs (self,profile_index);
+}
+
+OnvifMediaAudioOutputConfigs * 
+OnvifMediaService__getAudioOutputConfigurations(OnvifMediaService *self, int profile_index){
+    OnvifMediaServiceClass *klass;
+    g_return_val_if_fail (ONVIF_IS_MEDIA_SERVICE (self),FALSE);
+    klass = ONVIF_MEDIA_SERVICE_GET_CLASS (self);
+    g_return_val_if_fail (klass->get_audio_output_configs != NULL,FALSE);
+    return klass->get_audio_output_configs (self,profile_index);
+}
+
+OnvifMediaAudioOutputConfigOptions * 
+OnvifMediaService__getAudioOutputConfigurationOptions(OnvifMediaService *self, int profile_index){
+    OnvifMediaServiceClass *klass;
+    g_return_val_if_fail (ONVIF_IS_MEDIA_SERVICE (self),FALSE);
+    klass = ONVIF_MEDIA_SERVICE_GET_CLASS (self);
+    g_return_val_if_fail (klass->get_audio_output_config_options != NULL,FALSE);
+    return klass->get_audio_output_config_options (self,profile_index);
+}
+
 OnvifUri *
 OnvifMediaService__getSnapshotUri(OnvifMediaService *self, int profile_index){
     OnvifMediaServiceClass *klass;

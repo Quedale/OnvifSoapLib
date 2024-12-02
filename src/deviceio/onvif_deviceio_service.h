@@ -1,7 +1,7 @@
 #ifndef ONVIF_DEVICEIO_SERVICE_H_ 
 #define ONVIF_DEVICEIO_SERVICE_H_
 
-#include "shard_export.h"
+#include "../shard_export.h"
 #include "../onvif_base_service.h"
 #include "onvif_deviceio_audio_output_configuration_options.h"
 #include "onvif_tokens.h"

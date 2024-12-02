@@ -2,7 +2,6 @@
 #define ONVIF_MEDIA1_SERVICECAPABILITIES_LOCAL_H_
 
 #include "onvif_media1_service_capabilities.h"
-#include "../onvif_base_service_local.h"
 #include "../onvif_media_service_capabilities_local.h"
 
 #ifdef SOAP_H_FILE      /* if set, use the soapcpp2-generated fileH.h file as specified with: cc ... -DSOAP_H_FILE=fileH.h */

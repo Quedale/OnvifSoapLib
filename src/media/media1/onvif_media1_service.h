@@ -6,6 +6,9 @@
 #include "onvif_media1_profiles.h"
 #include "onvif_media1_uri.h"
 #include "onvif_media1_service_capabilities.h"
+#include "onvif_media1_audio_source_configs.h"
+#include "onvif_media1_audio_output_configs.h"
+#include "onvif_media1_audio_output_config_options.h"
 
 G_BEGIN_DECLS
 
@@ -27,6 +30,10 @@ SHARD_EXPORT OnvifMedia1Profiles * OnvifMedia1Service__getProfiles(OnvifMedia1Se
 SHARD_EXPORT OnvifMedia1Uri * OnvifMedia1Service__getSnapshotUri(OnvifMedia1Service *self, int profile_index);
 SHARD_EXPORT OnvifMedia1Uri * OnvifMedia1Service__getStreamUri(OnvifMedia1Service* self, int profile_index);
 SHARD_EXPORT OnvifMedia1ServiceCapabilities * OnvifMedia1Service__getServiceCapabilities(OnvifMedia1Service* self);
+SHARD_EXPORT OnvifMedia1AudioSourceConfigs * OnvifMedia1Service__getAudioSourceConfigurations(OnvifMedia1Service *self);
+SHARD_EXPORT OnvifMedia1AudioOutputConfigs * OnvifMedia1Service__getAudioOutputConfigurations(OnvifMedia1Service *self);
+SHARD_EXPORT OnvifMedia1AudioOutputConfigOptions * OnvifMedia1Service__getAudioOutputConfigurationOptions(OnvifMedia1Service *self, int profile_index);
+
 
 G_END_DECLS
 

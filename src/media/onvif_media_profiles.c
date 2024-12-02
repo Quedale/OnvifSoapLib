@@ -35,7 +35,6 @@ OnvifMediaProfiles__init (OnvifMediaProfiles * self){
     priv->profiles = NULL;
 }
 
-
 int 
 OnvifMediaProfiles__get_size(OnvifMediaProfiles * self){
     g_return_val_if_fail (self != NULL, 0);
@@ -60,6 +59,7 @@ OnvifMediaProfiles__get_profile(OnvifMediaProfiles * self,int index){
     
     OnvifMediaProfilesPrivate *priv = OnvifMediaProfiles__get_instance_private (ONVIF_MEDIA_PROFILES(self));
     g_return_val_if_fail (index < priv->count, NULL);
+    g_return_val_if_fail (index >= 0, NULL);
 
     return priv->profiles[index];
 }

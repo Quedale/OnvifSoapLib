@@ -46,7 +46,6 @@ OnvifTokens * OnvifDeviceIOService__getAudioSources(OnvifDeviceIOService * self)
     g_return_val_if_fail (ONVIF_IS_DEVICEIO_SERVICE (self), NULL);
 
     ONVIF_PREPARE_SOAP_CALL(OnvifTokens, tmd__Get, tmd__GetResponse);
-    // request.AudioOutputToken = 1;
     ONVIF_INVOKE_SOAP_CALL(self, tmd__GetAudioSources, OnvifTokens__new, ret_val, &request,  &response);
 
     return ret_val;

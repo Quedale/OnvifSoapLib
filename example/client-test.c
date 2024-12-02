@@ -43,12 +43,101 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 //Initialize argp context
 static struct argp argp = { options, parse_opt, NULL, doc, 0, 0, 0 };
 
+void print_media_audio_source_configs(OnvifMediaService * media_service, int profile_index){
+	OnvifMediaAudioSourceConfigs * audio_sources = OnvifMediaService__getAudioSourceConfigurations(media_service,profile_index);
+	SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(audio_sources));
+    switch(*fault){
+        case SOAP_FAULT_NONE:
+			if(OnvifMediaAudioSourceConfigs__get_size(audio_sources) <= 0) C_DEBUG("Device doesn't have a microphone");
+			for(int i=0;i<OnvifMediaAudioSourceConfigs__get_size(audio_sources);i++){
+				OnvifMediaAudioSourceConfig * audio_source = OnvifMediaAudioSourceConfigs__get_config(audio_sources,i);
+				C_DEBUG("----------AudioSourceConfig------------");
+				C_DEBUG("Token : %s",OnvifMediaAudioSourceConfig__get_token(audio_source));
+				C_DEBUG("Name : %s",OnvifMediaAudioSourceConfig__get_name(audio_source));
+				C_DEBUG("UseCount : %d",OnvifMediaAudioSourceConfig__get_use_count(audio_source));
+				C_DEBUG("SourceToken : %s",OnvifMediaAudioSourceConfig__get_source_token(audio_source));
+			}
+            break;
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            C_ERROR("Failed to retrieve AudioSourceConfig");
+            break;
+    }
+	g_object_unref(audio_sources);
+}
+
+void print_media_audio_output_configs(OnvifMediaService * media_service, int profile_index){
+	OnvifMediaAudioOutputConfigs * audio_outputs = OnvifMediaService__getAudioOutputConfigurations(media_service,profile_index);
+	SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(audio_outputs));
+    switch(*fault){
+        case SOAP_FAULT_NONE:
+			if(OnvifMediaAudioOutputConfigs__get_size(audio_outputs) <= 0) C_DEBUG("Device doesn't have a speaker");
+			for(int i=0;i<OnvifMediaAudioOutputConfigs__get_size(audio_outputs);i++){
+				OnvifMediaAudioOutputConfig * audio_output = OnvifMediaAudioOutputConfigs__get_config(audio_outputs,i);
+				C_DEBUG("----------AudioOutputConfig------------");
+				C_DEBUG("Token : %s",OnvifMediaAudioOutputConfig__get_token(audio_output));
+				C_DEBUG("Name : %s",OnvifMediaAudioOutputConfig__get_name(audio_output));
+				C_DEBUG("UseCount : %d",OnvifMediaAudioOutputConfig__get_use_count(audio_output));
+				C_DEBUG("OutputToken : %s",OnvifMediaAudioOutputConfig__get_output_token(audio_output));
+			}
+            break;
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            C_ERROR("Failed to retrieve Device AudioOutputConfig");
+            break;
+    }
+	g_object_unref(audio_outputs);
+}
+
+void print_media_audio_output_config_options(OnvifMediaService * media_service, int profile_index){
+	OnvifMediaAudioOutputConfigOptions * audio_src_config_opts = OnvifMediaService__getAudioOutputConfigurationOptions(media_service,profile_index);
+	SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(audio_src_config_opts));
+    switch(*fault){
+        case SOAP_FAULT_NONE:
+			C_DEBUG("----------AudioOutputConfigOption------------");
+			int count = OnvifMediaAudioOutputConfigOptions__ouput_tokens_available_count(audio_src_config_opts);
+			for(int i=0;i<count;i++){
+				char * out_token_available = OnvifMediaAudioOutputConfigOptions__get_ouput_token_available(audio_src_config_opts,i);
+				C_DEBUG("\tOutputTokenAvailable %i: %s",i,out_token_available);
+			}
+			count = OnvifMediaAudioOutputConfigOptions__get_send_primacy_options_count(audio_src_config_opts);
+			for(int i=0;i<count;i++){
+				char * send_primacy_opt = OnvifMediaAudioOutputConfigOptions__get_send_primacy_option(audio_src_config_opts,i);
+				C_DEBUG("\tSendPrimacyOption %i: %s",i,send_primacy_opt);
+			}
+			C_DEBUG("\t Minimum/Maximum : %d/%d",OnvifMediaAudioOutputConfigOptions__get_min_level(audio_src_config_opts),OnvifMediaAudioOutputConfigOptions__get_max_level(audio_src_config_opts));
+            break;
+        case SOAP_FAULT_CONNECTION_ERROR:
+        case SOAP_FAULT_NOT_VALID:
+        case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_UNEXPECTED:
+        default:
+            C_ERROR("Failed to retrieve Device AudioOutputConfigOptions");
+            break;
+    }
+	g_object_unref(audio_src_config_opts);
+}
+
 void loop_media_profiles(OnvifMediaProfiles * profiles, OnvifMediaService * media_service, OnvifDevice * dev){
 	for (int i = 0; i < OnvifMediaProfiles__get_size(profiles); i++){
 		OnvifMediaProfile * profile = OnvifMediaProfiles__get_profile(profiles,i);
 		C_DEBUG("Media Profile name: %s\n", OnvifMediaProfile__get_name(profile));
 		C_DEBUG("Media Profile token: %s\n", OnvifMediaProfile__get_token(profile));
 
+		//TODO Filter below calls only if supported
+		print_media_audio_source_configs(media_service,i);
+		print_media_audio_output_configs(media_service,i);
+		print_media_audio_output_config_options(media_service,i);
+		
 		OnvifUri * stream_uri = OnvifMediaService__getStreamUri(media_service, i);
 		SoapFault * fault = SoapObject__get_fault(SOAP_OBJECT(stream_uri));
 		const char * uri;

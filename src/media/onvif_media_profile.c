@@ -1,10 +1,12 @@
 
-#include "onvif_media_profile.h"
+#include "onvif_media_profile_local.h"
 
 enum {
     PROP_TOKEN = 1,
     PROP_NAME = 2,
-    PROP_INDEX = 3,
+    PROP_FIXED = 3,
+    PROP_INDEX = 4,
+    PROP_AUDIO_SOURCE = 5,
     N_PROPERTIES
 };
 
@@ -12,11 +14,21 @@ typedef struct {
     int index;
     char * name;
     char * token;
+    gboolean fixed;
+    OnvifMediaAudioSourceConfig * audio_source;
 } OnvifMediaProfilePrivate;
 
-G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (OnvifMediaProfile, OnvifMediaProfile_, G_TYPE_OBJECT)
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (OnvifMediaProfile, OnvifMediaProfile_, SOAP_TYPE_OBJECT)
 
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
+
+void
+OnvifMediaProfile__set_audio_source(OnvifMediaProfile * self, OnvifMediaAudioSourceConfig * audio_source){
+    g_return_if_fail(self != NULL);
+    g_return_if_fail(ONVIF_IS_MEDIA_PROFILE(self));
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    priv->audio_source = audio_source;
+}
 
 static void
 OnvifMediaProfile__set_property (GObject      *object,
@@ -50,8 +62,14 @@ OnvifMediaProfile__set_property (GObject      *object,
                 strcpy(priv->name,strval);
             }
             break;
+        case PROP_FIXED:
+            priv->fixed = g_value_get_boolean(value);
+            break;
         case PROP_INDEX:
             priv->index = g_value_get_int (value);
+            break;
+        case PROP_AUDIO_SOURCE:
+            priv->audio_source = g_value_get_object(value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -75,6 +93,12 @@ OnvifMediaProfile__get_property (GObject    *object,
             break;
         case PROP_INDEX:
             g_value_set_int (value, priv->index);
+            break;
+        case PROP_FIXED:
+            g_value_set_boolean(value, priv->fixed);
+            break;
+        case PROP_AUDIO_SOURCE:
+            g_value_set_object(value, priv->audio_source);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -123,6 +147,20 @@ OnvifMediaProfile__class_init (OnvifMediaProfileClass * klass){
                             "Onvif Media Profile index",
                             -1, G_MAXINT, -1,
                             G_PARAM_CONSTRUCT | G_PARAM_READWRITE);
+
+    obj_properties[PROP_FIXED] =
+        g_param_spec_boolean ("fixed",
+                            "FixedProfile",
+                            "A value of true signals that the profile cannot be deleted. Default is false.",
+                            FALSE,
+                            G_PARAM_CONSTRUCT | G_PARAM_READWRITE);
+
+    obj_properties[PROP_AUDIO_SOURCE] =
+        g_param_spec_object ("audiosource",
+                            "OnvifMediaAudioSourceConfiguration",
+                            "Optional configuration of the Audio input.",
+                            ONVIF_TYPE_MEDIA_AUDIO_SOURCE_CONFIG  /* default value */,
+                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
 
     g_object_class_install_properties (object_class,
                                         N_PROPERTIES,

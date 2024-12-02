@@ -6,6 +6,7 @@
 #include "clogger.h"
 #include "httpda.h"
 #include "plugin/logging.h"
+#include "SoapObject_local.h"
 
 #define FAULT_UNAUTHORIZED "\"http://www.onvif.org/ver10/error\":NotAuthorized"
 #define FAULT_ACTIONNOTSUPPORTED "\"http://www.onvif.org/ver10/error\":ActionNotSupported"
@@ -18,27 +19,7 @@ void OnvifBaseService__unlock(OnvifBaseService * self);
 SoapDef * OnvifBaseService__soap_new(OnvifBaseService * self);
 void OnvifBaseService__soap_destroy(OnvifBaseService * self, struct soap *soap);
 int OnvifBaseService__ssl_verify_callback(int ok, X509_STORE_CTX *store);
-
-#define STR_CONCAT(a,b) a##b
-#define TOSTRMAC(A) #A
-
-#define xsd__boolean_to_bool(a, b, c) \
-    if(!a){ \
-        C_WARN(TOSTRMAC(STR_CONCAT(c," is NULL"))); \
-        b = FALSE; \
-    } else { \
-        switch(*a){ \
-            case xsd__boolean__false_: \
-                b = FALSE; \
-                break; \
-            case xsd__boolean__true_: \
-                b = TRUE; \
-                break; \
-            default: \
-                b = FALSE; \
-                C_WARN(TOSTRMAC(STR_CONCAT(c," default to FALSE"))); \
-        } \
-    }
+void OnvifBaseService__print_fault(struct soap *soap);
 
 #define BUILD_SOAP_FUNC(a)  soap_call___##a 
 #define BUILD_SOAP_TYPE(a)  _##a 
@@ -157,7 +138,7 @@ retry: \
                 SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_ACTION_NOT_SUPPORTED); \
             } else { /* Mostly SOAP_FAULT */ \
                 C_ERROR("[%s] Unhandled ERROR %i [%s]\n",endpt,soap->error, fault_code); \
-                soap_print_fault(soap, stderr); \
+                OnvifBaseService__print_fault(soap); \
                 SoapObject__set_fault(SOAP_OBJECT(vo),SOAP_FAULT_UNEXPECTED); \
             } \
         } \

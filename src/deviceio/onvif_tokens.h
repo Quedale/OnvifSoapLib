@@ -1,8 +1,8 @@
 #ifndef ONVIF_TOKENS_H_ 
 #define ONVIF_TOKENS_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../shard_export.h"
+#include "../SoapObject.h"
 
 G_BEGIN_DECLS
 

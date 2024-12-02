@@ -1,26 +1,22 @@
 #ifndef ONVIF_DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS_H_ 
 #define ONVIF_DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS_H_
 
-#include "shard_export.h"
-#include "SoapObject.h"
+#include "../media/onvif_media_audio_output_config_options.h"
+#include "../shard_export.h"
 
 G_BEGIN_DECLS
 
 #define ONVIF_TYPE_DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS OnvifDeviceIOAudioOutputConfigurationOptions__get_type()
-G_DECLARE_FINAL_TYPE (OnvifDeviceIOAudioOutputConfigurationOptions, OnvifDeviceIOAudioOutputConfigurationOptions_, ONVIF, DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS, SoapObject)
+G_DECLARE_FINAL_TYPE (OnvifDeviceIOAudioOutputConfigurationOptions, OnvifDeviceIOAudioOutputConfigurationOptions_, ONVIF, DEVICEIO_AUDIO_OUTPUT_CONFIGURATION_OPTIONS, OnvifMediaAudioOutputConfigOptions)
 
-struct _OnvifDeviceIOAudioOutputConfigurationOptions
-{
-    SoapObject parent_instance;
+struct _OnvifDeviceIOAudioOutputConfigurationOptions {
+    OnvifMediaAudioOutputConfigOptions parent_instance;
 };
 
 
-struct _OnvifDeviceIOAudioOutputConfigurationOptionsClass
-{
-    SoapObjectClass parent_class;
+struct _OnvifDeviceIOAudioOutputConfigurationOptionsClass {
+    OnvifMediaAudioOutputConfigOptionsClass parent_class;
 };
-
-//TODO Implement getters
 
 G_END_DECLS
 

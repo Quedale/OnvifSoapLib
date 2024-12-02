@@ -1,5 +1,6 @@
 #include "onvif_device_hostnameinfo_local.h"
 #include "clogger.h"
+#include "../SoapObject_local.h"
 
 typedef struct {
     char * name;

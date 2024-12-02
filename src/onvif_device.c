@@ -25,6 +25,7 @@ typedef struct {
     P_MUTEX_TYPE prop_lock;
     
     OnvifDeviceService * device_service;
+    OnvifDeviceIOService * deviceio_service;
     P_MUTEX_TYPE media_lock;
     OnvifMedia1Service * media1_service;
     OnvifMedia2Service * media2_service;
@@ -36,7 +37,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (OnvifDevice, OnvifDevice_, G_TYPE_OBJECT)
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static SoapFault 
-OnvifDevice__createMediaService(OnvifDevice* self){
+OnvifDevice__createServices(OnvifDevice* self){
     SoapFault ret_fault = SOAP_FAULT_NONE;
     OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
     if(priv->media1_service){
@@ -50,15 +51,18 @@ OnvifDevice__createMediaService(OnvifDevice* self){
         goto exit;
     }
 
-    ONVIF_DEVICE_TRACE("[%s] OnvifDevice__createMediaService",self);
-    OnvifMedia * media;
-    OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(priv->device_service);
-    SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
+    ONVIF_DEVICE_TRACE("[%s] OnvifDevice__createServices",self);
+    OnvifDeviceServices * services = OnvifDeviceService__getServices(priv->device_service, TRUE);
+    SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(services));
+    OnvifService * service;
     switch(*caps_fault){
         case SOAP_FAULT_NONE:
-            media = OnvifCapabilities__get_media(capabilities);
-            priv->media1_service = OnvifMedia1Service__new(self, OnvifMedia__get_address(media));
-            priv->media2_service = OnvifMedia2Service__new(self, OnvifMedia__get_address(media));
+            service = OnvifDeviceServices__get_media(services);
+            if(service) priv->media1_service = OnvifMedia1Service__new(self, OnvifService__get_address(service));
+            service = OnvifDeviceServices__get_media2(services);
+            if(service) priv->media2_service = OnvifMedia2Service__new(self, OnvifService__get_address(service));
+            service = OnvifDeviceServices__get_deviceio(services);
+            if(service) priv->deviceio_service = OnvifDeviceIOService__new(self, OnvifService__get_address(service));
             break;
         case SOAP_FAULT_ACTION_NOT_SUPPORTED:
         case SOAP_FAULT_CONNECTION_ERROR:
@@ -66,13 +70,32 @@ OnvifDevice__createMediaService(OnvifDevice* self){
         case SOAP_FAULT_UNAUTHORIZED:
         case SOAP_FAULT_UNEXPECTED:
         default:
-            ONVIF_DEVICE_ERROR("[%s] Failed to retrieve capabilities capabilities...\n", self);
+            ONVIF_DEVICE_ERROR("[%s] Failed to retrieve device services...\n", self);
+            //TODO Fallback to GetCapabilities?
             ret_fault = *caps_fault;
             break;
     }
-
-    g_object_unref(capabilities);
-
+    g_object_unref(services);
+    // OnvifMedia * media;
+    // OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(priv->device_service);
+    // SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
+    // switch(*caps_fault){
+    //     case SOAP_FAULT_NONE:
+    //         media = OnvifCapabilities__get_media(capabilities);
+    //         priv->media1_service = OnvifMedia1Service__new(self, OnvifMedia__get_address(media));
+    //         priv->media2_service = OnvifMedia2Service__new(self, OnvifMedia__get_address(media));
+    //         break;
+    //     case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+    //     case SOAP_FAULT_CONNECTION_ERROR:
+    //     case SOAP_FAULT_NOT_VALID:
+    //     case SOAP_FAULT_UNAUTHORIZED:
+    //     case SOAP_FAULT_UNEXPECTED:
+    //     default:
+    //         ONVIF_DEVICE_ERROR("[%s] Failed to retrieve capabilities capabilities...\n", self);
+    //         ret_fault = *caps_fault;
+    //         break;
+    // }
+    // g_object_unref(capabilities);
 exit:
     P_MUTEX_UNLOCK(priv->media_lock);
     return ret_fault;
@@ -145,7 +168,7 @@ OnvifDevice__authenticate(OnvifDevice* self){
         }
     }
 
-    ret_fault = OnvifDevice__createMediaService(self);
+    ret_fault = OnvifDevice__createServices(self);
     switch(ret_fault){
         case SOAP_FAULT_NONE:
             ONVIF_MEDIA_DEBUG("[%s] Successfully created Media soap",self);
@@ -249,6 +272,14 @@ OnvifDevice__get_device_service(OnvifDevice* self){
     return priv->device_service;
 }
 
+OnvifDeviceIOService * 
+OnvifDevice__get_deviceio_service(OnvifDevice* self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    return priv->deviceio_service;
+}
+
 OnvifMediaService * 
 OnvifDevice__get_media_service(OnvifDevice* self){
     g_return_val_if_fail (self != NULL, NULL);
@@ -288,6 +319,11 @@ OnvifDevice__dispose (GObject *object){
     if(priv->device_service){
         g_object_unref(priv->device_service);
         priv->device_service = NULL;
+    }
+
+    if(priv->deviceio_service){
+        g_object_unref(priv->deviceio_service);
+        priv->deviceio_service = NULL;
     }
 
     if(priv->media1_service){
@@ -396,6 +432,7 @@ OnvifDevice__init(OnvifDevice* self) {
     priv->time_offset = 0;
     priv->credentials = OnvifCredentials__create();
     priv->device_service = NULL;
+    priv->deviceio_service = NULL;
     priv->media1_service = NULL;
     priv->purl = NULL;
     priv->datetime = NULL;

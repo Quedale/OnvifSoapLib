@@ -1,5 +1,6 @@
 #include "onvif_media1_service_capabilities_local.h"
 #include "clogger.h"
+#include "../../xsd_simple_type_converter.h"
 
 typedef struct {
     char * placeholder;
@@ -37,9 +38,7 @@ OnvifMedia1ServiceCapabilities__construct(SoapObject * obj, gpointer ptr){
         OnvifMediaServiceCapabilities__set_snapshot_uri(ONVIF_MEDIA_SERVICECAPABILITIES(self),FALSE);
     }
 
-    gboolean snapshoturi;
-    xsd__boolean_to_bool(caps->SnapshotUri,snapshoturi,"SnapshotUri");
-    OnvifMediaServiceCapabilities__set_snapshot_uri(ONVIF_MEDIA_SERVICECAPABILITIES(self),snapshoturi);
+    OnvifMediaServiceCapabilities__set_snapshot_uri(ONVIF_MEDIA_SERVICECAPABILITIES(self),xsd__boolean_to_bool(caps->SnapshotUri,FALSE));
 }
 
 static void

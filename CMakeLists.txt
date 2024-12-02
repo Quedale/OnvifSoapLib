@@ -195,6 +195,11 @@ set(devicemgmt_headers
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_services.h)
 set(media_headers
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_output_config_options.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_output_config.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_output_configs.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_source_config.h
+            ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_source_configs.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profile.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_profiles.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_service.h
@@ -202,12 +207,18 @@ set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_snapshot.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_uri.h)
 set(media1_headers
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_audio_output_config_options.h
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_audio_output_configs.h
+            ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_audio_source_configs.h
             ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_profile.h
             ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_profiles.h
             ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_service.h
             ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_service_capabilities.h
             ${PROJECT_SOURCE_DIR}/src/media/media1/onvif_media1_uri.h)
 set(media2_headers
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_audio_output_config_options.h
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_audio_output_configs.h
+            ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_audio_source_configs.h
             ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_service.h
             ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_service_capabilities.h
             ${PROJECT_SOURCE_DIR}/src/media/media2/onvif_media2_profile.h

@@ -164,28 +164,7 @@ OnvifService * OnvifService__create(OnvifDeviceServices * parent, struct tds__Se
     strcpy(self->xaddr,tds_serv->XAddr);
 
     if(tds_serv->Capabilities) {
-        if(!strcmp(tds_serv->Namespace,"http://www.onvif.org/ver10/media/wsdl")){
-            // struct trt__Capabilities test;
-
-            // //TODO Properly map anyType to T_SOAP type
-            // struct soap * ctx = soap_new1(SOAP_XML_IGNORENS);
-            // ctx->is = tds_serv->Capabilities->__any;
-            // C_FATAL("is %d: %s",strlen(ctx->is),ctx->is);
-            // //Re-implement soap_read_trt__Capabilities to resolve warnings
-            // soap_default_trt__Capabilities(ctx, &test);
-            // if(soap_begin_recv(ctx) || !soap_get_trt__Capabilities(ctx, &test, NULL, NULL) || soap_end_recv(ctx)){
-            //     soap_print_fault(ctx, stderr);
-            // } else {
-            //     C_DEBUG("SnapshotUri : %d",*test.SnapshotUri);
-            //     C_DEBUG("Rotation : %d",*test.Rotation);
-            //     C_DEBUG("ProfileCapabilities : %d",*test.ProfileCapabilities->MaximumNumberOfProfiles);
-            //     C_DEBUG("is %d: %s",strlen(ctx->is),ctx->is);
-            //     C_DEBUG("tds_serv->Capabilities->__any : %s",tds_serv->Capabilities->__any);
-            //     C_DEBUG("XxAddr : %s",self->xaddr);
-            // }
-        } else {
-            C_DEBUG("Service : %s -- %s",tds_serv->Namespace,self->xaddr);
-        }
+        C_DEBUG("Service : %s -- %s",tds_serv->Namespace,self->xaddr);
     } else {
         C_WARN("No capability provided.");
     }

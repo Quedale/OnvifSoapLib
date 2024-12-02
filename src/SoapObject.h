@@ -33,10 +33,8 @@ GType SoapFault__get_type (void) G_GNUC_CONST;
 #define SOAP_TYPE_FAULT (SoapFault__get_type())
 
 
-struct _SoapObjectClass
-{
+struct _SoapObjectClass {
   GObjectClass parent_class;
-
   void (* construct) (SoapObject  * self, gpointer ptr);
 
 };
@@ -44,9 +42,7 @@ struct _SoapObjectClass
 /*
  * Method definitions.
  */
-SoapObject * SoapObject__new (void);
 SoapFault * SoapObject__get_fault(SoapObject * self);
-void SoapObject__set_fault(SoapObject * self, SoapFault fault);
 
 G_END_DECLS
 
