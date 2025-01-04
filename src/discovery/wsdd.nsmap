@@ -4,7 +4,7 @@
    The first four entries are mandatory and should not be removed */
 SOAP_NMAC struct Namespace disco_namespaces[] = {
         { "SOAP-ENV", "http://www.w3.org/2003/05/soap-envelope", "http://schemas.xmlsoap.org/soap/envelope/", NULL },
-        { "wsa5", "http://www.w3.org/2005/08/addressing", "http://schemas.xmlsoap.org/ws/2004/08/addressing", NULL },
+        { "wsa5",  "http://schemas.xmlsoap.org/ws/2004/08/addressing", NULL, NULL },
         { "wsdd", "http://schemas.xmlsoap.org/ws/2005/04/discovery", NULL, NULL },
         { NULL, NULL, NULL, NULL} /* end of namespaces[] */
     };
