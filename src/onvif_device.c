@@ -171,6 +171,11 @@ OnvifDevice__authenticate(OnvifDevice* self){
     ret_fault = OnvifDevice__createServices(self);
     switch(ret_fault){
         case SOAP_FAULT_NONE:
+            if(!priv->media1_service){
+                ONVIF_DEVICE_ERROR("[%s] OnvifDevice__authenticate - Device doesn't support media service [%d]\n",self, ret_fault);
+                ret_fault = SOAP_FAULT_UNEXPECTED;
+                goto exit;
+            }
             ONVIF_MEDIA_DEBUG("[%s] Successfully created Media soap",self);
             break;
         case SOAP_FAULT_ACTION_NOT_SUPPORTED:
