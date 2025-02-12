@@ -133,11 +133,6 @@ OnvifBaseService__init (OnvifBaseService *self){
     P_MUTEX_SETUP(priv->prop_lock);
 }
 
-OnvifBaseService * 
-OnvifBaseService__new (OnvifDevice * device, const char * endpoint){
-    return g_object_new (ONVIF_TYPE_BASE_SERVICE, "device",device,"uri",endpoint, NULL);
-}
-
 void 
 OnvifBaseService__set_endpoint(OnvifBaseService * self, char * endpoint){
     OnvifBaseServicePrivate *priv = OnvifBaseService__get_instance_private (self);
