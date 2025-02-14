@@ -274,6 +274,7 @@ OnvifDeviceInterface * OnvifDeviceInterface__create(struct tt__NetworkInterface 
     } else {
         onvifinterface->name = NULL;
         onvifinterface->mac = NULL;
+        onvifinterface->mtu = -1;
         C_WARN("NetworkInterface has no Info defined.");
     }
     
