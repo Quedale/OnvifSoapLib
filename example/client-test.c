@@ -363,8 +363,8 @@ int main(int argc, char *argv[])
 						C_INFO("enabled : %d",OnvifIPv4Configuration__is_enabled(v4));
 						C_INFO("manual count : %d",OnvifIPv4Configuration__get_manual_count(v4));
 						for(int i=0;i<OnvifIPv4Configuration__get_manual_count(v4);i++){
-							OnvifPrefixedIPv4Address * addr = OnvifIPv4Configuration__get_manual(v4, i);
-							C_INFO("ipv4 : %s/%d",OnvifPrefixedIPv4Address__get_address(addr), OnvifPrefixedIPv4Address__get_prefix(addr));
+							OnvifPrefixedIPAddress * addr = OnvifIPv4Configuration__get_manual(v4, i);
+							C_INFO("ipv4 : %s/%d",OnvifPrefixedIPAddress__get_address(addr), OnvifPrefixedIPAddress__get_prefix(addr));
 						}
 					} else {
 						C_INFO("No IPv4 Configured");
