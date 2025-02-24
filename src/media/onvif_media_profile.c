@@ -1,5 +1,6 @@
 
 #include "onvif_media_profile_local.h"
+#include "clogger.h"
 
 enum {
     PROP_TOKEN = 1,
@@ -27,6 +28,10 @@ OnvifMediaProfile__set_audio_source(OnvifMediaProfile * self, OnvifMediaAudioSou
     g_return_if_fail(self != NULL);
     g_return_if_fail(ONVIF_IS_MEDIA_PROFILE(self));
     OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    if(priv->audio_source){
+        C_WARN("AudioSource configuration being overwritten");
+        g_object_unref(priv->audio_source);
+    }
     priv->audio_source = audio_source;
 }
 
@@ -67,9 +72,6 @@ OnvifMediaProfile__set_property (GObject      *object,
             break;
         case PROP_INDEX:
             priv->index = g_value_get_int (value);
-            break;
-        case PROP_AUDIO_SOURCE:
-            priv->audio_source = g_value_get_object(value);
             break;
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -117,6 +119,10 @@ OnvifMediaProfile__dispose (GObject *self){
         free(priv->token);
         priv->token = NULL;
     }
+    if(priv->audio_source){
+        g_object_unref(priv->audio_source);
+        priv->audio_source = NULL;
+    }
     G_OBJECT_CLASS (OnvifMediaProfile__parent_class)->dispose (self);
 }
 
@@ -160,7 +166,7 @@ OnvifMediaProfile__class_init (OnvifMediaProfileClass * klass){
                             "OnvifMediaAudioSourceConfiguration",
                             "Optional configuration of the Audio input.",
                             ONVIF_TYPE_MEDIA_AUDIO_SOURCE_CONFIG  /* default value */,
-                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE);
+                            G_PARAM_READABLE);
 
     g_object_class_install_properties (object_class,
                                         N_PROPERTIES,

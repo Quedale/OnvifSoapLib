@@ -170,6 +170,7 @@ OnvifPrefixedIPAddress__destroy(OnvifPrefixedIPAddress * self){
     if(self->address)
         free(self->address);
     self->prefix = 0;
+    free(self);
 }
 
 static OnvifIPv6Configuration * 
@@ -261,6 +262,7 @@ static void destroy_addresslist(OnvifPrefixedIPAddress ** list, int * count){
     for(int i=0;i<*count;i++){
         OnvifPrefixedIPAddress__destroy(list[i]);
     }
+    free(list);
     *count = 0;
 }
 
@@ -273,6 +275,8 @@ OnvifIPv6Configuration__destroy(OnvifIPv6Configuration * self){
     destroy_addresslist(self->local,&self->local_count);
     destroy_addresslist(self->fromdhcp,&self->dhcp_count);
     destroy_addresslist(self->fromra,&self->ra_count);
+
+    free(self);
 }
 
 static OnvifIPv4Configuration * 
@@ -361,17 +365,14 @@ OnvifIPv4Configuration__destroy(OnvifIPv4Configuration * self){
     self->enabled = 0;
     self->dhcp = 0;
 
-    if(self->manual){
-        for(int i=0;i<self->manual_count;i++){
-            OnvifPrefixedIPAddress__destroy(self->manual[i]);
-        }
-    }
-    self->manual_count = 0;
+    destroy_addresslist(self->manual,&self->manual_count);
 
     if(self->local)
         OnvifPrefixedIPAddress__destroy(self->local);
     if(self->fromdhcp)
-        OnvifPrefixedIPAddress__destroy(self->fromdhcp);   
+        OnvifPrefixedIPAddress__destroy(self->fromdhcp); 
+        
+    free(self);
 }
 
 OnvifDeviceInterface * 
