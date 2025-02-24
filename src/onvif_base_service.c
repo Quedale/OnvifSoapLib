@@ -58,6 +58,37 @@ OnvifBaseService__get_property (GObject    *object,
     }
 }
 
+void
+http_da_cleanup(struct http_da_info * da_info){
+    if(da_info->authrealm){
+        free(da_info->authrealm);
+        da_info->authrealm = NULL;
+    }
+    if(da_info->userid){
+        free(da_info->userid);
+        da_info->userid = NULL;
+    }
+    if(da_info->passwd){
+        free(da_info->passwd);
+        da_info->passwd = NULL;
+    }
+    if(da_info->nonce){
+        free(da_info->nonce);
+        da_info->nonce = NULL;
+    }
+    if(da_info->opaque){
+        free(da_info->opaque);
+        da_info->opaque = NULL;
+    }
+    if(da_info->qop){
+        free(da_info->qop);
+        da_info->qop = NULL;
+    }
+    if(da_info->alg){
+        free(da_info->alg);
+        da_info->alg = NULL;
+    }
+}
 
 static void
 OnvifBaseService__dispose (GObject *object){
@@ -69,16 +100,9 @@ OnvifBaseService__dispose (GObject *object){
     }
 
     if(priv->da_info){
-        //It might be more efficient to clean up da_info manually
-        struct soap fakesoap;
-        soap_init1(&fakesoap, SOAP_XML_CANONICAL | SOAP_C_UTFSTRING);
-        soap_register_plugin(&fakesoap, http_da);
-        http_da_release(&fakesoap, priv->da_info);
+        http_da_cleanup(priv->da_info);
         free(priv->da_info);
-        soap_destroy(&fakesoap);
-        soap_end(&fakesoap);
-        soap_done(&fakesoap);
-        priv->da_info = NULL;
+        priv->da_info=NULL;
     }
 
     P_MUTEX_CLEANUP(priv->service_lock);
@@ -244,6 +268,8 @@ OnvifBaseService__http_challenge(OnvifBaseService * self, SoapDef * soap, char *
     if(!priv->da_info){
         priv->da_info = malloc(sizeof(struct http_da_info));
         memset (priv->da_info, 0, sizeof(struct http_da_info));
+    } else {
+        http_da_cleanup(priv->da_info);
     }
     http_da_save(soap, priv->da_info, soap->authrealm, user, pass);
     free(user);
