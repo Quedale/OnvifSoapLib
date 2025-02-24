@@ -86,8 +86,7 @@ OnvifDeviceServices__reset (OnvifDeviceServices *self){
 }
 
 static void
-OnvifDeviceServices__dispose (GObject *self)
-{
+OnvifDeviceServices__dispose (GObject *self){
     OnvifDeviceServices__reset(ONVIF_DEVICE_SERVICES(self));
 
     G_OBJECT_CLASS (OnvifDeviceServices__parent_class)->dispose (self);
@@ -95,8 +94,7 @@ OnvifDeviceServices__dispose (GObject *self)
 
 
 static void
-OnvifDeviceServices__class_init (OnvifDeviceServicesClass * klass)
-{
+OnvifDeviceServices__class_init (OnvifDeviceServicesClass * klass){
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     object_class->dispose = OnvifDeviceServices__dispose;
     SoapObjectClass *soapobj_class = SOAP_OBJECT_CLASS(klass);
@@ -104,8 +102,7 @@ OnvifDeviceServices__class_init (OnvifDeviceServicesClass * klass)
 }
 
 static void
-OnvifDeviceServices__init (OnvifDeviceServices * self)
-{
+OnvifDeviceServices__init (OnvifDeviceServices * self){
     OnvifDeviceServicesPrivate *priv = OnvifDeviceServices__get_instance_private (ONVIF_DEVICE_SERVICES(self));
     priv->imaging = NULL;
     priv->media = NULL;
@@ -114,11 +111,13 @@ OnvifDeviceServices__init (OnvifDeviceServices * self)
     priv->events = NULL;
 }
 
-OnvifDeviceServices* OnvifDeviceServices__new(struct _tds__GetServicesResponse * resp){
+OnvifDeviceServices* 
+OnvifDeviceServices__new(struct _tds__GetServicesResponse * resp){
     return g_object_new (ONVIF_TYPE_DEVICE_SERVICES, "data", resp, NULL);
 }
 
-OnvifService * OnvifDeviceServices__get_deviceio(OnvifDeviceServices * self){
+OnvifService * 
+OnvifDeviceServices__get_deviceio(OnvifDeviceServices * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICES (self), NULL);
 
@@ -126,7 +125,8 @@ OnvifService * OnvifDeviceServices__get_deviceio(OnvifDeviceServices * self){
     return priv->deviceio;
 }
 
-SHARD_EXPORT OnvifService * OnvifDeviceServices__get_media(OnvifDeviceServices * self){
+SHARD_EXPORT OnvifService * 
+OnvifDeviceServices__get_media(OnvifDeviceServices * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICES (self), NULL);
 
@@ -134,7 +134,8 @@ SHARD_EXPORT OnvifService * OnvifDeviceServices__get_media(OnvifDeviceServices *
     return priv->media;
 }
 
-SHARD_EXPORT OnvifService * OnvifDeviceServices__get_media2(OnvifDeviceServices * self){
+SHARD_EXPORT OnvifService * 
+OnvifDeviceServices__get_media2(OnvifDeviceServices * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICES (self), NULL);
 
@@ -142,7 +143,8 @@ SHARD_EXPORT OnvifService * OnvifDeviceServices__get_media2(OnvifDeviceServices 
     return priv->media2;
 }
 
-SHARD_EXPORT OnvifService * OnvifDeviceServices__get_events(OnvifDeviceServices * self){
+SHARD_EXPORT OnvifService * 
+OnvifDeviceServices__get_events(OnvifDeviceServices * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICES (self), NULL);
 
@@ -150,7 +152,8 @@ SHARD_EXPORT OnvifService * OnvifDeviceServices__get_events(OnvifDeviceServices 
     return priv->events;
 }
 
-SHARD_EXPORT OnvifService * OnvifDeviceServices__get_imaging(OnvifDeviceServices * self){
+SHARD_EXPORT OnvifService * 
+OnvifDeviceServices__get_imaging(OnvifDeviceServices * self){
     g_return_val_if_fail (self != NULL, NULL);
     g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICES (self), NULL);
 
@@ -158,7 +161,8 @@ SHARD_EXPORT OnvifService * OnvifDeviceServices__get_imaging(OnvifDeviceServices
     return priv->imaging;
 }
 
-OnvifService * OnvifService__create(OnvifDeviceServices * parent, struct tds__Service * tds_serv){
+OnvifService * 
+OnvifService__create(OnvifDeviceServices * parent, struct tds__Service * tds_serv){
     OnvifService * self = malloc(sizeof(OnvifService));
     self->xaddr = malloc(strlen(tds_serv->XAddr)+1);
     strcpy(self->xaddr,tds_serv->XAddr);
@@ -174,15 +178,18 @@ OnvifService * OnvifService__create(OnvifDeviceServices * parent, struct tds__Se
     return self;
 }
 
-void OnvifService__destroy(OnvifService * self){
+void 
+OnvifService__destroy(OnvifService * self){
     if(self){
         if(self->xaddr){
             free(self->xaddr);
             self->xaddr = NULL;
         }
+        free(self);
     }
 }
 
-SHARD_EXPORT char * OnvifService__get_address(OnvifService * self){
+SHARD_EXPORT char * 
+OnvifService__get_address(OnvifService * self){
     return self->xaddr;
 }
