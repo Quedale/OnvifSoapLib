@@ -19,6 +19,7 @@ MESON_TOOL=meson
 FAILED=0
 
 SKIP_GSOAP=0
+SKIP_DEP=0
 SKIP_WSDL=0
 GSOAP_SRC_DIR="${GSOAP_SRC_DIR:=subprojects/gsoap-2.8}" 
 i=1;
@@ -26,6 +27,9 @@ for arg in "$@"
 do
     if [ $arg == "--skip-gsoap" ]; then
         SKIP_GSOAP=1
+    fi
+    if [ $arg == "--skip-dependencies" ]; then
+        SKIP_DEP=1
     fi
     if [ $arg == "--skip-wsdl" ]; then
         SKIP_WSDL=1
@@ -662,30 +666,33 @@ cd $SUBPROJECT_DIR
 #       
 ################################################################
 #Check if new changes needs to be pulled
-git -C CUtils remote update 2> /dev/null
-LOCAL=$(git -C CUtils rev-parse @ 2> /dev/null)
-REMOTE=$(git -C CUtils rev-parse @{u} 2> /dev/null)
-BASE=$(git -C CUtils merge-base @ @{u} 2> /dev/null)
-force_rebuild=0
-if [ $LOCAL = $REMOTE ]; then
-    echo "CUtils is already up-to-date. Do nothing..."
-elif [ $LOCAL = $BASE ]; then
-    echo "CUtils has new changes. Force rebuild..."
-    force_rebuild=1
-elif [ $REMOTE = $BASE ]; then
-    echo "CUtils has local changes. Doing nothing..."
-else
-    echo "Error CUtils is diverged."
-    exit 1
-fi
+ret=0
+if [ ${SKIP_DEP} -eq 0 ]; then
+  git -C CUtils remote update 2> /dev/null
+  LOCAL=$(git -C CUtils rev-parse @ 2> /dev/null)
+  REMOTE=$(git -C CUtils rev-parse @{u} 2> /dev/null)
+  BASE=$(git -C CUtils merge-base @ @{u} 2> /dev/null)
+  force_rebuild=0
+  if [ $LOCAL = $REMOTE ]; then
+      echo "CUtils is already up-to-date. Do nothing..."
+  elif [ $LOCAL = $BASE ]; then
+      echo "CUtils has new changes. Force rebuild..."
+      force_rebuild=1
+  elif [ $REMOTE = $BASE ]; then
+      echo "CUtils has local changes. Doing nothing..."
+  else
+      echo "Error CUtils is diverged."
+      exit 1
+  fi
 
-if [ $force_rebuild -eq 0 ]; then
-  CUTILSLIB_PKG=$SUBPROJECT_DIR/CUtils/build/dist/lib/pkgconfig
-  PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$CUTILSLIB_PKG \
-  pkg-config --exists --print-errors "cutils"
-  ret=$?
-else
-  ret=1
+  if [ $force_rebuild -eq 0 ]; then
+    CUTILSLIB_PKG=$SUBPROJECT_DIR/CUtils/build/dist/lib/pkgconfig
+    PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$CUTILSLIB_PKG \
+    pkg-config --exists --print-errors "cutils"
+    ret=$?
+  else
+    ret=1
+  fi
 fi
 
 if [ $ret != 0 ]; then
@@ -703,10 +710,14 @@ fi
 #       
 ################################################################
 PATH=$SUBPROJECT_DIR/gsoap-2.8/build/dist/bin:$PATH
-GSOAP_PKG=$SUBPROJECT_DIR/gsoap-2.8/build/dist/lib/pkgconfig
-PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GSOAP_PKG \
-pkg-config --exists --print-errors "gsoap >= 2.8.123"
-ret=$?
+ret=0
+if [ ${SKIP_DEP} -eq 0 ]; then
+  GSOAP_PKG=$SUBPROJECT_DIR/gsoap-2.8/build/dist/lib/pkgconfig
+  PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GSOAP_PKG \
+  pkg-config --exists --print-errors "gsoap >= 2.8.123"
+  ret=$?
+fi
+
 if [ $SKIP_GSOAP -eq 0 ] && [ $ret != 0 ]; then
 
     ################################################################
@@ -723,10 +734,10 @@ if [ $SKIP_GSOAP -eq 0 ] && [ $ret != 0 ]; then
         if [ $FAILED -eq 1 ]; then exit 1; fi
     fi
 
-
+    gsoap_version=2.8.134
     echo "-- Building gsoap libgsoap-dev --"
     #WS-Security depends on OpenSSL library 3.0 or 1.1
-    downloadAndExtract file="gsoap.zip" path="https://sourceforge.net/projects/gsoap2/files/gsoap_2.8.129.zip/download"
+    downloadAndExtract file="gsoap.zip" path="https://sourceforge.net/projects/gsoap2/files/gsoap_$gsoap_version.zip/download"
     if [ $FAILED -eq 1 ]; then exit 1; fi
     PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$OPENSSL_PKG:$ZLIB_PKG \
     C_INCLUDE_PATH="$SSL_INCLUDE:$ZLIB_INCLUDE:$C_INCLUDE_PATH" \
@@ -739,10 +750,13 @@ if [ $SKIP_GSOAP -eq 0 ] && [ $ret != 0 ]; then
 fi
 
 
-NTLM_PKG=$SUBPROJECT_DIR/libntlm/build/dist/lib/pkgconfig
-PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$NTLM_PKG \
-pkg-config --exists --print-errors "libntlm >= 1.5"
-ret=$?
+ret=0
+if [ ${SKIP_DEP} -eq 0 ]; then
+  NTLM_PKG=$SUBPROJECT_DIR/libntlm/build/dist/lib/pkgconfig
+  PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$NTLM_PKG \
+  pkg-config --exists --print-errors "libntlm >= 1.5"
+  ret=$?
+fi
 if [ $ret != 0 ]; then
   pullOrClone path=https://gitlab.com/gsasl/libntlm.git tag=v1.7
   if [ $FAILED -eq 1 ]; then exit 1; fi

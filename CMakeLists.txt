@@ -1,16 +1,21 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.18.1)
 project(client-test VERSION 0.1.0)
 
-include(CTest)
-enable_testing()
-
 include(CMakeDependentOption)
+
 cmake_dependent_option(
   ONVIFSOAP_STATIC             # option variable
   "Build static library"    # description
   ON                        # default value if exposed; user can override
   "NOT BUILD_SHARED_LIBS"   # condition to expose option
   OFF                       # value if not exposed; user can't override
+)
+cmake_dependent_option(
+        ENABLE_EXAMPLES             # option variable
+        "Build demo executables"    # description
+        OFF                        # default value if exposed; user can override
+        "NOT ENABLE_EXAMPLES"   # condition to expose option
+        ON                       # value if not exposed; user can't override
 )
 
 if (ONVIFSOAP_STATIC)
@@ -19,7 +24,6 @@ if (ONVIFSOAP_STATIC)
 else ()
   set(ONVIFSOAP_BUILD_TYPE SHARED)
 endif ()
-
 
 
 set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release)
@@ -36,21 +40,6 @@ elseif (MINGW)
     add_compile_options(-Wa,-mbig-obj)
 endif ()
 
-set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/CUtils/build/dist/lib/pkgconfig")
-set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/libntlm/build/dist/lib/pkgconfig")
-find_package(PkgConfig)
-pkg_check_modules(CUTILS REQUIRED cutils)
-pkg_check_modules(NTLM REQUIRED libntlm)
-pkg_check_modules(GLIB REQUIRED glib-2.0)
-pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
-pkg_check_modules(ZSTD QUIET libzstd)
-include_directories(${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${GOBJECT_INCLUDE_DIRS})
-link_directories(${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
-
-find_package(OpenSSL REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(Threads REQUIRED)
-
 include_directories(${GSOAP_SRC_DIR}/gsoap/ 
                     ${GSOAP_SRC_DIR}/gsoap/import 
                     ${GSOAP_SRC_DIR}/gsoap/custom 
@@ -59,7 +48,7 @@ include_directories(${GSOAP_SRC_DIR}/gsoap/
                     src)
 
 if(NOT EXISTS ${CMAKE_SOURCE_DIR}/src/generated)
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
+  file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 endif()
 
 aux_source_directory(src src_dir)
@@ -96,8 +85,54 @@ add_library(onvifsoap ${ONVIFSOAP_BUILD_TYPE} ${src_dir}
                           ${GSOAP_SRC_DIR}/gsoap/plugin/httpda.c
                           ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c)
 
-#Ingore gsoap warnings
+
+if(ANDROID)
+  ################################################
+  # These dependencies aren't inplemented in bootstrap yet.
+  # The will be implemented in the parent android project soon
+  ################################################
+  find_library(CUTILS cutils    REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${SUBPROJECTS_ROOT}/CUtils/dist/lib")
+  find_library(NTLM   ntlm      REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${SUBPROJECTS_ROOT}/libntlm-1.8/dist/lib")
+  find_library(GLIB   glib-2.0  REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
+  find_library(SSL    ssl       REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
+  find_library(CRYPTO crypto    REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
+  find_library(GOBJ gobject-2.0 REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
+  target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/include)
+  target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/include/openssl)
+  target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/include/glib-2.0)
+  target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/lib/glib-2.0/include)
+  target_include_directories(onvifsoap PRIVATE ${SUBPROJECTS_ROOT}/CUtils/dist/include)
+  target_include_directories(onvifsoap PRIVATE ${SUBPROJECTS_ROOT}/libntlm-1.8/dist/include)
+  target_link_libraries(onvifsoap PRIVATE ${CUTILS} ${NTLM} ${GLIB} ${GOBJ} ${SSL} ${CRYPTO})
+
+  #glib dependencies
+  add_library(iconv INTERFACE IMPORTED)
+  add_library(ffi INTERFACE IMPORTED)
+  set_target_properties(iconv PROPERTIES IMPORTED_LOCATION ${GSTREAMER_ROOT}/lib/libiconv.a)
+  set_target_properties(ffi PROPERTIES IMPORTED_LOCATION ${GSTREAMER_ROOT}/lib/libffi.a)
+  target_link_libraries(onvifsoap PRIVATE iconv ffi)
+else()
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/CUtils/build/dist/lib/pkgconfig")
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_CURRENT_SOURCE_DIR}/subprojects/libntlm/build/dist/lib/pkgconfig")
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(CUTILS REQUIRED cutils)
+  pkg_check_modules(NTLM REQUIRED libntlm)
+  pkg_check_modules(GLIB REQUIRED glib-2.0)
+  pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
+  pkg_check_modules(ZSTD QUIET libzstd)
+  target_include_directories(onvifsoap PRIVATE ${CUTILS_INCLUDE_DIRS} ${NTLM_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${GOBJECT_INCLUDE_DIRS})
+  target_link_libraries(onvifsoap PRIVATE ${ZSTD_LDFLAGS} ${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
+  find_package(OpenSSL REQUIRED)
+  find_package(ZLIB REQUIRED)
+  find_package(Threads REQUIRED)
+  target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ${CMAKE_DL_LIBS})
+  target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
+  target_link_libraries(onvifsoap PRIVATE Threads::Threads)
+  target_compile_options(onvifsoap PRIVATE "SHELL: -Wall")
+endif()
+
 if (MSVC)
+  #I care little for MSVC warning. Support is from good faith
   # target_compile_options(gsoap PRIVATE "SHELL: -wd4244 -wd4267")
   set_source_files_properties(${GSOAP_SRC_DIR}/gsoap/dom.c 
                               ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
@@ -110,7 +145,9 @@ if (MSVC)
                               ${GSOAP_SRC_DIR}/gsoap/plugin/threads.c
                               ${GSOAP_SRC_DIR}/gsoap/plugin/httpda.c
                               ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c PROPERTIES COMPILE_FLAGS -wd4244 -wd4267)
+  target_compile_options(onvifsoap PRIVATE "SHELL: -wd4100 -wd4244 -wd4255 -wd4706 -wd4820 -wd4996 -wd5045")
 else()
+  target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
   # target_compile_options(gsoap PRIVATE "SHELL: -Wformat-truncation=0 -Wno-deprecated-declarations -Wno-format -fPIC")
   set_source_files_properties(${GSOAP_SRC_DIR}/gsoap/dom.c 
                               ${GSOAP_SRC_DIR}/gsoap/stdsoap2.c 
@@ -125,51 +162,18 @@ else()
                               ${GSOAP_SRC_DIR}/gsoap/custom/struct_timeval.c PROPERTIES COMPILE_FLAGS -w)
 endif()
 
-if(OPENSSL_FOUND)
-  target_link_libraries(onvifsoap PRIVATE OpenSSL::SSL OpenSSL::Crypto ${CMAKE_DL_LIBS})
-  target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_OPENSSL")
-else()
-  message(FATAL_ERROR "OpenSSL not found...")
+target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_GZIP -DWITH_OPENSSL -c -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NONAMESPACES -DWITH_NOEMPTYSTRUCT -DWITH_NOEMPTYNAMESPACES -DWITH_DOM -DWITH_NTLM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
+target_compile_options(onvifsoap PRIVATE "-Wno-gnu-zero-variadic-macro-arguments")
+
+if(ENABLE_EXAMPLES)
+  add_subdirectory(example)
 endif()
-
-message(NOTICE "ZSTD_LDFLAGS ${ZSTD_LDFLAGS}")
-target_link_libraries(onvifsoap PRIVATE ${ZSTD_LDFLAGS})
-
-if(ZLIB_FOUND)
-  target_link_libraries(onvifsoap PRIVATE ZLIB::ZLIB)
-  target_compile_options(onvifsoap PRIVATE "SHELL: -DWITH_GZIP")
-else()
-  message(WARNING "ZLIB not found...")
-endif()
-
-if(Threads_FOUND)
-  target_link_libraries(onvifsoap PRIVATE Threads::Threads)
-else()
-  message(FATAL_ERROR  "Threads not found...")
-endif()
-
-target_link_libraries(onvifsoap PRIVATE ${CUTILS_LDFLAGS} ${NTLM_LDFLAGS} ${GLIB_LDFLAGS} ${GOBJECT_LDFLAGS})
-
-#I care little for MSVC warning. Support is from good faith
-if (MSVC)
-  target_compile_options(onvifsoap PRIVATE "SHELL: -wd4100 -wd4244 -wd4255 -wd4706 -wd4820 -wd4996 -wd5045")
-endif()
-
-if(NOT WIN32)
-  target_compile_options(onvifsoap PRIVATE "SHELL: -fvisibility=hidden")
-endif()
-
-target_compile_options(onvifsoap PRIVATE "SHELL: -c -Wall -Wextra -Wpedantic -Wno-unused-parameter -DWITH_NONAMESPACES -DWITH_NOEMPTYSTRUCT -DWITH_NOEMPTYNAMESPACES -DWITH_DOM -DWITH_NTLM -DBUILD_SHARD -DSOAP_H_FILE=onvifsoapH.h")
-
-add_subdirectory(example)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
 set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
-
-include(CPack)
 
 #Defining headers to export
 set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h 

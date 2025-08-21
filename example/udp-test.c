@@ -22,7 +22,7 @@ broadcast(const char *mess)
     int count = 1;
     char buffer[MAX_UDP_MSG_SIZE];
     struct sockaddr_in server_addr;
-    int addr_len = sizeof(struct sockaddr_in);
+    socklen_t addr_len = sizeof(socklen_t);
     int broadcastSock = socket(AF_INET, SOCK_DGRAM, 0);
     if(broadcastSock < 0){
         printf("Failed to create socket.\n");
