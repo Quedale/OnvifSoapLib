@@ -225,6 +225,9 @@ void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *)){
     C_ERROR("error listening prob...");
   }
 
+  free(msg->id);
+  free(msg);
+
 exit:
   if(debug_flag){
     soap_set_logging_outbound(&serv,NULL);
@@ -234,8 +237,6 @@ exit:
   soap_end(&serv);     // delete managed data and temporaries 
   soap_done(&serv);
 
-  free(msg->id);
-  free(msg);
   return;
 }
 
