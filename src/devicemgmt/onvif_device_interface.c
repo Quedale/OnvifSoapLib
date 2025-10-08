@@ -131,35 +131,42 @@ OnvifDeviceInterfaces__get_interface(OnvifDeviceInterfaces * self, int index){
     return priv->interfaces[index];
 }
 
+static void
+OnvifIPv6Configuration__create_prefix_addresses(OnvifPrefixedIPAddress *** addresses, int * count, struct tt__PrefixedIPv6Address * ttaddresses, int ttcount){
+    *count = ttcount;
+    if(ttcount > 0){
+        *addresses = malloc(sizeof(OnvifPrefixedIPAddress *) * ttcount);
+        for(int a=0;a<ttcount;a++){
+            //tt__PrefixedIPv4Address and tt__PrefixedIPv6Address have the same signature
+            *addresses[ttcount-1] = OnvifPrefixedIPAddress__create6(&ttaddresses[a]);
+        }
+    } else {
+        *addresses = NULL;
+    }
+}
+
 static OnvifIPv6Configuration * 
 OnvifIPv6Configuration__create(struct tt__IPv6NetworkInterface *IPv6){
     OnvifIPv6Configuration * ret = NULL;
     if(IPv6){
         ret = malloc(sizeof(OnvifIPv6Configuration));
         ret->enabled = IPv6->Enabled;
-        ret->manual_count = 0;
-        ret->manual = NULL;
-        ret->local_count = 0;
-        ret->local = NULL;
-        ret->ra_count = 0;
-        ret->fromra = NULL;
-        ret->dhcp_count = 0;
-        ret->fromdhcp = NULL;
         if(IPv6->Config){
             ret->dhcp = IPv6->Config->DHCP;
-            ret->manual_count = IPv6->Config->__sizeManual;
-            ret->local_count = IPv6->Config->__sizeLinkLocal;
-            ret->ra_count = IPv6->Config->__sizeFromRA;
-            ret->dhcp_count = IPv6->Config->__sizeFromDHCP;
-
-            if(ret->manual_count > 0){
-                ret->manual = malloc(sizeof(OnvifPrefixedIPAddress *) * ret->manual_count);
-                struct tt__PrefixedIPv6Address * manuals = IPv6->Config->Manual;
-                for(int a=0;a<ret->manual_count;a++){
-                    //tt__PrefixedIPv4Address and tt__PrefixedIPv6Address have the same signature
-                    ret->manual[ret->manual_count-1] = OnvifPrefixedIPAddress__create6(&manuals[a]);
-                }
-            }
+            OnvifIPv6Configuration__create_prefix_addresses(&ret->manual,&ret->manual_count,IPv6->Config->Manual,IPv6->Config->__sizeManual);
+            OnvifIPv6Configuration__create_prefix_addresses(&ret->local,&ret->local_count,IPv6->Config->LinkLocal,IPv6->Config->__sizeLinkLocal);
+            OnvifIPv6Configuration__create_prefix_addresses(&ret->fromra,&ret->ra_count,IPv6->Config->FromRA,IPv6->Config->__sizeFromRA);
+            OnvifIPv6Configuration__create_prefix_addresses(&ret->fromdhcp,&ret->dhcp_count,IPv6->Config->FromDHCP,IPv6->Config->__sizeFromDHCP);
+        } else {
+            ret->dhcp = 0;
+            ret->manual_count = 0;
+            ret->manual = NULL;
+            ret->local_count = 0;
+            ret->local = NULL;
+            ret->ra_count = 0;
+            ret->fromra = NULL;
+            ret->dhcp_count = 0;
+            ret->fromdhcp = NULL;
         }
     }
 
