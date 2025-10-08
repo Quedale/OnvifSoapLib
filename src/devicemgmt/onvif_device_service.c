@@ -6,6 +6,7 @@
 #include "onvif_device_interface_local.h"
 #include "onvif_device_scopes_local.h"
 #include "onvif_device_services_local.h"
+#include "onvif_device_ntp_local.h"
 #include "onvif_device_service.h"
 #include "clogger.h"
 #include <string.h>
@@ -85,6 +86,16 @@ OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceServ
 
     ONVIF_PREPARE_SOAP_CALL(OnvifDeviceInterfaces, _tds__GetNetworkInterfaces, _tds__GetNetworkInterfacesResponse);
     ONVIF_INVOKE_SOAP_CALL(self, tds__GetNetworkInterfaces, OnvifDeviceInterfaces__new, ret_val, &request,  &response);
+
+    return ret_val;
+}
+
+OnvifDeviceNTP * OnvifDeviceService__getNTP(OnvifDeviceService * self) {
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE_SERVICE (self), NULL);
+
+    ONVIF_PREPARE_SOAP_CALL(OnvifDeviceNTP, _tds__GetNTP, _tds__GetNTPResponse);
+    ONVIF_INVOKE_SOAP_CALL(self, tds__GetNTP, OnvifDeviceNTP__new, ret_val, &request,  &response);
 
     return ret_val;
 }

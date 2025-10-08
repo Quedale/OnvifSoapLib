@@ -195,9 +195,11 @@ set(devicemgmt_headers
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_hostnameinfo.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_info.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_interface.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_ntp.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_scopes.h
             ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_service.h
-            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_services.h)
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_device_services.h
+            ${PROJECT_SOURCE_DIR}/src/devicemgmt/onvif_prefix_ip_address.h)
 set(media_headers
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_output_config_options.h
             ${PROJECT_SOURCE_DIR}/src/media/onvif_media_audio_output_config.h

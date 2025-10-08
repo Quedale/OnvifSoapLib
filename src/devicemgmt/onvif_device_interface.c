@@ -1,10 +1,6 @@
 #include "onvif_device_interface_local.h"
+#include "onvif_prefix_ip_address_local.h"
 #include "clogger.h"
-
-typedef struct _OnvifPrefixedIPAddress {
-    char * address;
-    int prefix;
-} OnvifPrefixedIPAddress;
 
 typedef struct _OnvifIPv4Configuration {
     int enabled;
@@ -135,44 +131,6 @@ OnvifDeviceInterfaces__get_interface(OnvifDeviceInterfaces * self, int index){
     return priv->interfaces[index];
 }
 
-static OnvifPrefixedIPAddress * 
-OnvifPrefixedIPAddress__create(struct tt__PrefixedIPv4Address * addr){
-    if(!addr){
-        return NULL;
-    }
-
-    OnvifPrefixedIPAddress * ret = malloc(sizeof(OnvifPrefixedIPAddress));
-    if(addr->Address){
-        ret->address = malloc(strlen(addr->Address) + 1);
-        strcpy(ret->address,addr->Address);
-    } else {
-        ret->address = malloc(strlen("No IPv4 Manual Address defined") + 1);
-        strcpy(ret->address,"No IPv4 Manual Address defined");
-        C_ERROR("No IPv4 Manual Address defined in soap response");
-    }
-
-    ret->prefix = addr->PrefixLength;
-    return ret;
-}
-
-char * 
-OnvifPrefixedIPAddress__get_address(OnvifPrefixedIPAddress * self){
-    return self->address;
-}
-
-int 
-OnvifPrefixedIPAddress__get_prefix(OnvifPrefixedIPAddress * self){
-    return self->prefix;
-}
-
-static void 
-OnvifPrefixedIPAddress__destroy(OnvifPrefixedIPAddress * self){
-    if(self->address)
-        free(self->address);
-    self->prefix = 0;
-    free(self);
-}
-
 static OnvifIPv6Configuration * 
 OnvifIPv6Configuration__create(struct tt__IPv6NetworkInterface *IPv6){
     OnvifIPv6Configuration * ret = NULL;
@@ -195,11 +153,11 @@ OnvifIPv6Configuration__create(struct tt__IPv6NetworkInterface *IPv6){
             ret->dhcp_count = IPv6->Config->__sizeFromDHCP;
 
             if(ret->manual_count > 0){
-                ret->manual = malloc(sizeof(OnvifPrefixedIPAddress) * ret->manual_count);
+                ret->manual = malloc(sizeof(OnvifPrefixedIPAddress *) * ret->manual_count);
                 struct tt__PrefixedIPv6Address * manuals = IPv6->Config->Manual;
                 for(int a=0;a<ret->manual_count;a++){
                     //tt__PrefixedIPv4Address and tt__PrefixedIPv6Address have the same signature
-                    ret->manual[ret->manual_count-1] = OnvifPrefixedIPAddress__create((struct tt__PrefixedIPv4Address *)&manuals[a]);
+                    ret->manual[ret->manual_count-1] = OnvifPrefixedIPAddress__create6(&manuals[a]);
                 }
             }
         }
@@ -294,20 +252,20 @@ OnvifIPv4Configuration__create(struct tt__IPv4NetworkInterface *IPv4){
             ret->manual_count = IPv4->Config->__sizeManual;
             //Manually configured IPs
             if(ret->manual_count > 0){
-                ret->manual = malloc(sizeof(OnvifPrefixedIPAddress) * ret->manual_count);
+                ret->manual = malloc(sizeof(OnvifPrefixedIPAddress *) * ret->manual_count);
                 struct tt__PrefixedIPv4Address * manuals = IPv4->Config->Manual;
                 for(int a=0;a<ret->manual_count;a++){
-                    ret->manual[ret->manual_count-1] = OnvifPrefixedIPAddress__create(&manuals[a]);
+                    ret->manual[ret->manual_count-1] = OnvifPrefixedIPAddress__create4(&manuals[a]);
                 }
             }
 
             //Link local address.
             if(IPv4->Config->LinkLocal)
-                ret->local = OnvifPrefixedIPAddress__create(IPv4->Config->LinkLocal);
+                ret->local = OnvifPrefixedIPAddress__create4(IPv4->Config->LinkLocal);
 
             //DHCP IP
             if(IPv4->Config->FromDHCP)
-                ret->fromdhcp = OnvifPrefixedIPAddress__create(IPv4->Config->FromDHCP);
+                ret->fromdhcp = OnvifPrefixedIPAddress__create4(IPv4->Config->FromDHCP);
 
         } else {
             ret->manual_count = 0;

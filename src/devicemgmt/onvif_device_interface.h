@@ -3,6 +3,7 @@
 
 #include "../shard_export.h"
 #include "../SoapObject.h"
+#include "onvif_prefix_ip_address.h"
 
 G_BEGIN_DECLS
 
@@ -11,7 +12,6 @@ G_DECLARE_FINAL_TYPE (OnvifDeviceInterfaces, OnvifDeviceInterfaces_, ONVIF, DEVI
 
 typedef struct _OnvifIPv4Configuration OnvifIPv4Configuration;
 typedef struct _OnvifIPv6Configuration OnvifIPv6Configuration;
-typedef struct _OnvifPrefixedIPAddress OnvifPrefixedIPAddress;
 typedef struct _OnvifDeviceInterface OnvifDeviceInterface;
 
 struct _OnvifDeviceInterfaces {
@@ -52,9 +52,6 @@ OnvifPrefixedIPAddress ** OnvifIPv4Configuration__get_manuals(OnvifIPv4Configura
 OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_manual(OnvifIPv4Configuration * self, int index);
 OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_local(OnvifIPv4Configuration * self);
 OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_fromdhcp(OnvifIPv4Configuration * self);
-
-char * OnvifPrefixedIPAddress__get_address(OnvifPrefixedIPAddress * self);
-int OnvifPrefixedIPAddress__get_prefix(OnvifPrefixedIPAddress * self);
 
 G_END_DECLS
 

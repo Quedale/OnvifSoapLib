@@ -10,6 +10,7 @@
 #include "onvif_device_scopes.h"
 #include "onvif_device_datetime.h"
 #include "onvif_device_services.h"
+#include "onvif_device_ntp.h"
 
 G_BEGIN_DECLS
 
@@ -32,6 +33,7 @@ SHARD_EXPORT OnvifCapabilities* OnvifDeviceService__getCapabilities(OnvifDeviceS
 SHARD_EXPORT OnvifDeviceServices * OnvifDeviceService__getServices(OnvifDeviceService * self, int IncludeCapability);
 SHARD_EXPORT OnvifDeviceInformation * OnvifDeviceService__getDeviceInformation(OnvifDeviceService *self);
 SHARD_EXPORT OnvifDeviceInterfaces * OnvifDeviceService__getNetworkInterfaces(OnvifDeviceService * self);
+SHARD_EXPORT OnvifDeviceNTP * OnvifDeviceService__getNTP(OnvifDeviceService * self);
 SHARD_EXPORT OnvifDeviceDateTime * OnvifDeviceService__getSystemDateAndTime(OnvifDeviceService * self);
 
 G_END_DECLS
