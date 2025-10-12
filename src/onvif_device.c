@@ -64,38 +64,44 @@ OnvifDevice__createServices(OnvifDevice* self){
             service = OnvifDeviceServices__get_deviceio(services);
             if(service) priv->deviceio_service = OnvifDeviceIOService__new(self, OnvifService__get_address(service));
             break;
-        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
-        case SOAP_FAULT_CONNECTION_ERROR:
-        case SOAP_FAULT_NOT_VALID:
         case SOAP_FAULT_UNAUTHORIZED:
+        case SOAP_FAULT_CONNECTION_ERROR:
+            ONVIF_DEVICE_ERROR("[%s] Failed to retrieve device services...\n", self);
+            ret_fault = *caps_fault;
+            break;
+        case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+        case SOAP_FAULT_NOT_VALID:
         case SOAP_FAULT_UNEXPECTED:
         default:
-            ONVIF_DEVICE_ERROR("[%s] Failed to retrieve device services...\n", self);
-            //TODO Fallback to GetCapabilities?
-            ret_fault = *caps_fault;
+            ONVIF_DEVICE_ERROR("[%s] GetServices failed...\n", self);
+            ONVIF_DEVICE_ERROR("[%s] Fallback on GetCapabilities...\n", self);
+            OnvifMedia * media;
+            OnvifDeviceIOCapabilities * deviceio;
+            OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(priv->device_service);
+            caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
+            switch(*caps_fault){
+                case SOAP_FAULT_NONE:
+                    media = OnvifCapabilities__get_media(capabilities);
+                    deviceio = OnvifCapabilities__get_deviceio(capabilities);
+                    priv->media1_service = OnvifMedia1Service__new(self, OnvifMedia__get_address(media));
+                    priv->media2_service = OnvifMedia2Service__new(self, OnvifMedia__get_address(media));
+                    priv->deviceio_service = OnvifDeviceIOService__new(self, OnvifDeviceIOCapabilities__get_address(deviceio));
+                    break;
+                case SOAP_FAULT_ACTION_NOT_SUPPORTED:
+                case SOAP_FAULT_CONNECTION_ERROR:
+                case SOAP_FAULT_NOT_VALID:
+                case SOAP_FAULT_UNAUTHORIZED:
+                case SOAP_FAULT_UNEXPECTED:
+                default:
+                    ONVIF_DEVICE_ERROR("[%s] Failed to retrieve service URIs...", self);
+                    ret_fault = *caps_fault;
+                    break;
+            }
+            g_object_unref(capabilities);
             break;
     }
     g_object_unref(services);
-    // OnvifMedia * media;
-    // OnvifCapabilities* capabilities = OnvifDeviceService__getCapabilities(priv->device_service);
-    // SoapFault * caps_fault = SoapObject__get_fault(SOAP_OBJECT(capabilities));
-    // switch(*caps_fault){
-    //     case SOAP_FAULT_NONE:
-    //         media = OnvifCapabilities__get_media(capabilities);
-    //         priv->media1_service = OnvifMedia1Service__new(self, OnvifMedia__get_address(media));
-    //         priv->media2_service = OnvifMedia2Service__new(self, OnvifMedia__get_address(media));
-    //         break;
-    //     case SOAP_FAULT_ACTION_NOT_SUPPORTED:
-    //     case SOAP_FAULT_CONNECTION_ERROR:
-    //     case SOAP_FAULT_NOT_VALID:
-    //     case SOAP_FAULT_UNAUTHORIZED:
-    //     case SOAP_FAULT_UNEXPECTED:
-    //     default:
-    //         ONVIF_DEVICE_ERROR("[%s] Failed to retrieve capabilities capabilities...\n", self);
-    //         ret_fault = *caps_fault;
-    //         break;
-    // }
-    // g_object_unref(capabilities);
+
 exit:
     P_MUTEX_UNLOCK(priv->media_lock);
     return ret_fault;
