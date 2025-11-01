@@ -38,6 +38,9 @@ if (NOT DEFINED GSOAP_SRC_DIR)
   set(GSOAP_SRC_DIR  ${CMAKE_SOURCE_DIR}/subprojects/gsoap-2.8)
 endif()
 
+message(STATUS "Generated source path : ${GENERATED_SOURCE_PATH}")
+message(STATUS "gSoap source path : ${GSOAP_SRC_DIR}")
+
 if (MSVC)
     add_compile_options(/bigobj)
 elseif (MINGW)
