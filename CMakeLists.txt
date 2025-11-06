@@ -30,9 +30,16 @@ set(OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/release)
 set(LIBRARY_OUTPUT_PATH    ${OUTPUT_DIR})
 set(EXECUTABLE_OUTPUT_PATH ${OUTPUT_DIR})
 
+if(NOT DEFINED GENERATED_SOURCE_PATH)
+    set(GENERATED_SOURCE_PATH "${CMAKE_SOURCE_DIR}/src/generated")
+endif()
+
 if (NOT DEFINED GSOAP_SRC_DIR)
   set(GSOAP_SRC_DIR  ${CMAKE_SOURCE_DIR}/subprojects/gsoap-2.8)
 endif()
+
+message(STATUS "Generated source path : ${GENERATED_SOURCE_PATH}")
+message(STATUS "gSoap source path : ${GSOAP_SRC_DIR}")
 
 if (MSVC)
     add_compile_options(/bigobj)
@@ -44,11 +51,11 @@ include_directories(${GSOAP_SRC_DIR}/gsoap/
                     ${GSOAP_SRC_DIR}/gsoap/import 
                     ${GSOAP_SRC_DIR}/gsoap/custom 
                     ${GSOAP_SRC_DIR}/gsoap/plugin 
-                    src/generated
+                    ${GENERATED_SOURCE_PATH}
                     src)
 
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/src/generated)
-  file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
+if(NOT EXISTS ${GENERATED_SOURCE_PATH})
+  file(MAKE_DIRECTORY ${GENERATED_SOURCE_PATH})
 endif()
 
 aux_source_directory(src src_dir)
@@ -58,7 +65,7 @@ aux_source_directory(src/media src_media)
 aux_source_directory(src/media/media1 src_media1)
 aux_source_directory(src/media/media2 src_media2)
 aux_source_directory(src/discovery src_dir_disco)
-aux_source_directory(src/generated generated_dir)
+aux_source_directory(${GENERATED_SOURCE_PATH} generated_dir)
 
 #########################
 #

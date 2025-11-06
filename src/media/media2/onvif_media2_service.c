@@ -1,4 +1,4 @@
-#include "../onvif_base_service_local.h"
+#include "onvif_base_service_local.h"
 #include "onvif_media2_service.h"
 #include "onvif_media2_service_capabilities_local.h"
 #include "onvif_media2_profiles_local.h"

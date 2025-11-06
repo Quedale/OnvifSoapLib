@@ -1,5 +1,5 @@
 #include "onvif_base_service_local.h"
-#include "generated/onvifsoap.nsmap"
+#include "onvifsoap.nsmap"
 #include "wsseapi.h"
 #include <string.h>
 #include <stdlib.h>

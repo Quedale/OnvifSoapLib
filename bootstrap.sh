@@ -22,6 +22,8 @@ SKIP_GSOAP=0
 SKIP_DEP=0
 SKIP_WSDL=0
 GSOAP_SRC_DIR="${GSOAP_SRC_DIR:=subprojects/gsoap-2.8}" 
+GENERATED_SOURCE_PATH="${GENERATED_SOURCE_PATH:=$SCRT_DIR/src/generated}" 
+
 i=1;
 for arg in "$@" 
 do
@@ -774,9 +776,10 @@ cd ..
 
 if [ $SKIP_WSDL -eq 0 ]; then
     echo "Generating WSDL gsoap files..."
-    rm -rf $SUBPROJECT_DIR/../src/generated
-    mkdir $SUBPROJECT_DIR/../src/generated
-    wsdl2h -Ow4 -t$SUBPROJECT_DIR/../wsdl/typemap.dat -o $SUBPROJECT_DIR/../src/generated/onvif.h -c \
+    # rm -rf $GENERATED_SOURCE_PATH # Removed since path can be set externally and we don't want to nuke the wrong folder
+    mkdir -p $GENERATED_SOURCE_PATH
+
+    wsdl2h -Ow4 -t$SUBPROJECT_DIR/../wsdl/typemap.dat -o $GENERATED_SOURCE_PATH/onvif.h -c \
       ./wsdl/onvif/wsdl/devicemgmt.wsdl \
       ./wsdl/onvif/wsdl/event.wsdl \
       ./wsdl/onvif/wsdl/deviceio.wsdl \
@@ -821,7 +824,7 @@ if [ $SKIP_WSDL -eq 0 ]; then
     # http://www.onvif.org/onvif/ver10/replay.wsdl \
     # http://www.onvif.org/onvif/ver20/analytics/wsdl/analytics.wsdl \
     # http://www.onvif.org/onvif/ver10/analyticsdevice.wsdl \ 
-    soapcpp2 -n -ponvifsoap -f100 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap $SUBPROJECT_DIR/../src/generated/onvif.h -d$SUBPROJECT_DIR/../src/generated
+    soapcpp2 -n -ponvifsoap -f100 -CL -x -I$GSOAP_SRC_DIR/gsoap/import:$GSOAP_SRC_DIR/gsoap  $GENERATED_SOURCE_PATH/onvif.h -d$GENERATED_SOURCE_PATH
     ret=$?
     if [ $ret != 0 ]; then
       printf "${RED}*****************************\n${NC}"
