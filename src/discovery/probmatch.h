@@ -1,6 +1,8 @@
 #ifndef prob_match_h__
 #define prob_match_h__
 
+#include "shard_export.h"
+
  typedef struct {
     char *prob_uuid;
     char *addr_uuid; // SOAP-ENV:Envelope/SOAP-ENV:Body/d:ProbeMatches/d:ProbeMatch
@@ -18,37 +20,16 @@ typedef struct {
     ProbMatch **matches;
 } ProbMatches;
 
-__attribute__ ((visibility("default"))) 
-extern ProbMatches* ProbMatches__create(); 
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatches__destroy(ProbMatches* self);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatches__insert_match(ProbMatches* self, ProbMatch* match);
-
-__attribute__ ((visibility("default"))) 
-extern ProbMatch* ProbMatch__create();
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__destroy(ProbMatch* self);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__set_prob_uuid(ProbMatch* self, char * prob_uuid);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__set_addr_uuid(ProbMatch* self, char * addr_uuid);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__add_addr(ProbMatch* self, char * addr);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__set_types(ProbMatch* self, char * types);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__insert_scope(ProbMatch* self, char * scope);
-
-__attribute__ ((visibility("default"))) 
-extern void ProbMatch__set_version(ProbMatch* self, int scope);
+SHARD_EXPORT ProbMatches* ProbMatches__create(); 
+SHARD_EXPORT void ProbMatches__destroy(ProbMatches* self);
+SHARD_EXPORT void ProbMatches__insert_match(ProbMatches* self, ProbMatch* match);
+SHARD_EXPORT ProbMatch* ProbMatch__create();
+SHARD_EXPORT void ProbMatch__destroy(ProbMatch* self);
+SHARD_EXPORT void ProbMatch__set_prob_uuid(ProbMatch* self, char * prob_uuid);
+SHARD_EXPORT void ProbMatch__set_addr_uuid(ProbMatch* self, char * addr_uuid);
+SHARD_EXPORT void ProbMatch__add_addr(ProbMatch* self, char * addr);
+SHARD_EXPORT void ProbMatch__set_types(ProbMatch* self, char * types);
+SHARD_EXPORT void ProbMatch__insert_scope(ProbMatch* self, char * scope);
+SHARD_EXPORT void ProbMatch__set_version(ProbMatch* self, int scope);
 
 #endif

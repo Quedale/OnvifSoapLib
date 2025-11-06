@@ -34,24 +34,24 @@ SHARD_EXPORT int OnvifDeviceInterface__get_mtu(OnvifDeviceInterface * self);
 SHARD_EXPORT OnvifIPv4Configuration * OnvifDeviceInterface__get_ipv4(OnvifDeviceInterface * self);
 SHARD_EXPORT OnvifIPv6Configuration * OnvifDeviceInterface__get_ipv6(OnvifDeviceInterface * self);
 
-int OnvifIPv6Configuration__is_enabled(OnvifIPv6Configuration * self);
-int OnvifIPv6Configuration__is_dhcp(OnvifIPv6Configuration * self);
-int OnvifIPv6Configuration__get_manual_count(OnvifIPv6Configuration * self);
-int OnvifIPv6Configuration__get_local_count(OnvifIPv6Configuration * self);
-int OnvifIPv6Configuration__get_fromdhcp_count(OnvifIPv6Configuration * self);
-int OnvifIPv6Configuration__get_fromra_count(OnvifIPv6Configuration * self);
-OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_manuals(OnvifIPv6Configuration * self);
-OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_local(OnvifIPv6Configuration * self);
-OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_fromdhcp(OnvifIPv6Configuration * self);
-OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_fromra(OnvifIPv6Configuration * self);
+SHARD_EXPORT int OnvifIPv6Configuration__is_enabled(OnvifIPv6Configuration * self);
+SHARD_EXPORT int OnvifIPv6Configuration__is_dhcp(OnvifIPv6Configuration * self);
+SHARD_EXPORT int OnvifIPv6Configuration__get_manual_count(OnvifIPv6Configuration * self);
+SHARD_EXPORT int OnvifIPv6Configuration__get_local_count(OnvifIPv6Configuration * self);
+SHARD_EXPORT int OnvifIPv6Configuration__get_fromdhcp_count(OnvifIPv6Configuration * self);
+SHARD_EXPORT int OnvifIPv6Configuration__get_fromra_count(OnvifIPv6Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_manuals(OnvifIPv6Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_local(OnvifIPv6Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_fromdhcp(OnvifIPv6Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress ** OnvifIPv6Configuration__get_fromra(OnvifIPv6Configuration * self);
 
-int OnvifIPv4Configuration__is_enabled(OnvifIPv4Configuration * self);
-int OnvifIPv4Configuration__is_dhcp(OnvifIPv4Configuration * self);
-int OnvifIPv4Configuration__get_manual_count(OnvifIPv4Configuration * self);
-OnvifPrefixedIPAddress ** OnvifIPv4Configuration__get_manuals(OnvifIPv4Configuration * self);
-OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_manual(OnvifIPv4Configuration * self, int index);
-OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_local(OnvifIPv4Configuration * self);
-OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_fromdhcp(OnvifIPv4Configuration * self);
+SHARD_EXPORT int OnvifIPv4Configuration__is_enabled(OnvifIPv4Configuration * self);
+SHARD_EXPORT int OnvifIPv4Configuration__is_dhcp(OnvifIPv4Configuration * self);
+SHARD_EXPORT int OnvifIPv4Configuration__get_manual_count(OnvifIPv4Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress ** OnvifIPv4Configuration__get_manuals(OnvifIPv4Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_manual(OnvifIPv4Configuration * self, int index);
+SHARD_EXPORT OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_local(OnvifIPv4Configuration * self);
+SHARD_EXPORT OnvifPrefixedIPAddress * OnvifIPv4Configuration__get_fromdhcp(OnvifIPv4Configuration * self);
 
 G_END_DECLS
 

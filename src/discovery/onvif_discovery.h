@@ -3,11 +3,10 @@
 
 #include "probmatch.h" 
 #include "discovered_obj.h"
+#include "shard_export.h"
 
-__attribute__ ((visibility("default"))) 
-extern void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *));
+SHARD_EXPORT void sendProbe(void * data, int timeout, int (*cc)(DiscoveryEvent *));
 
-__attribute__ ((visibility("default"))) 
-extern char * onvif_extract_scope(char * key, ProbMatch * match);
+SHARD_EXPORT char * onvif_extract_scope(char * key, ProbMatch * match);
 
 #endif

@@ -2,6 +2,7 @@
 #define SOAP_OBJECT_H
 
 #include <glib-object.h>
+#include "shard_export.h"
 
 /*
  * Potentially, include other headers on which this header depends.
@@ -42,7 +43,7 @@ struct _SoapObjectClass {
 /*
  * Method definitions.
  */
-SoapFault * SoapObject__get_fault(SoapObject * self);
+SHARD_EXPORT SoapFault * SoapObject__get_fault(SoapObject * self);
 
 G_END_DECLS
 
