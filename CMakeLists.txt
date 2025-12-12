@@ -183,10 +183,8 @@ set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
 set(CMAKE_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_PREFIX}/include)
 
 #Defining headers to export
-set(headers ${PROJECT_SOURCE_DIR}/src/discovery/discoverer.h 
-		        ${PROJECT_SOURCE_DIR}/src/discovery/onvif_discovery.h 
-		        ${PROJECT_SOURCE_DIR}/src/discovery/probmatch.h
-            ${PROJECT_SOURCE_DIR}/src/discovery/discovered_obj.h
+set(headers ${PROJECT_SOURCE_DIR}/src/discovery/onvif_discoverer.h
+		        ${PROJECT_SOURCE_DIR}/src/discovery/onvif_probematches.h
             ${PROJECT_SOURCE_DIR}/src/onvif_base_service.h
 		        ${PROJECT_SOURCE_DIR}/src/onvif_credentials.h
             ${PROJECT_SOURCE_DIR}/src/onvif_device.h

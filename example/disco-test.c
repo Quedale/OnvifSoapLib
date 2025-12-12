@@ -1,18 +1,14 @@
-#include "discovery/onvif_discovery.h"
-#include "discovery/discoverer.h"
+#include "discovery/onvif_discoverer.h"
+// #include "discovery/discoverer.h"
 #include <stddef.h>
 #include "clogger.h"
 
-void probe_callback(DiscoveryEvent * e){
+void _dicovery_found_server_cb (OnvifDiscoverer * discoverer, OnvifProbeMatches * probematches) {
     C_DEBUG("prob callback...\n");
-    DiscoveredServer * server = e->server;
-
-    C_DEBUG("MSG UUID : %s\n", server->msg_uuid);
-    C_DEBUG("PROBE UUID : %s\n", server->relate_uuid);
-
+        int match_count = OnvifProbeMatches__get_count(probematches);
     int i;
-    for(i=0;i<server->matches->match_count;i++){
-        ProbMatch * match = server->matches->matches[i];
+    for(i=0;i<match_count;i++){
+        ProbMatch * match = OnvifProbeMatches__get_matches(probematches)[i];
         for(int a=0;a<match->addrs_count;a++){
             C_DEBUG("\tAddress : %s\n",match->addrs[a]);
         }
@@ -35,9 +31,10 @@ int main(int argc, char** argv)
 
         C_DEBUG("sending probex...\n");
 
-        struct UdpDiscoverer udsc = UdpDiscoverer__create(probe_callback);
-        UdpDiscoverer__start(&udsc, NULL, 1, 2);
-
+        OnvifDiscoverer * discoverer = OnvifDiscoverer__new(1,2);
+        g_signal_connect(discoverer,"probe-match",G_CALLBACK(_dicovery_found_server_cb),NULL);
+        OnvifDiscoverer__start(discoverer);
+        
         C_DEBUG("sending probe done...\n");
         return 0;
 
