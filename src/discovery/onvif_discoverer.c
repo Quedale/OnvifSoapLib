@@ -25,9 +25,16 @@ enum {
     LAST_SIGNAL
 };
 
+typedef enum {
+    DISCOVERING,
+    STOPPED
+} DiscovererState;
+
 typedef struct {
     int retry_count;
     int timeout;
+    struct soap * serv;
+    DiscovererState state;
 } OnvifDiscovererPrivate ;
 
 static guint signals[LAST_SIGNAL] = { 0 };
@@ -83,6 +90,8 @@ OnvifDiscoverer__init(OnvifDiscoverer* self) {
     OnvifDiscovererPrivate *priv = OnvifDiscoverer__get_instance_private (self);
     priv->retry_count = 1;
     priv->timeout = 1;
+    priv->serv = NULL;
+    priv->state = STOPPED;
 }
 
 static void
@@ -143,29 +152,15 @@ OnvifDiscoverer__sendMessage(struct soap * serv, char * type, const char * id){
 }
 
 static void
-OnvifDiscoverer__sendProbe(OnvifDiscoverer * self){
-    char *debug_flag = NULL;
+OnvifDiscoverer__sendProbe(OnvifDiscoverer * self, struct soap * serv){
 
-    if (( debug_flag =getenv( "PROBE_DEBUG" )) != NULL )
-        C_INFO("PROBE_DEBUG variable set. '%s'",debug_flag);
-
-    struct soap serv;
-    memset((void*)&serv, 0, sizeof(serv));
-    soap_init1(&serv,SOAP_IO_UDP);
-    soap_set_namespaces(&serv, disco_namespaces);
-    soap_register_plugin(&serv, soap_wsa);
-
-    if(debug_flag){
-        soap_register_plugin(&serv, logging);
-        soap_set_logging_outbound(&serv,stdout);
-        soap_set_logging_inbound(&serv,stdout);
-    }
-
-    if (!soap_valid_socket(soap_bind(&serv, NULL, 0, 1000))){
+    if (!soap_valid_socket(soap_bind(serv, NULL, 0, 1000))){
         C_ERROR("Failed to bind discovery socket");
-        soap_print_fault(&serv, stderr);
+        soap_print_fault(serv, stderr);
         goto exit;
     }
+
+    OnvifDiscovererPrivate *priv = OnvifDiscoverer__get_instance_private (self);
 
     //TODO Support provided setting
     // serv->ipv4_multicast_ttl = 1;
@@ -181,26 +176,23 @@ OnvifDiscoverer__sendProbe(OnvifDiscoverer * self){
     // priv_sendProbe(&serv, "\"http://www.onvif.org/ver10/device/wsdl\":Device", msg->id);
 
     C_DEBUG("Sending NVT probe...");
-    serv.user = self;
+    serv->user = self;
+    if(priv->state == STOPPED) goto exit;
 
-    OnvifDiscoverer__sendMessage(&serv, "\"http://www.onvif.org/ver10/network/wsdl\":NetworkVideoTransmitter", soap_wsa_rand_uuid(&serv));
+    OnvifDiscoverer__sendMessage(serv, "\"http://www.onvif.org/ver10/network/wsdl\":NetworkVideoTransmitter", soap_wsa_rand_uuid(serv));
+
+    if(priv->state == STOPPED) goto exit;
 
     //Listen for responses
-    OnvifDiscovererPrivate *priv = OnvifDiscoverer__get_instance_private (self);
-    if (soap_wsdd_listen(&serv, priv->timeout) != SOAP_OK){
-        soap_print_fault(&serv, stderr);
+    if (soap_wsdd_listen(serv, priv->timeout) != SOAP_OK){
+        soap_print_fault(serv, stderr);
         C_ERROR("error listening prob...");
     }
 
 
 exit:
-    if(debug_flag){
-        soap_set_logging_outbound(&serv,NULL);
-        soap_set_logging_inbound(&serv,NULL);
-    }
-    soap_destroy(&serv); // delete managed objects
-    soap_end(&serv);     // delete managed data and temporaries
-    soap_done(&serv);
+    soap_destroy(serv); // delete managed objects
+    soap_end(serv);     // delete managed data and temporaries
 }
 
 void
@@ -208,16 +200,56 @@ OnvifDiscoverer__start(OnvifDiscoverer * self){
     g_return_if_fail (self != NULL);
     g_return_if_fail (ONVIF_IS_DISCOVERER (self));
     OnvifDiscovererPrivate *priv = OnvifDiscoverer__get_instance_private (self);
-    for(int i=0;i<priv->retry_count;i++){
-        OnvifDiscoverer__sendProbe(self);
+
+    if(priv->state == DISCOVERING){
+        OnvifDiscoverer__stop(self);
     }
+
+    struct soap serv;
+    priv->state = DISCOVERING;
+    priv->serv = &serv;
+
+    memset((void*)&serv, 0, sizeof(serv));
+    soap_init1(&serv,SOAP_IO_UDP);
+    soap_set_namespaces(&serv, disco_namespaces);
+    soap_register_plugin(&serv, soap_wsa);
+
+    char *debug_flag = NULL;
+
+    if (( debug_flag =getenv( "PROBE_DEBUG" )) != NULL )
+        C_INFO("PROBE_DEBUG variable set. '%s'",debug_flag);
+
+    if(debug_flag){
+        soap_register_plugin(&serv, logging);
+        soap_set_logging_outbound(&serv,stdout);
+        soap_set_logging_inbound(&serv,stdout);
+    }
+
+    for(int i=0;i<priv->retry_count;i++){
+        OnvifDiscoverer__sendProbe(self, &serv);
+        if(priv->state == STOPPED) break;
+    }
+
+    priv->serv = NULL;
+    if(debug_flag){
+        soap_set_logging_outbound(&serv,NULL);
+        soap_set_logging_inbound(&serv,NULL);
+    }
+    priv->state = STOPPED;
+    soap_done(&serv);
 }
 
 void
 OnvifDiscoverer__stop(OnvifDiscoverer * self){
     g_return_if_fail (self != NULL);
     g_return_if_fail (ONVIF_IS_DISCOVERER (self));
-    C_FIXME("TODO Implement stop");
+    C_DEBUG("OnvifDiscoverer__stop");
+    OnvifDiscovererPrivate *priv = OnvifDiscoverer__get_instance_private (self);
+    if(priv->state == DISCOVERING && priv->serv) {
+        soap_closesock(priv->serv);
+        priv->serv = NULL;
+        priv->state = STOPPED;
+    }
 }
 
 // Note: This function returns a pointer to a substring of the original string.

@@ -61,6 +61,7 @@ struct _OnvifDeviceClass {
 SHARD_EXPORT OnvifDevice * OnvifDevice__new(char * device_url);
 SHARD_EXPORT char * OnvifDevice__get_host(OnvifDevice* self);
 SHARD_EXPORT char * OnvifDevice__get_port(OnvifDevice* self);
+SHARD_EXPORT char * OnvifDevice__get_protocol(OnvifDevice * self);
 SHARD_EXPORT SoapFault OnvifDevice__authenticate(OnvifDevice* self);
 SHARD_EXPORT int OnvifDevice__is_authenticated(OnvifDevice* self);
 SHARD_EXPORT void OnvifDevice__set_credentials(OnvifDevice* self,const char * user,const char* pass);

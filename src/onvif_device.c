@@ -483,3 +483,18 @@ OnvifDevice__get_port(OnvifDevice* self){
     P_MUTEX_UNLOCK(priv->prop_lock);
     return ret;
 }
+
+char *
+OnvifDevice__get_protocol(OnvifDevice * self){
+    g_return_val_if_fail (self != NULL, NULL);
+    g_return_val_if_fail (ONVIF_IS_DEVICE (self), NULL);
+    OnvifDevicePrivate *priv = OnvifDevice__get_instance_private (self);
+    char * ret = NULL;
+    P_MUTEX_LOCK(priv->prop_lock);
+    if(priv->purl->protocol){
+        ret = malloc(strlen(priv->purl->protocol)+1);
+        strcpy(ret,priv->purl->protocol);
+    }
+    P_MUTEX_UNLOCK(priv->prop_lock);
+    return ret;
+}
