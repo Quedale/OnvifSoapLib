@@ -59,11 +59,6 @@ OnvifDeviceDateTime__construct(SoapObject * obj, gpointer ptr){
     } else {
         priv->datetime = timegm(&tmrdev); //Convert tm to time_t
     }
-
-    if(priv->datetime < 0){
-        C_ERROR("Invalid GetSystemDateTime time value.");
-        SoapObject__set_fault(obj,SOAP_FAULT_UNEXPECTED);
-    }
 }
 
 
