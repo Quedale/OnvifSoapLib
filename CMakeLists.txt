@@ -98,8 +98,8 @@ if(ANDROID)
   # These dependencies aren't inplemented in bootstrap yet.
   # The will be implemented in the parent android project soon
   ################################################
-  find_library(CUTILS cutils    REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${SUBPROJECTS_ROOT}/CUtils/dist/lib")
-  find_library(NTLM   ntlm      REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${SUBPROJECTS_ROOT}/libntlm-1.8/dist/lib")
+  find_library(CUTILS cutils    REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${SUBPROJECTS_ROOT}/CUtils/dist/${ANDROID_ABI}/lib")
+  find_library(NTLM   ntlm      REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${SUBPROJECTS_ROOT}/libntlm-1.8/dist/${ANDROID_ABI}/lib")
   find_library(GLIB   glib-2.0  REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
   find_library(SSL    ssl       REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
   find_library(CRYPTO crypto    REQUIRED NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH PATHS "${GSTREAMER_ROOT}/lib")
@@ -108,8 +108,8 @@ if(ANDROID)
   target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/include/openssl)
   target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/include/glib-2.0)
   target_include_directories(onvifsoap PRIVATE ${GSTREAMER_ROOT}/lib/glib-2.0/include)
-  target_include_directories(onvifsoap PRIVATE ${SUBPROJECTS_ROOT}/CUtils/dist/include)
-  target_include_directories(onvifsoap PRIVATE ${SUBPROJECTS_ROOT}/libntlm-1.8/dist/include)
+  target_include_directories(onvifsoap PRIVATE "${SUBPROJECTS_ROOT}/CUtils/dist/${ANDROID_ABI}/include")
+  target_include_directories(onvifsoap PRIVATE "${SUBPROJECTS_ROOT}/libntlm-1.8/dist/${ANDROID_ABI}/include")
   target_link_libraries(onvifsoap PRIVATE ${CUTILS} ${NTLM} ${GLIB} ${GOBJ} ${SSL} ${CRYPTO})
 
   #glib dependencies

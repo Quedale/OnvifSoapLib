@@ -205,7 +205,7 @@ OnvifDevice__authenticate(OnvifDevice* self){
                 g_object_unref(priv->media1_service);
                 priv->media1_service = NULL;
             } else {
-                ONVIF_MEDIA_ERROR("[%s] StreamURI : %s",self, uri);
+                ONVIF_MEDIA_DEBUG("[%s] StreamURI : %s",self, uri);
                 P_MUTEX_LOCK(priv->prop_lock);
                 priv->authenticated = 1;
                 P_MUTEX_UNLOCK(priv->prop_lock);

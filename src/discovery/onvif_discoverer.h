@@ -23,4 +23,6 @@ SHARD_EXPORT OnvifDiscoverer * OnvifDiscoverer__new(int retry, int timeout);
 SHARD_EXPORT void OnvifDiscoverer__start(OnvifDiscoverer * self);
 SHARD_EXPORT void OnvifDiscoverer__stop(OnvifDiscoverer * self);
 
+G_END_DECLS
+
 #endif //ANDRONVIF_ONVIF_DISCOVERER_H
