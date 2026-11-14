@@ -39,7 +39,6 @@ static SoapFault
 OnvifMediaService__load_profiles_cache(OnvifMediaService * self){
     OnvifMediaServicePrivate *priv = OnvifMediaService__get_instance_private (ONVIF_MEDIA_SERVICE(self));
     if(!priv->profiles || *SoapObject__get_fault(SOAP_OBJECT(priv->profiles)) != SOAP_FAULT_NONE){
-        if(priv->profiles) g_object_unref(priv->profiles);
         priv->profiles = OnvifMediaService__getProfiles(self);
     }
 
@@ -99,11 +98,20 @@ OnvifMediaService__get_profiles(OnvifMediaService * self){
 
 OnvifMediaProfiles *
 OnvifMediaService__getProfiles(OnvifMediaService *self){
-    OnvifMediaServiceClass *klass;
+    g_return_val_if_fail (self != NULL, FALSE);
     g_return_val_if_fail (ONVIF_IS_MEDIA_SERVICE (self),FALSE);
+    OnvifMediaServiceClass *klass;
     klass = ONVIF_MEDIA_SERVICE_GET_CLASS (self);
     g_return_val_if_fail (klass->get_profiles != NULL,FALSE);
-    return klass->get_profiles (self);
+
+     OnvifMediaProfiles * profiles = klass->get_profiles (self);
+    if(profiles && *SoapObject__get_fault(SOAP_OBJECT(profiles)) == SOAP_FAULT_NONE){
+        OnvifMediaServicePrivate *priv = OnvifMediaService__get_instance_private (ONVIF_MEDIA_SERVICE(self));
+        if(priv->profiles) g_object_unref(priv->profiles);
+        //TODO Notify that profile list was updated
+        priv->profiles = profiles;
+    }
+    return profiles;
 }
 
 OnvifUri *

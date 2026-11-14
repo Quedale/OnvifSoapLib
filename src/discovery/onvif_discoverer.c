@@ -13,6 +13,7 @@
 #include "onvif_discoverer.h"
 #include "clogger.h"
 #include "onvif_probematches.h"
+#include "../onvif_base_service_local.h"
 
 enum {
     PROP_RETRY_COUNT = 1,
@@ -146,8 +147,8 @@ OnvifDiscoverer__sendMessage(struct soap * serv, char * type, const char * id){
                               NULL); // MatchBy
 
     if (ret != SOAP_OK){
-        soap_print_fault(serv, stderr);
         C_ERROR("error sending prob...%i",ret);
+        OnvifBaseService__print_fault(serv);
     }
 }
 
@@ -156,7 +157,7 @@ OnvifDiscoverer__sendProbe(OnvifDiscoverer * self, struct soap * serv){
 
     if (!soap_valid_socket(soap_bind(serv, NULL, 0, 1000))){
         C_ERROR("Failed to bind discovery socket");
-        soap_print_fault(serv, stderr);
+        OnvifBaseService__print_fault(serv);
         goto exit;
     }
 
@@ -185,7 +186,7 @@ OnvifDiscoverer__sendProbe(OnvifDiscoverer * self, struct soap * serv){
 
     //Listen for responses
     if (soap_wsdd_listen(serv, priv->timeout) != SOAP_OK){
-        soap_print_fault(serv, stderr);
+        OnvifBaseService__print_fault(serv);
         C_ERROR("error listening prob...");
     }
 

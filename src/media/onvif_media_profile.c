@@ -204,3 +204,10 @@ OnvifMediaProfile__get_index(OnvifMediaProfile* self){
     OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
     return priv->index;
 }
+
+int OnvifMediaProfile__is_fixed(OnvifMediaProfile* self){
+    g_return_val_if_fail(self != NULL, -1);
+    g_return_val_if_fail(ONVIF_IS_MEDIA_PROFILE(self), -1);
+    OnvifMediaProfilePrivate *priv = OnvifMediaProfile__get_instance_private (self);
+    return priv->fixed;
+}

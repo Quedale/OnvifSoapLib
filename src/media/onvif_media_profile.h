@@ -23,6 +23,7 @@ struct _OnvifMediaProfileClass {
 SHARD_EXPORT const char * OnvifMediaProfile__get_name(OnvifMediaProfile* self);
 SHARD_EXPORT const char * OnvifMediaProfile__get_token(OnvifMediaProfile* self);
 SHARD_EXPORT int OnvifMediaProfile__get_index(OnvifMediaProfile* self);
+SHARD_EXPORT int OnvifMediaProfile__is_fixed(OnvifMediaProfile* self);
 
 G_END_DECLS
 
